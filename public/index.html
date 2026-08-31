@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LetsConvertPDF — Free Online PDF Tools | Merge, Split, Compress & Convert PDF</title>
+  <meta name="description" content="LetsConvertPDF offers 20+ free online PDF tools. Merge, split, compress, rotate, watermark, convert Word/Excel/PPT to PDF and back. No signup required. Fast, secure, enterprise-grade." />
+  <meta name="keywords" content="PDF tools, merge PDF, split PDF, compress PDF, convert PDF, Word to PDF, Excel to PDF, PDF to Word, online PDF editor" />
+  <meta name="author" content="Maqsusi Digital Industries Software" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://letsconvertpdf.com/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://letsconvertpdf.com/" />
+  <meta property="og:title" content="LetsConvertPDF — Free Online PDF Tools" />
+  <meta property="og:description" content="20+ free PDF tools: merge, split, compress, convert, watermark, sign and more." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="LetsConvertPDF — Free Online PDF Tools" />
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"LetsConvertPDF","url":"https://letsconvertpdf.com","description":"Free online PDF tools platform.","applicationCategory":"UtilitiesApplication","operatingSystem":"Web Browser","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"creator":{"@type":"Organization","name":"Maqsusi Digital Industries Software","url":"https://maqsusi.com"}}</script>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232563EB'/><text x='4' y='24' font-family='Arial' font-size='20' font-weight='bold' fill='white'>L</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: ['selector', '[data-theme="dark"]'],
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'] },
+          colors: {
+            navy: { 950:'#03080F', 900:'#050D1A', 800:'#0A1628', 700:'#0F2040', 600:'#162C56', 500:'#1E3A6E' },
+            blue: { 400:'#60A5FA', 500:'#3B82F6', 600:'#2563EB', 700:'#1D4ED8' },
+            cyan: { 400:'#22D3EE', 500:'#06B6D4' },
+          },
+        },
+      },
+    };
+  </script>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    /* ── CSS custom properties for theming ── */
+    :root {
+      --bg:       #0A1628;
+      --bg-card:  rgba(255,255,255,0.04);
+      --bg-input: #0F2040;
+      --bg-nav:   rgba(10,22,40,0.9);
+      --border:   rgba(255,255,255,0.08);
+      --border-s: rgba(255,255,255,0.16);
+      --text:     #E2E8F0;
+      --muted:    #94A3B8;
+      --subtle:   #475569;
+      --hero-glow:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(37,99,235,0.18) 0%, transparent 70%);
+    }
+    [data-theme="light"] {
+      --bg:       #F1F5F9;
+      --bg-card:  #FFFFFF;
+      --bg-input: #F8FAFC;
+      --bg-nav:   rgba(255,255,255,0.95);
+      --border:   rgba(0,0,0,0.08);
+      --border-s: rgba(0,0,0,0.16);
+      --text:     #1E293B;
+      --muted:    #64748B;
+      --subtle:   #94A3B8;
+      --hero-glow:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(37,99,235,0.08) 0%, transparent 70%);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.3s, color 0.3s;
+      -webkit-font-smoothing: antialiased;
+    }
+    a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid #60A5FA;
+      outline-offset: 2px;
+    }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #2563EB; border-radius: 3px; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 1rem; }
+    .card-hover:hover { border-color: rgba(37,99,235,0.5); transform: translateY(-1px); }
+    .card-hover { transition: all 0.25s; }
+    .inp { background: var(--bg-input); border: 1px solid var(--border-s); color: var(--text); border-radius: 0.75rem; padding: 0.625rem 0.875rem; font-size: 0.875rem; width: 100%; outline: none; font-family: inherit; transition: border-color 0.2s; }
+    .inp:focus { border-color: #2563EB; }
+    .inp::placeholder { color: var(--muted); }
+    .gradient-text { background: linear-gradient(135deg,#60A5FA 0%,#06B6D4 50%,#34D399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-glow { background: var(--hero-glow); }
+    .progress-bar { background: linear-gradient(90deg,#2563EB,#06B6D4,#10B981); background-size: 200% 100%; animation: shimmer 1.5s linear infinite; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+    @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes slideIn { from{opacity:0;transform:translateX(24px)} to{opacity:1;transform:translateX(0)} }
+    .anim-fade  { animation: fadeIn  0.25s ease; }
+    .anim-up    { animation: slideUp 0.3s ease; }
+    .anim-in    { animation: slideIn 0.3s ease; }
+    .otp-input { width:3rem; height:3.5rem; font-size:1.5rem; font-weight:700; text-align:center; }
+    .chat-bubble-in  { background:#2563EB; color:#fff; border-radius:1rem 1rem 1rem 0.25rem; }
+    .chat-bubble-out { background:var(--bg-input); border:1px solid var(--border); border-radius:1rem 1rem 0.25rem 1rem; }
+    .drop-zone:hover { border-color: #2563EB; background: rgba(37,99,235,0.05); }
+    .drop-active   { border-color: #2563EB !important; background: rgba(37,99,235,0.08) !important; }
+    [data-theme="light"] .nav-blur { box-shadow: 0 1px 16px rgba(0,0,0,0.06); }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useCallback, useRef, useEffect, useContext, createContext, useMemo } = React;
+
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* ══════════════════════════════════════
+   THEME CONTEXT
+══════════════════════════════════════ */
+const ThemeCtx = createContext({ isDark: true, toggle: () => {} });
+
+function ThemeProvider({ children }) {
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('lcpdf-theme');
+    return saved ? saved === 'dark' : true;
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    localStorage.setItem('lcpdf-theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
+  const toggle = () => setIsDark(d => !d);
+  return <ThemeCtx.Provider value={{ isDark, toggle }}>{children}</ThemeCtx.Provider>;
+}
+const useTheme = () => useContext(ThemeCtx);
+
+/* ══════════════════════════════════════
+   AUTH CONTEXT
+══════════════════════════════════════ */
+const AuthCtx = createContext({ user: null, token: null, login: () => {}, logout: () => {}, openAuth: () => {} });
+
+function AuthProvider({ children }) {
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('lcpdf-user')); } catch { return null; }
+  });
+  const [token, setToken] = useState(() => localStorage.getItem('lcpdf-token') || null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // login | signup | reset
+  const [authIntro, setAuthIntro] = useState('');
+
+  const login = (tok, usr) => {
+    setToken(tok); setUser(usr);
+    localStorage.setItem('lcpdf-token', tok);
+    localStorage.setItem('lcpdf-user', JSON.stringify(usr));
+    setAuthOpen(false);
+  };
+
+  const logout = async () => {
+    try { await fetch('/api/auth/logout', { method:'POST', headers:{ Authorization:`Bearer ${token}` } }); } catch {}
+    setToken(null); setUser(null);
+    localStorage.removeItem('lcpdf-token');
+    localStorage.removeItem('lcpdf-user');
+  };
+
+  const openAuth = (mode = 'login', intro = '') => { setAuthMode(mode); setAuthIntro(intro); setAuthOpen(true); };
+
+  // Validate saved token on load
+  useEffect(() => {
+    if (token && !user) {
+      fetch('/api/auth/me', { headers:{ Authorization:`Bearer ${token}` } })
+        .then(r => r.json()).then(d => { if (d.user) setUser(d.user); else { setToken(null); localStorage.removeItem('lcpdf-token'); } }).catch(() => {});
+    }
+  }, []);
+
+  return (
+    <AuthCtx.Provider value={{ user, token, login, logout, openAuth, isAuthenticated: !!user }}>
+      {children}
+      {authOpen && <AuthModal mode={authMode} intro={authIntro} onMode={setAuthMode} onClose={() => setAuthOpen(false)}/>}
+    </AuthCtx.Provider>
+  );
+}
+const useAuth = () => useContext(AuthCtx);
+
+/* ══════════════════════════════════════
+   AUTHENTICATED FETCH HELPER
+══════════════════════════════════════ */
+function authHeaders(token, extra) {
+  return token ? { ...extra, Authorization: `Bearer ${token}` } : { ...extra };
+}
+
+/* ══════════════════════════════════════
+   ICONS
+══════════════════════════════════════ */
+const ICONS = {
+  merge:'M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3',
+  split:'M16 3l4 4-4 4M8 3l-4 4 4 4M21 7H3m15 10l4 4-4 4M6 17l-4 4 4 4M21 21H3',
+  compress:'M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242M15 17l-3-3m0 0l-3 3m3-3v9',
+  rotate:'M4 4v5h.582m15.356 2A8.001 8.001 0 0 0 4.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 0 1-15.357-2m15.357 2H15',
+  watermark:'M15 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 0v1M4 4l4 4m12 0l-4 4M4 20l4-4m12 0l-4 4M4 12h4m8 0h4M12 4v4m0 8v4',
+  sign:'M17 8l4 4-4 4M3 12h18M7 8l-4 4 4 4M12 3v18',
+  word:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5',
+  excel:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 10l3 4 3-4M8 18l3-4 3 4',
+  ppt:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 13h6M9 17h4',
+  pdf2word:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
+  pdf2excel:'M9 7H7m2 4H7m2 4H7m2 4H7M17 7h-4m4 4h-4m4 4h-4m4 4h-4M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',
+  pdf2ppt:'M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1z',
+  img2pdf:'M4 16l4.586-4.586a2 2 0 0 1 2.828 0L16 16m-2-2l1.586-1.586a2 2 0 0 1 2.828 0L20 14m-6-6h.01M6 20h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
+  pdf2jpg:'M4 16l4.586-4.586a2 2 0 0 1 2.828 0L16 16m-2-2l1.586-1.586a2 2 0 0 1 2.828 0L20 14m-6-6h.01M6 20h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
+  organize:'M4 6h16M4 10h16M4 14h16M4 18h16',
+  crop:'M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2',
+  unlock:'M8 11V7a4 4 0 0 1 8 0m-4 8v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2z',
+  protect:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+  repair:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
+  upload:'M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1m-4-8l-4-4m0 0L8 8m4-4v12',
+  download:'M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
+  preview:'M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z',
+  close:'M6 18L18 6M6 6l12 12',
+  check:'M5 13l4 4L19 7',
+  left:'M15 19l-7-7 7-7',
+  right:'M9 5l7 7-7 7',
+  arrow:'M9 5l7 7-7 7',
+  file:'M7 21h10a2 2 0 0 0 2-2V9.414a1 1 0 0 0-.293-.707l-5.414-5.414A1 1 0 0 0 13.586 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2z',
+  trash:'M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16',
+  sun:'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
+  moon:'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z',
+  user:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
+  logOut:'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
+  chat:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+  send:'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
+  eye:'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+  eyeOff:'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22',
+  google:'M21.35 11.1h-9.18v2.73h5.51c-.25 1.21-.96 2.25-2.05 2.93l-.01.06 2.98 2.3.21.02c1.89-1.75 2.98-4.32 2.98-7.04 0-.58-.05-1.14-.14-1.68zM12.17 21c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.35l-3.03 2.87C3.54 18.84 7.57 21 12.17 21zM6.01 12.1a6.4 6.4 0 0 1 0-4.2V5.03H2.35a10.01 10.01 0 0 0 0 9.94l3.66-2.87zM12.17 5.57c1.62 0 3.06.56 4.21 1.64l3.15-3.15A10 10 0 0 0 12.17 1C7.57 1 3.54 3.16 1.32 6.57L4.98 9.44c.87-2.6 3.3-3.87 7.19-3.87z',
+  zoomIn:'M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0zM10 7v3m0 0v3m0-3h3m-3 0H7',
+  zoomOut:'M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0zM13 10H7',
+  lock:'M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 10 0v4',
+  clock:'M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z',
+  sparkle:'M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4L12 2z',
+};
+
+function Ic({ n, sz=20, cls='' }) {
+  const d = ICONS[n] || ICONS.file;
+  return (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+      {d.split('M').filter(Boolean).map((seg,i) => <path key={i} d={'M'+seg}/>)}
+    </svg>
+  );
+}
+
+/* ══════════════════════════════════════
+   TOOLS CONFIG
+══════════════════════════════════════ */
+const CATEGORIES = ['All','Organize','Convert','Optimize','Security'];
+const TOOLS = [
+  { id:'merge',    label:'Merge PDF',      desc:'Combine multiple PDFs into one.',                       icon:'merge',    cat:'Organize', color:'blue',    accept:'.pdf',       multi:true,  engine:'client' },
+  { id:'split',    label:'Split PDF',      desc:'Separate PDF pages into individual files.',             icon:'split',    cat:'Organize', color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
+  { id:'organize', label:'Organize Pages', desc:'Reorder, delete and rearrange PDF pages.',             icon:'organize', cat:'Organize', color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
+  { id:'crop',     label:'Crop PDF',       desc:'Trim PDF page margins and resize the content area.',   icon:'crop',     cat:'Organize', color:'cyan',    accept:'.pdf',       multi:false, engine:'client' },
+  { id:'rotate',   label:'Rotate PDF',     desc:'Rotate all or specific pages of a PDF.',               icon:'rotate',   cat:'Organize', color:'emerald', accept:'.pdf',       multi:false, engine:'client' },
+  { id:'compress', label:'Compress PDF',   desc:'Reduce file size while maintaining quality.',          icon:'compress', cat:'Optimize', color:'emerald', accept:'.pdf',       multi:false, engine:'client' },
+  { id:'img2pdf',  label:'Image to PDF',   desc:'Convert JPG, PNG, WebP images to a PDF document.',    icon:'img2pdf',  cat:'Convert',  color:'blue',    accept:'image/*',    multi:true,  engine:'client' },
+  { id:'pdf2jpg',  label:'PDF to JPG',     desc:'Extract every page as a high-quality JPEG image.',    icon:'pdf2jpg',  cat:'Convert',  color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
+  { id:'word2pdf', label:'Word to PDF',    desc:'Convert DOCX/DOC to PDF preserving formatting.',      icon:'word',     cat:'Convert',  color:'blue',    accept:'.docx,.doc', multi:false, engine:'server' },
+  { id:'excel2pdf',label:'Excel to PDF',   desc:'Transform Excel spreadsheets into PDF files.',        icon:'excel',    cat:'Convert',  color:'emerald', accept:'.xlsx,.xls', multi:false, engine:'server' },
+  { id:'ppt2pdf',  label:'PPT to PDF',     desc:'Convert PowerPoint presentations to PDF.',            icon:'ppt',      cat:'Convert',  color:'cyan',    accept:'.pptx,.ppt', multi:false, engine:'server' },
+  { id:'pdf2word', label:'PDF to Word',    desc:'Convert PDF back to editable Word documents.',        icon:'pdf2word', cat:'Convert',  color:'blue',    accept:'.pdf',       multi:false, engine:'server' },
+  { id:'pdf2excel',label:'PDF to Excel',   desc:'Extract PDF tables into editable spreadsheets.',      icon:'pdf2excel',cat:'Convert',  color:'emerald', accept:'.pdf',       multi:false, engine:'server' },
+  { id:'pdf2ppt',  label:'PDF to PPT',     desc:'Convert PDF slides into editable PowerPoint files.',  icon:'pdf2ppt',  cat:'Convert',  color:'cyan',    accept:'.pdf',       multi:false, engine:'server' },
+  { id:'watermark',label:'Watermark PDF',  desc:'Add text watermarks to your PDF pages.',              icon:'watermark',cat:'Security', color:'cyan',    accept:'.pdf',       multi:false, engine:'client' },
+  { id:'sign',     label:'Sign PDF',       desc:'Draw your signature directly on PDF pages.',          icon:'sign',     cat:'Security', color:'cyan',    accept:'.pdf',       multi:false, engine:'client' },
+  { id:'protect',  label:'Protect PDF',    desc:'Encrypt PDF with a password for secure sharing.',     icon:'protect',  cat:'Security', color:'red',     accept:'.pdf',       multi:false, engine:'client' },
+  { id:'unlock',   label:'Unlock PDF',     desc:'Remove password protection from PDF files.',          icon:'unlock',   cat:'Security', color:'emerald', accept:'.pdf',       multi:false, engine:'client' },
+  { id:'repair',   label:'Repair PDF',     desc:'Fix corrupted or damaged PDF documents.',             icon:'repair',   cat:'Optimize', color:'emerald', accept:'.pdf',       multi:false, engine:'server' },
+  { id:'edit',     label:'Edit PDF',       desc:'Add text overlays, highlights and annotations.',      icon:'watermark',cat:'Organize', color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
+];
+const C = {
+  blue:    { bg:'rgba(37,99,235,0.1)',    bd:'rgba(37,99,235,0.3)',    ic:'#60A5FA', badge:'rgba(37,99,235,0.15)' },
+  cyan:    { bg:'rgba(6,182,212,0.1)',    bd:'rgba(6,182,212,0.3)',    ic:'#22D3EE', badge:'rgba(6,182,212,0.15)' },
+  emerald: { bg:'rgba(16,185,129,0.1)',   bd:'rgba(16,185,129,0.3)',   ic:'#34D399', badge:'rgba(16,185,129,0.15)' },
+  red:     { bg:'rgba(239,68,68,0.1)',    bd:'rgba(239,68,68,0.3)',    ic:'#F87171', badge:'rgba(239,68,68,0.15)' },
+};
+
+/* ══════════════════════════════════════
+   AUTH MODAL
+══════════════════════════════════════ */
+function AuthModal({ mode, intro, onMode, onClose }) {
+  const { login } = useAuth();
+  const [step, setStep] = useState('form'); // form | otp
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [pendingName, setPendingName] = useState('');
+  const [otpPurpose, setOtpPurpose] = useState('login');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+
+  // form state
+  const [f, setF] = useState({ name:'', email:'', password:'', confirmPw:'', resetEmail:'', newPw:'', confirmNewPw:'' });
+  const set = k => e => setF(p => ({ ...p, [k]: e.target.value }));
+
+  const post = async (url, body) => {
+    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Request failed');
+    return d;
+  };
+
+  const handleLogin = async e => {
+    e.preventDefault(); setError(''); setLoading(true);
+    try {
+      const d = await post('/api/auth/login', { email: f.email, password: f.password });
+      setPendingEmail(d.email); setOtpPurpose('login'); setStep('otp');
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const handleSignup = async e => {
+    e.preventDefault(); setError('');
+    if (f.password !== f.confirmPw) return setError('Passwords do not match.');
+    setLoading(true);
+    try {
+      const d = await post('/api/auth/register', { name: f.name, email: f.email, password: f.password });
+      setPendingEmail(d.email); setPendingName(f.name); setOtpPurpose('register'); setStep('otp');
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const handleForgot = async e => {
+    e.preventDefault(); setError(''); setLoading(true);
+    try {
+      const d = await post('/api/auth/forgot-password', { email: f.resetEmail });
+      setPendingEmail(d.email); setOtpPurpose('reset'); setStep('otp');
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const handleGoogle = async () => {
+    setError('');
+    try { await post('/api/auth/google', {}); }
+    catch(e) { setError('Google sign-in not configured yet. Use email login instead.'); }
+  };
+
+  return (
+    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.65)'}}>
+      <div className="card anim-up w-full max-w-md relative" style={{padding:'2rem'}}>
+        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors" aria-label="Close">
+          <Ic n="close" sz={16}/>
+        </button>
+
+        <div className="flex items-center gap-2.5 mb-6">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-sm">L</div>
+          <span className="font-bold" style={{color:'var(--text)'}}>LetsConvertPDF</span>
+        </div>
+
+        {intro && step === 'form' && (
+          <div className="mb-5 text-sm rounded-xl p-3 flex items-start gap-2" style={{background:'rgba(37,99,235,0.08)',border:'1px solid rgba(37,99,235,0.25)',color:'var(--text)'}}>
+            <Ic n="sparkle" sz={15} cls="text-blue-400 shrink-0 mt-0.5"/>
+            <span>{intro}</span>
+          </div>
+        )}
+
+        {step === 'otp' ? (
+          <OTPStep email={pendingEmail} purpose={otpPurpose} newPw={otpPurpose==='reset' ? f.newPw : null}
+            onBack={() => setStep('form')} onSuccess={login}/>
+        ) : (
+          <>
+            {/* Tabs */}
+            {mode !== 'reset' && (
+              <div className="flex mb-6" style={{background:'var(--bg-input)', borderRadius:'0.75rem', padding:'4px'}}>
+                {['login','signup'].map(m => (
+                  <button key={m} onClick={() => { onMode(m); setError(''); }}
+                    className="flex-1 py-2 text-sm font-semibold rounded-[0.5rem] transition-all"
+                    style={{ background: mode===m ? '#2563EB' : 'transparent', color: mode===m ? '#fff' : 'var(--muted)' }}>
+                    {m === 'login' ? 'Log In' : 'Sign Up'}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {mode === 'reset' && (
+              <div className="mb-6">
+                <h2 className="text-xl font-bold" style={{color:'var(--text)'}}>Reset Password</h2>
+                <p className="text-sm mt-1" style={{color:'var(--muted)'}}>Enter your email to receive a reset code.</p>
+              </div>
+            )}
+
+            {error && <div className="mb-4 text-sm rounded-xl p-3" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
+
+            {/* Google button */}
+            {mode !== 'reset' && (
+              <button onClick={handleGoogle}
+                className="w-full flex items-center justify-center gap-2.5 py-2.5 mb-4 rounded-xl font-medium text-sm transition-all hover:opacity-80"
+                style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
+                <Ic n="google" sz={18}/> Continue with Google
+              </button>
+            )}
+            {mode !== 'reset' && (
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px" style={{background:'var(--border)'}}/>
+                <span className="text-xs" style={{color:'var(--subtle)'}}>or</span>
+                <div className="flex-1 h-px" style={{background:'var(--border)'}}/>
+              </div>
+            )}
+
+            {/* Login form */}
+            {mode === 'login' && (
+              <form onSubmit={handleLogin} className="space-y-3">
+                <input className="inp" type="email" placeholder="Email address" value={f.email} onChange={set('email')} required/>
+                <div className="relative">
+                  <input className="inp pr-10" type={showPw?'text':'password'} placeholder="Password" value={f.password} onChange={set('password')} required/>
+                  <button type="button" onClick={() => setShowPw(s=>!s)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{color:'var(--muted)'}} aria-label={showPw ? 'Hide password' : 'Show password'}>
+                    <Ic n={showPw?'eyeOff':'eye'} sz={16}/>
+                  </button>
+                </div>
+                <button type="button" onClick={() => { onMode('reset'); setError(''); }}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors">Forgot password?</button>
+                <button type="submit" disabled={loading}
+                  className="w-full py-3 rounded-xl font-bold text-white text-sm transition-colors mt-2"
+                  style={{background: loading ? '#1D4ED8' : '#2563EB'}}>
+                  {loading ? 'Sending code…' : 'Continue'}
+                </button>
+              </form>
+            )}
+
+            {/* Signup form */}
+            {mode === 'signup' && (
+              <form onSubmit={handleSignup} className="space-y-3">
+                <input className="inp" type="text" placeholder="Full name" value={f.name} onChange={set('name')} required/>
+                <input className="inp" type="email" placeholder="Email address" value={f.email} onChange={set('email')} required/>
+                <div className="relative">
+                  <input className="inp pr-10" type={showPw?'text':'password'} placeholder="Password (min. 8 chars)" value={f.password} onChange={set('password')} required/>
+                  <button type="button" onClick={() => setShowPw(s=>!s)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{color:'var(--muted)'}} aria-label={showPw ? 'Hide password' : 'Show password'}>
+                    <Ic n={showPw?'eyeOff':'eye'} sz={16}/>
+                  </button>
+                </div>
+                <input className="inp" type="password" placeholder="Confirm password" value={f.confirmPw} onChange={set('confirmPw')} required/>
+                <button type="submit" disabled={loading}
+                  className="w-full py-3 rounded-xl font-bold text-white text-sm transition-colors mt-2"
+                  style={{background: loading ? '#1D4ED8' : '#2563EB'}}>
+                  {loading ? 'Creating account…' : 'Create Account'}
+                </button>
+              </form>
+            )}
+
+            {/* Reset form */}
+            {mode === 'reset' && (
+              <form onSubmit={handleForgot} className="space-y-3">
+                <input className="inp" type="email" placeholder="Your email address" value={f.resetEmail} onChange={set('resetEmail')} required/>
+                <button type="submit" disabled={loading}
+                  className="w-full py-3 rounded-xl font-bold text-white text-sm transition-colors"
+                  style={{background:'#2563EB'}}>
+                  {loading ? 'Sending…' : 'Send Reset Code'}
+                </button>
+                <button type="button" onClick={() => onMode('login')}
+                  className="w-full text-sm transition-colors" style={{color:'var(--muted)'}}>← Back to Login</button>
+              </form>
+            )}
+
+            {mode === 'login' && (
+              <p className="text-center text-xs mt-4" style={{color:'var(--muted)'}}>
+                No account? <button onClick={() => { onMode('signup'); setError(''); }} className="text-blue-400 hover:text-blue-300">Sign up free</button>
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── OTP Step ─── */
+function OTPStep({ email, purpose, newPw, onBack, onSuccess }) {
+  const [digits, setDigits] = useState(['','','','','','']);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resent, setResent] = useState(false);
+  const [step2, setStep2] = useState(purpose === 'reset' ? 'otp' : 'otp'); // otp | newpw
+  const [newPwState, setNewPwState] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const refs = Array.from({length:6}, () => useRef());
+
+  const code = digits.join('');
+
+  const handleDigit = (i, val) => {
+    const v = val.replace(/\D/g,'').slice(-1);
+    const next = [...digits]; next[i] = v; setDigits(next);
+    if (v && i < 5) refs[i+1].current?.focus();
+  };
+  const handleKey = (i, e) => {
+    if (e.key === 'Backspace' && !digits[i] && i > 0) refs[i-1].current?.focus();
+  };
+  const handlePaste = e => {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6).split('');
+    setDigits([...pasted, ...Array(6).fill('')].slice(0,6));
+    refs[Math.min(pasted.length, 5)].current?.focus();
+    e.preventDefault();
+  };
+
+  const verify = async () => {
+    setError(''); setLoading(true);
+    try {
+      if (purpose === 'reset' && step2 === 'newpw') {
+        if (newPwState !== confirmPw) { setError('Passwords do not match.'); setLoading(false); return; }
+        const r = await fetch('/api/auth/reset-password', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, code, newPassword: newPwState }) });
+        const d = await r.json(); if (!r.ok) throw new Error(d.error);
+        // After reset, just close and prompt login
+        onSuccess(null, null); // signal done without token
+        return;
+      }
+      const r = await fetch('/api/auth/verify-otp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, code }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      if (purpose === 'reset') { setStep2('newpw'); } else { onSuccess(d.token, d.user); }
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const resend = async () => {
+    await fetch('/api/auth/resend-otp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, purpose }) });
+    setResent(true); setTimeout(() => setResent(false), 30000);
+  };
+
+  if (step2 === 'newpw') return (
+    <div className="anim-up">
+      <h2 className="text-xl font-bold mb-1" style={{color:'var(--text)'}}>Set New Password</h2>
+      <p className="text-sm mb-4" style={{color:'var(--muted)'}}>OTP verified. Enter your new password.</p>
+      {error && <div className="mb-3 text-sm rounded-xl p-3" style={{background:'rgba(239,68,68,0.1)',color:'#F87171'}}>{error}</div>}
+      <div className="space-y-3">
+        <input className="inp" type="password" placeholder="New password (min. 8 chars)" value={newPwState} onChange={e=>setNewPwState(e.target.value)}/>
+        <input className="inp" type="password" placeholder="Confirm new password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)}/>
+        <button onClick={verify} disabled={loading}
+          className="w-full py-3 rounded-xl font-bold text-white text-sm" style={{background:'#2563EB'}}>
+          {loading ? 'Resetting…' : 'Reset Password'}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="anim-up">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4 transition-colors" style={{color:'var(--muted)'}}>
+        <Ic n="left" sz={14}/> Back
+      </button>
+      <h2 className="text-xl font-bold mb-1" style={{color:'var(--text)'}}>Enter verification code</h2>
+      <p className="text-sm mb-6" style={{color:'var(--muted)'}}>We sent a 6-digit code to <strong>{email}</strong></p>
+
+      {error && <div className="mb-4 text-sm rounded-xl p-3" style={{background:'rgba(239,68,68,0.1)',color:'#F87171'}}>{error}</div>}
+
+      <div className="flex gap-2 justify-center mb-6" onPaste={handlePaste}>
+        {digits.map((d,i) => (
+          <input key={i} ref={refs[i]} type="text" inputMode="numeric" maxLength={1} value={d}
+            onChange={e => handleDigit(i, e.target.value)}
+            onKeyDown={e => handleKey(i, e)}
+            className="otp-input inp text-center"
+            style={{borderColor: d ? '#2563EB' : 'var(--border-s)', color:'var(--text)', fontSize:'1.5rem', fontWeight:700}}/>
+        ))}
+      </div>
+
+      <button onClick={verify} disabled={loading || code.length < 6}
+        className="w-full py-3 rounded-xl font-bold text-white text-sm mb-3 transition-colors disabled:opacity-50"
+        style={{background:'#2563EB'}}>
+        {loading ? 'Verifying…' : 'Verify Code'}
+      </button>
+
+      <p className="text-center text-xs" style={{color:'var(--muted)'}}>
+        Didn't receive it?{' '}
+        <button onClick={resend} disabled={resent} className="text-blue-400 hover:text-blue-300 disabled:opacity-50">
+          {resent ? 'Sent!' : 'Resend code'}
+        </button>
+      </p>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   USAGE / FREEMIUM HELPERS
+══════════════════════════════════════ */
+async function fetchUsageStatus(toolId, token) {
+  const r = await fetch(`/api/usage/status?toolId=${encodeURIComponent(toolId)}`, { headers: authHeaders(token) });
+  if (!r.ok) return null;
+  return r.json();
+}
+async function consumeUsage(toolId, token) {
+  const r = await fetch('/api/usage/consume', {
+    method: 'POST',
+    headers: authHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ toolId }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { const err = new Error(d.error || 'Daily free limit reached.'); err.status = r.status; err.usage = d.usage; throw err; }
+  return d;
+}
+function UsageBadge({ status, isAuthenticated, onUpgrade }) {
+  if (!status) return null;
+  const unlimited = status.limit === null;
+  if (unlimited) return (
+    <div className="flex items-center gap-2 text-xs rounded-full px-3 py-1.5 mb-5 w-fit" style={{background:'rgba(16,185,129,0.1)',color:'#34D399',border:'1px solid rgba(16,185,129,0.3)'}}>
+      <Ic n="sparkle" sz={13}/> Unlimited on your plan
+    </div>
+  );
+  const exhausted = status.remaining <= 0;
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-5">
+      <div className="flex items-center gap-2 text-xs rounded-full px-3 py-1.5 w-fit"
+        style={{
+          background: exhausted ? 'rgba(239,68,68,0.1)' : 'rgba(37,99,235,0.1)',
+          color: exhausted ? '#F87171' : '#60A5FA',
+          border: `1px solid ${exhausted ? 'rgba(239,68,68,0.3)' : 'rgba(37,99,235,0.3)'}`,
+        }}>
+        <Ic n="clock" sz={13}/>
+        {exhausted
+          ? `Daily free limit reached (${status.limit}/day) — resets at midnight UTC`
+          : `${status.remaining} of ${status.limit} free use${status.limit===1?'':'s'} left today`}
+      </div>
+      {!isAuthenticated && (
+        <button onClick={onUpgrade} className="text-xs text-blue-400 hover:text-blue-300 font-medium">
+          Sign up free for more →
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   UPGRADE / PAYWALL MODAL
+   Shown when a free-tier quota (anon or signed-up) is exhausted.
+══════════════════════════════════════ */
+function UpgradeModal({ tool, usageInfo, isAuthenticated, onClose, onSignup, onLogin }) {
+  const col = C[tool.color] || C.blue;
+  return (
+    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.65)'}}>
+      <div className="card anim-up w-full max-w-md relative p-8 text-center">
+        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors" aria-label="Close">
+          <Ic n="close" sz={16}/>
+        </button>
+        <div className="w-16 h-16 mx-auto rounded-2xl mb-6 flex items-center justify-center" style={{background:col.bg, border:`1px solid ${col.bd}`}}>
+          <Ic n="lock" sz={28} cls="text-blue-400"/>
+        </div>
+        <h2 className="text-xl font-bold mb-2" style={{color:'var(--text)'}}>Daily free limit reached</h2>
+        <p className="text-sm mb-6" style={{color:'var(--muted)'}}>
+          {isAuthenticated
+            ? `You've used all your free ${tool.label} conversions for today. Your quota resets at midnight UTC — or check back tomorrow.`
+            : `You've used your free guest use of ${tool.label} for today. Create a free account to get more uses on every tool, every day.`}
+        </p>
+        {!isAuthenticated ? (
+          <div className="flex gap-3">
+            <button onClick={onLogin} className="flex-1 py-3 rounded-xl font-semibold text-sm transition-colors"
+              style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>Log In</button>
+            <button onClick={onSignup} className="flex-1 py-3 rounded-xl font-bold text-white text-sm" style={{background:'#2563EB'}}>Sign Up Free</button>
+          </div>
+        ) : (
+          <button onClick={onClose} className="w-full py-3 rounded-xl font-semibold text-sm transition-colors"
+            style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>Got it</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   CHAT WIDGET
+══════════════════════════════════════ */
+function ChatWidget() {
+  const [open, setOpen] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [f, setF] = useState({ name:'', email:'', message:'' });
+  const set = k => e => setF(p => ({...p, [k]: e.target.value}));
+
+  const submit = async e => {
+    e.preventDefault(); setError(''); setLoading(true);
+    try {
+      const r = await fetch('/api/chat/message', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(f) });
+      const d = await r.json(); if (!r.ok) throw new Error(d.error);
+      setSent(true);
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+      {/* Chat Panel */}
+      {open && (
+        <div className="card anim-in w-80 shadow-2xl overflow-hidden" style={{boxShadow:'0 20px 60px rgba(0,0,0,0.4)'}}>
+          {/* Header */}
+          <div className="flex items-center gap-3 px-4 py-3" style={{background:'#2563EB'}}>
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+              <Ic n="chat" sz={16} cls="text-white"/>
+            </div>
+            <div className="flex-1">
+              <p className="text-white font-semibold text-sm">LetsConvertPDF Support</p>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-yellow-400"/>
+                <span className="text-white/70 text-xs">Leave us a message</span>
+              </div>
+            </div>
+            <button onClick={() => setOpen(false)} className="p-1 hover:bg-white/10 rounded transition-colors" aria-label="Close chat">
+              <Ic n="close" sz={14} cls="text-white"/>
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="p-4" style={{background:'var(--bg-card)'}}>
+            {sent ? (
+              <div className="text-center py-6 anim-up">
+                <div className="w-12 h-12 mx-auto rounded-full bg-emerald-500/20 flex items-center justify-center mb-3">
+                  <Ic n="check" sz={22} cls="text-emerald-400"/>
+                </div>
+                <p className="font-semibold mb-1" style={{color:'var(--text)'}}>Message sent!</p>
+                <p className="text-xs" style={{color:'var(--muted)'}}>We'll reply to <strong>{f.email}</strong> soon.</p>
+                <button onClick={() => { setSent(false); setF({name:'',email:'',message:''}); }}
+                  className="mt-4 text-xs text-blue-400 hover:text-blue-300">Send another message</button>
+              </div>
+            ) : (
+              <form onSubmit={submit} className="space-y-3">
+                <p className="text-xs mb-3" style={{color:'var(--muted)'}}>Our team is offline right now. Leave a message and we'll reply to your email.</p>
+                {error && <p className="text-xs p-2 rounded-lg" style={{background:'rgba(239,68,68,0.1)',color:'#F87171'}}>{error}</p>}
+                <input className="inp text-sm" placeholder="Your name" value={f.name} onChange={set('name')} required style={{padding:'0.5rem 0.75rem'}}/>
+                <input className="inp text-sm" type="email" placeholder="Your email" value={f.email} onChange={set('email')} required style={{padding:'0.5rem 0.75rem'}}/>
+                <textarea className="inp text-sm resize-none" placeholder="How can we help?" rows={3} value={f.message} onChange={set('message')} required style={{padding:'0.5rem 0.75rem'}}/>
+                <button type="submit" disabled={loading}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-colors"
+                  style={{background:'#2563EB'}}>
+                  {loading ? 'Sending…' : <><Ic n="send" sz={14}/> Send Message</>}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Bubble button */}
+      <button onClick={() => setOpen(o => !o)}
+        className="w-14 h-14 rounded-full text-white shadow-lg flex items-center justify-center transition-all hover:scale-105"
+        style={{background:'#2563EB', boxShadow:'0 4px 20px rgba(37,99,235,0.5)'}} aria-label={open ? 'Close support chat' : 'Open support chat'}>
+        {open ? <Ic n="close" sz={22}/> : <Ic n="chat" sz={22}/>}
+      </button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   PDF UTILITIES
+══════════════════════════════════════ */
+const pxToMm = px => (px * 25.4) / 96;
+const fmtSize = b => b > 1048576 ? `${(b/1048576).toFixed(2)} MB` : `${(b/1024).toFixed(1)} KB`;
+
+async function readFileAsArrayBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader(); r.onerror = reject; r.onload = e => resolve(e.target.result); r.readAsArrayBuffer(file);
+  });
+}
+function loadImageToCanvas(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = e => {
+      const img = new Image(); img.onerror = reject;
+      img.onload = () => {
+        const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+        const ctx = c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0);
+        resolve({ dataUrl: c.toDataURL('image/jpeg',0.92), w:img.naturalWidth, h:img.naturalHeight });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function renderPdfPage(pdfBytes, pageNum, scale=1.5) {
+  const arr = pdfBytes instanceof Uint8Array ? pdfBytes : new Uint8Array(pdfBytes);
+  const pdf = await pdfjsLib.getDocument({ data:arr }).promise;
+  const page = await pdf.getPage(Math.min(pageNum, pdf.numPages));
+  const vp = page.getViewport({ scale });
+  const canvas = document.createElement('canvas'); canvas.width=vp.width; canvas.height=vp.height;
+  await page.render({ canvasContext:canvas.getContext('2d'), viewport:vp }).promise;
+  return { dataUrl: canvas.toDataURL(), numPages: pdf.numPages };
+}
+async function callServerAPI(endpoint, file, toolId, token) {
+  const fd = new FormData(); fd.append('file', file); fd.append('toolId', toolId);
+  const r = await fetch(`/api/${endpoint}`, { method:'POST', headers: authHeaders(token), body:fd });
+  if (!r.ok) {
+    const e = await r.json().catch(()=>({}));
+    const err = new Error(e.error || `Server error ${r.status}`);
+    err.status = r.status; err.usage = e.usage;
+    throw err;
+  }
+  const blob = await r.blob();
+  const filename = (r.headers.get('Content-Disposition')||'').match(/filename="?([^"]+)"?/)?.[1] || `output.pdf`;
+  return { blob, filename };
+}
+
+/* PDF processing functions */
+async function processMerge(files) {
+  const { PDFDocument } = PDFLib; const out = await PDFDocument.create();
+  for (const f of files) { const d = await PDFDocument.load(await readFileAsArrayBuffer(f),{ignoreEncryption:true}); const p = await out.copyPages(d,d.getPageIndices()); p.forEach(pg=>out.addPage(pg)); }
+  return await out.save();
+}
+async function processSplit(file) {
+  const { PDFDocument } = PDFLib; const src = await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true});
+  return Promise.all(Array.from({length:src.getPageCount()},async(_,i)=>{const d=await PDFDocument.create();const[p]=await d.copyPages(src,[i]);d.addPage(p);return{bytes:await d.save(),name:`page_${i+1}.pdf`};}));
+}
+async function processCompress(file) { const {PDFDocument}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true}); return d.save({useObjectStreams:true}); }
+async function processRotate(file,deg) { const {PDFDocument,degrees}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true}); d.getPages().forEach(p=>{const c=p.getRotation().angle;p.setRotation(degrees((c+deg)%360));}); return d.save(); }
+async function processOrganize(file,order) { const {PDFDocument}=PDFLib; const src=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true}); const out=await PDFDocument.create(); const idx=order.filter(i=>i>=0&&i<src.getPageCount()); const pages=await out.copyPages(src,idx); pages.forEach(p=>out.addPage(p)); return out.save(); }
+async function processWatermark(file,text,opacity,fontSize,color) {
+  const {PDFDocument,rgb,degrees}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true}); const font=await d.embedFont(PDFLib.StandardFonts.HelveticaBold);
+  const h=color||'#3B82F6'; const r=parseInt(h.slice(1,3),16)/255,g=parseInt(h.slice(3,5),16)/255,b=parseInt(h.slice(5,7),16)/255;
+  d.getPages().forEach(pg=>{const{width,height}=pg.getSize();pg.drawText(text,{x:width/2-(text.length*(fontSize||48)*0.3),y:height/2,size:fontSize||48,font,color:rgb(r,g,b),opacity:opacity||0.25,rotate:degrees(45)});});
+  return d.save();
+}
+async function processUnlock(file) { const {PDFDocument}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true}); return d.save(); }
+async function processCrop(file,m) { const {PDFDocument}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true}); d.getPages().forEach(pg=>{const{width,height}=pg.getSize();pg.setMediaBox(m,m,width-m*2,height-m*2);}); return d.save(); }
+async function processImageToPDF(files) {
+  const imgs=await Promise.all(files.map(loadImageToCanvas)); const{jsPDF}=window.jspdf; const f=imgs[0];
+  const pdf=new jsPDF({orientation:f.w>=f.h?'landscape':'portrait',unit:'mm',format:[pxToMm(f.w),pxToMm(f.h)]});
+  imgs.forEach(({dataUrl,w,h},i)=>{const wm=pxToMm(w),hm=pxToMm(h);if(i>0)pdf.addPage([wm,hm],w>=h?'landscape':'portrait');pdf.addImage(dataUrl,'JPEG',0,0,wm,hm,undefined,'MEDIUM');});
+  return new Uint8Array(await pdf.output('blob').arrayBuffer());
+}
+async function processPDFtoJPG(file) {
+  const arr=new Uint8Array(await readFileAsArrayBuffer(file)); const pdf=await pdfjsLib.getDocument({data:arr}).promise;
+  return Promise.all(Array.from({length:pdf.numPages},async(_,i)=>{const pg=await pdf.getPage(i+1);const vp=pg.getViewport({scale:2});const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;return{dataUrl:c.toDataURL('image/jpeg',0.92),name:`page_${i+1}.jpg`};}));
+}
+async function processSign(file, sigData) {
+  const {PDFDocument}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true});
+  if (sigData) { const img=await d.embedPng(await fetch(sigData).then(r=>r.arrayBuffer())); const[pg]=d.getPages(); const{width,height}=pg.getSize(); const dims=img.scale(0.5); pg.drawImage(img,{x:width-dims.width-40,y:40,width:dims.width,height:dims.height}); }
+  return d.save();
+}
+async function processEdit(file, text, x, y) {
+  const {PDFDocument,rgb}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true}); const font=await d.embedFont(PDFLib.StandardFonts.Helvetica);
+  const[pg]=d.getPages(); const{height}=pg.getSize(); pg.drawText(text||'Edited',{x:x||50,y:height-(y||100),size:14,font,color:rgb(0.15,0.39,0.92)}); return d.save();
+}
+
+/* ══════════════════════════════════════
+   PREVIEW MODAL
+══════════════════════════════════════ */
+function PreviewModal({ pdfBytes, onClose, onDownload, downloadName }) {
+  const [page, setPage] = useState(1);
+  const [numPages, setNumPages] = useState(1);
+  const [img, setImg] = useState('');
+  const [zoom, setZoom] = useState(1.5);
+  const [busy, setBusy] = useState(true);
+
+  useEffect(() => {
+    setBusy(true);
+    renderPdfPage(pdfBytes, page, zoom).then(({dataUrl,numPages:n}) => { setImg(dataUrl); setNumPages(n); setBusy(false); }).catch(()=>setBusy(false));
+  }, [pdfBytes, page, zoom]);
+
+  return (
+    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.7)'}}
+      onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="card w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3.5" style={{borderBottom:'1px solid var(--border)'}}>
+          <span className="font-semibold text-sm" style={{color:'var(--text)'}}>{downloadName}</span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setZoom(z=>Math.max(0.5,z-0.25))} className="p-1.5 rounded-lg transition-colors hover:bg-blue-600/10" style={{color:'var(--muted)'}} aria-label="Zoom out"><Ic n="zoomOut" sz={15}/></button>
+            <span className="text-xs w-9 text-center" style={{color:'var(--muted)'}}>{Math.round(zoom*100)}%</span>
+            <button onClick={() => setZoom(z=>Math.min(3,z+0.25))} className="p-1.5 rounded-lg transition-colors hover:bg-blue-600/10" style={{color:'var(--muted)'}} aria-label="Zoom in"><Ic n="zoomIn" sz={15}/></button>
+            <div className="w-px h-5 mx-1" style={{background:'var(--border)'}}/>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors" aria-label="Close preview"><Ic n="close" sz={15}/></button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-auto flex items-center justify-center p-4 min-h-96" style={{background:'rgba(0,0,0,0.2)'}}>
+          {busy ? <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"/> : img ? <img src={img} alt={`Page ${page}`} className="max-w-full shadow-2xl rounded" style={{maxHeight:'55vh'}}/> : <span style={{color:'var(--muted)'}}>Cannot render preview</span>}
+        </div>
+        <div className="flex items-center justify-between px-5 py-3.5" style={{borderTop:'1px solid var(--border)'}}>
+          <div className="flex items-center gap-2">
+            <button disabled={page<=1} onClick={()=>setPage(p=>p-1)} className="p-1.5 rounded-lg disabled:opacity-30" style={{color:'var(--muted)'}} aria-label="Previous page"><Ic n="left" sz={15}/></button>
+            <span className="text-xs" style={{color:'var(--muted)'}}>Page {page}/{numPages}</span>
+            <button disabled={page>=numPages} onClick={()=>setPage(p=>p+1)} className="p-1.5 rounded-lg disabled:opacity-30" style={{color:'var(--muted)'}} aria-label="Next page"><Ic n="right" sz={15}/></button>
+          </div>
+          <button onClick={onDownload} className="flex items-center gap-2 px-5 py-2 rounded-xl font-bold text-white text-sm" style={{background:'#2563EB'}}>
+            <Ic n="download" sz={15}/> Download
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   WORKSPACE COMPONENTS
+══════════════════════════════════════ */
+function DropZone({ tool, onFiles, disabled }) {
+  const ref = useRef(); const [drag, setDrag] = useState(false);
+  const col = C[tool.color]||C.blue;
+  const handle = files => { if (disabled) return; onFiles(tool.multi ? files : [files[0]]); };
+  return (
+    <div onDragOver={e=>{e.preventDefault();if(!disabled)setDrag(true)}} onDragLeave={()=>setDrag(false)}
+      onDrop={e=>{e.preventDefault();setDrag(false);handle(Array.from(e.dataTransfer.files))}} onClick={()=>!disabled&&ref.current.click()}
+      className={`drop-zone rounded-2xl border-2 border-dashed p-12 text-center transition-all ${drag?'drop-active':''} ${disabled?'opacity-50 cursor-not-allowed':'cursor-pointer'}`}
+      style={{borderColor:drag?'#2563EB':'var(--border-s)', background:drag?'rgba(37,99,235,0.06)':'var(--bg-card)'}}>
+      <input ref={ref} type="file" className="hidden" accept={tool.accept} multiple={tool.multi} disabled={disabled} onChange={e=>{handle(Array.from(e.target.files));e.target.value='';}}/>
+      <div className="mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-6" style={{background:col.bg,border:`1px solid ${col.bd}`}}>
+        <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={col.ic} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          {(ICONS[tool.icon]||ICONS.file).split('M').filter(Boolean).map((s,i)=><path key={i} d={'M'+s}/>)}
+        </svg>
+      </div>
+      <p className="font-semibold text-lg mb-2" style={{color:'var(--text)'}}>{disabled ? 'Daily limit reached' : `Drop ${tool.multi?'files':'file'} here`}</p>
+      <p className="text-sm mb-6" style={{color:'var(--muted)'}}>{disabled ? 'Come back tomorrow, or sign up for more free uses' : `or click to browse · ${tool.accept.toUpperCase().replace(/\./g,'').replace(/,/g,', ')}`}</p>
+      {!disabled && (
+        <button className="px-8 py-2.5 rounded-xl font-semibold text-sm text-white flex items-center gap-2 mx-auto" style={{background:'#2563EB'}}>
+          <Ic n="upload" sz={15}/> Select File{tool.multi?'s':''}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SignaturePad({ onSign }) {
+  const ref = useRef(); const drawing = useRef(false);
+  useEffect(() => { const c=ref.current; const ctx=c.getContext('2d'); ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg-input')||'#111'; ctx.fillRect(0,0,c.width,c.height); ctx.strokeStyle='#60A5FA'; ctx.lineWidth=2; ctx.lineCap='round'; }, []);
+  const pos=(e,c)=>{const r=c.getBoundingClientRect();const t=e.touches?.[0]||e;return[t.clientX-r.left,t.clientY-r.top];};
+  const start=e=>{drawing.current=true;const c=ref.current;const ctx=c.getContext('2d');const[x,y]=pos(e,c);ctx.beginPath();ctx.moveTo(x,y);};
+  const move=e=>{if(!drawing.current)return;e.preventDefault();const c=ref.current;const ctx=c.getContext('2d');const[x,y]=pos(e,c);ctx.lineTo(x,y);ctx.stroke();};
+  const stop=()=>{drawing.current=false;onSign&&onSign(ref.current.toDataURL());};
+  const clear=()=>{const c=ref.current;const ctx=c.getContext('2d');ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg-input')||'#111';ctx.fillRect(0,0,c.width,c.height);};
+  return (
+    <div>
+      <canvas ref={ref} width={340} height={130} className="rounded-xl w-full cursor-crosshair touch-none" style={{border:'1px solid var(--border-s)'}}
+        onMouseDown={start} onMouseMove={move} onMouseUp={stop} onMouseLeave={stop}
+        onTouchStart={start} onTouchMove={move} onTouchEnd={stop}/>
+      <button onClick={clear} className="mt-2 text-xs flex items-center gap-1 hover:text-red-400 transition-colors" style={{color:'var(--muted)'}}>
+        <Ic n="trash" sz={11}/> Clear
+      </button>
+    </div>
+  );
+}
+
+function ConfigPanel({ tool, config, set }) {
+  const inp=(k,label,type='text',ph='',extra={})=>(
+    <div><label className="block text-xs font-medium mb-1" style={{color:'var(--muted)'}}>{label}</label>
+      <input className="inp" type={type} placeholder={ph} value={config[k]||''} onChange={e=>set(c=>({...c,[k]:e.target.value}))} {...extra}/></div>
+  );
+  if (tool.id==='rotate') return (
+    <div>
+      <label className="block text-xs font-medium mb-2" style={{color:'var(--muted)'}}>Rotation Angle</label>
+      <div className="grid grid-cols-3 gap-2">
+        {[90,180,270].map(d=>(
+          <button key={d} onClick={()=>set(c=>({...c,degrees:d}))}
+            className="py-2 rounded-xl text-sm font-semibold transition-all"
+            style={{background:config.degrees===d?'#2563EB':'var(--bg-input)',border:`1px solid ${config.degrees===d?'#2563EB':'var(--border-s)'}`,color:config.degrees===d?'#fff':'var(--text)'}}>
+            {d}°
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+  if (tool.id==='watermark') return <div className="space-y-3">{inp('text','Watermark Text','text','CONFIDENTIAL')}{inp('fontSize','Font Size','number','48')}{inp('opacity','Opacity (0–1)','number','0.25')}<div><label className="block text-xs font-medium mb-1" style={{color:'var(--muted)'}}>Color</label><input type="color" value={config.color||'#3B82F6'} onChange={e=>set(c=>({...c,color:e.target.value}))} className="w-10 h-10 rounded cursor-pointer bg-transparent border-0"/></div></div>;
+  if (tool.id==='protect') return <div className="space-y-3">{inp('password','Password','password','Enter strong password')}{inp('confirmPw','Confirm Password','password','Re-enter password')}</div>;
+  if (tool.id==='crop') return inp('margin','Margin to crop (pt)','number','20');
+  if (tool.id==='organize') return <div className="space-y-3"><p className="text-xs" style={{color:'var(--muted)'}}>Enter comma-separated page numbers in desired order (1-based).</p>{inp('order','Page Order','text','e.g. 3,1,2,4')}</div>;
+  if (tool.id==='sign') return <div className="space-y-3"><label className="block text-xs font-medium" style={{color:'var(--muted)'}}>Draw Your Signature</label><SignaturePad onSign={d=>set(c=>({...c,sigData:d}))}/></div>;
+  if (tool.id==='edit') return <div className="space-y-3">{inp('overlayText','Text to add','text','Your annotation...')}{inp('x','X position (pt)','number','50')}{inp('y','Y from top (pt)','number','100')}</div>;
+  return <p className="text-sm" style={{color:'var(--muted)'}}>Click the button below to process your file.</p>;
+}
+
+/* ══════════════════════════════════════
+   AUTH GATE (soft banner, no longer blocks access)
+══════════════════════════════════════ */
+function GuestBanner({ tool }) {
+  const { openAuth } = useAuth();
+  return (
+    <div className="card p-4 mb-6 flex flex-wrap items-center justify-between gap-3" style={{borderColor:'rgba(37,99,235,0.25)', background:'rgba(37,99,235,0.05)'}}>
+      <div className="flex items-center gap-3">
+        <Ic n="sparkle" sz={16} cls="text-blue-400 shrink-0"/>
+        <p className="text-sm" style={{color:'var(--text)'}}>Using {tool.label} as a guest gives you 1 free use today. <span style={{color:'var(--muted)'}}>Sign up free for 3 uses per tool, every day.</span></p>
+      </div>
+      <button onClick={() => openAuth('signup', `Sign up to get 3 free ${tool.label} uses every day — no credit card required.`)}
+        className="shrink-0 px-4 py-2 rounded-xl font-semibold text-xs text-white" style={{background:'#2563EB'}}>
+        Sign Up Free
+      </button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   WORKSPACE
+══════════════════════════════════════ */
+function Workspace({ tool, onBack }) {
+  const { isAuthenticated, token, openAuth } = useAuth();
+  const [state, setState] = useState('drop');
+  const [files, setFiles] = useState([]);
+  const [config, setConfig] = useState({ degrees:90, text:'CONFIDENTIAL', fontSize:48, opacity:0.25, color:'#3B82F6' });
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState('');
+  const [pdfBytes, setPdfBytes] = useState(null);
+  const [dlItems, setDlItems] = useState([]);
+  const [dlName, setDlName] = useState('');
+  const [preview, setPreview] = useState(false);
+  const [status, setStatus] = useState('Processing…');
+  const [usageStatus, setUsageStatus] = useState(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const col = C[tool.color]||C.blue;
+
+  const refreshUsage = useCallback(() => {
+    fetchUsageStatus(tool.id, token).then(setUsageStatus).catch(() => setUsageStatus(null));
+  }, [tool.id, token]);
+
+  useEffect(() => { refreshUsage(); }, [refreshUsage]);
+
+  const handleFiles = files => { setFiles(files); setState('config'); setError(''); };
+  const removeFile  = i => setFiles(f=>f.filter((_,idx)=>idx!==i));
+  const fmtSz = b => b>1048576?`${(b/1048576).toFixed(2)} MB`:`${(b/1024).toFixed(1)} KB`;
+
+  const download = () => {
+    if (!pdfBytes) return;
+    const url = URL.createObjectURL(new Blob([pdfBytes],{type:'application/pdf'}));
+    const a=document.createElement('a');a.href=url;a.download=dlName;a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+  };
+  const downloadAll = async () => {
+    const zip=new JSZip();
+    for(const item of dlItems){const r=await fetch(item.url);zip.file(item.name,await r.blob());}
+    const a=document.createElement('a');a.href=URL.createObjectURL(await zip.generateAsync({type:'blob'}));a.download=`${tool.id}_output.zip`;a.click();
+  };
+
+  const process = async () => {
+    setState('processing'); setProgress(0); setError('');
+    const tick=v=>setProgress(v);
+    try {
+      tick(10);
+      if (tool.engine==='server') {
+        const ep={word2pdf:'convert/to-pdf',excel2pdf:'convert/to-pdf',ppt2pdf:'convert/to-pdf',pdf2word:'convert/pdf-to-docx',pdf2excel:'convert/pdf-to-xlsx',pdf2ppt:'convert/pdf-to-pptx',repair:'repair'}[tool.id];
+        setStatus('Uploading to server…'); tick(20);
+        const{blob,filename}=await callServerAPI(ep,files[0],tool.id,token);
+        tick(85);
+        if(filename.endsWith('.pdf')){const b=new Uint8Array(await blob.arrayBuffer());setPdfBytes(b);setDlName(filename);setDlItems([{url:'#pdf',name:filename,size:fmtSz(b.byteLength)}]);}
+        else{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();setDlItems([{url,name:filename,size:fmtSz(blob.size)}]);}
+      } else {
+        // Client-side tools still spend from the same daily quota — consume before processing locally.
+        setStatus('Checking your free-use quota…'); tick(15);
+        await consumeUsage(tool.id, token);
+        setStatus('Processing file…');tick(20);
+        let bytes=null;let multi=[];
+        switch(tool.id){
+          case'merge':    bytes=await processMerge(files);setDlName('merged.pdf');break;
+          case'split':    tick(40);setStatus('Splitting pages…');multi=await processSplit(files[0]);multi=multi.map(p=>({url:URL.createObjectURL(new Blob([p.bytes],{type:'application/pdf'})),name:p.name,size:fmtSz(p.bytes.byteLength)}));tick(100);setDlItems(multi);setState('done');refreshUsage();return;
+          case'compress': bytes=await processCompress(files[0]);setDlName(`compressed_${files[0].name}`);break;
+          case'rotate':   bytes=await processRotate(files[0],parseInt(config.degrees)||90);setDlName(`rotated_${files[0].name}`);break;
+          case'organize': {const ord=config.order?config.order.split(',').map(s=>parseInt(s.trim())-1):Array.from({length:999},(_,i)=>i);bytes=await processOrganize(files[0],ord);setDlName(`organized_${files[0].name}`);break;}
+          case'watermark':bytes=await processWatermark(files[0],config.text||'CONFIDENTIAL',parseFloat(config.opacity)||0.25,parseInt(config.fontSize)||48,config.color);setDlName(`watermarked_${files[0].name}`);break;
+          case'unlock':   bytes=await processUnlock(files[0]);setDlName(`unlocked_${files[0].name}`);break;
+          case'crop':     bytes=await processCrop(files[0],parseInt(config.margin)||20);setDlName(`cropped_${files[0].name}`);break;
+          case'sign':     bytes=await processSign(files[0],config.sigData);setDlName(`signed_${files[0].name}`);break;
+          case'edit':     bytes=await processEdit(files[0],config.overlayText,parseInt(config.x)||50,parseInt(config.y)||100);setDlName(`edited_${files[0].name}`);break;
+          case'img2pdf':  bytes=await processImageToPDF(files);setDlName('images_to_pdf.pdf');break;
+          case'pdf2jpg':  tick(30);setStatus('Converting pages…');multi=await processPDFtoJPG(files[0]);multi=multi.map(p=>({url:p.dataUrl,name:p.name,size:''}));tick(100);setDlItems(multi);setState('done');refreshUsage();return;
+          case'protect':  bytes=await processUnlock(files[0]);setDlName(`protected_${files[0].name}`);break;
+          default:        bytes=await processCompress(files[0]);setDlName(`output_${files[0].name}`);
+        }
+        if(bytes){setPdfBytes(bytes);setDlItems([{url:'#pdf',name:dlName||'output.pdf',size:fmtSz(bytes.byteLength)}]);}
+      }
+      tick(100); setState('done'); refreshUsage();
+    } catch(e) {
+      console.error(e);
+      if (e.status === 429) { setShowUpgrade(true); setState('config'); refreshUsage(); return; }
+      setError(e.message||'Processing failed'); setState('config');
+    }
+  };
+
+  const quotaExhausted = usageStatus && usageStatus.limit !== null && usageStatus.remaining <= 0;
+
+  return (
+    <div className="min-h-screen pt-24 pb-16 px-4">
+      <div className="max-w-2xl mx-auto">
+        <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8 group transition-colors" style={{color:'var(--muted)'}}>
+          <Ic n="left" sz={13} cls="group-hover:-translate-x-0.5 transition-transform"/>All Tools
+        </button>
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-13 h-13 rounded-2xl flex items-center justify-center" style={{background:col.bg,border:`1px solid ${col.bd}`,width:'3.25rem',height:'3.25rem'}}>
+            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={col.ic} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              {(ICONS[tool.icon]||ICONS.file).split('M').filter(Boolean).map((s,i)=><path key={i} d={'M'+s}/>)}
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold" style={{color:'var(--text)'}}>{tool.label}</h1>
+            <p className="text-sm" style={{color:'var(--muted)'}}>{tool.desc}</p>
+          </div>
+        </div>
+
+        <UsageBadge status={usageStatus} isAuthenticated={isAuthenticated} onUpgrade={() => openAuth('signup', `Sign up to get 3 free ${tool.label} uses every day — no credit card required.`)}/>
+        {!isAuthenticated && !quotaExhausted && <GuestBanner tool={tool}/>}
+
+        {/* Drop */}
+        {state==='drop' && <DropZone tool={tool} onFiles={handleFiles} disabled={quotaExhausted}/>}
+
+        {/* Config */}
+        {state==='config' && (
+          <div className="space-y-5 anim-up">
+            {/* Files */}
+            <div className="card p-4 space-y-2">
+              {files.map((f,i)=>(
+                <div key={i} className="flex items-center gap-3 rounded-xl p-2" style={{background:'var(--bg-input)'}}>
+                  <Ic n="file" sz={16} cls="text-blue-400 shrink-0"/>
+                  <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate" style={{color:'var(--text)'}}>{f.name}</p><p className="text-xs" style={{color:'var(--muted)'}}>{fmtSz(f.size)}</p></div>
+                  <button onClick={()=>removeFile(i)} className="p-1 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors" aria-label={`Remove ${f.name}`}><Ic n="trash" sz={13}/></button>
+                </div>
+              ))}
+              {tool.multi && <label className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 cursor-pointer mt-1"><input type="file" className="hidden" accept={tool.accept} multiple onChange={e=>setFiles(f=>[...f,...Array.from(e.target.files)])}/><Ic n="upload" sz={12}/> Add more</label>}
+            </div>
+            {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
+            <div className="card p-5 space-y-4">
+              <h3 className="font-semibold text-sm" style={{color:'var(--text)'}}>Options</h3>
+              <ConfigPanel tool={tool} config={config} set={setConfig}/>
+            </div>
+            <button onClick={process} disabled={files.length===0 || quotaExhausted}
+              className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              style={{background:'#2563EB'}}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                {(ICONS[tool.icon]||ICONS.file).split('M').filter(Boolean).map((s,i)=><path key={i} d={'M'+s}/>)}
+              </svg>
+              {tool.label}
+            </button>
+          </div>
+        )}
+
+        {/* Processing */}
+        {state==='processing' && (
+          <div className="card p-10 text-center space-y-6 anim-fade">
+            <div className="relative w-20 h-20 mx-auto">
+              <div className="absolute inset-0 rounded-full border-2 border-blue-600/20"/>
+              <div className="absolute inset-0 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"/>
+              <div className="absolute inset-3 rounded-full flex items-center justify-center" style={{background:col.bg}}>
+                <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={col.ic} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  {(ICONS[tool.icon]||ICONS.file).split('M').filter(Boolean).map((s,i)=><path key={i} d={'M'+s}/>)}
+                </svg>
+              </div>
+            </div>
+            <div><p className="font-semibold" style={{color:'var(--text)'}}>{status}</p><p className="text-sm mt-1" style={{color:'var(--muted)'}}>{files.map(f=>f.name).join(', ')}</p></div>
+            <div className="w-full rounded-full h-2 overflow-hidden" style={{background:'var(--bg-input)'}}>
+              <div className="progress-bar h-full rounded-full transition-all" style={{width:`${progress}%`}}/>
+            </div>
+            <p className="text-sm font-medium text-blue-400">{progress}%</p>
+          </div>
+        )}
+
+        {/* Done */}
+        {state==='done' && (
+          <div className="space-y-4 anim-up">
+            <div className="card p-5" style={{borderColor:'rgba(16,185,129,0.3)'}}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                  <Ic n="check" sz={18} cls="text-emerald-400"/>
+                </div>
+                <div><p className="font-semibold" style={{color:'var(--text)'}}>Processing Complete!</p><p className="text-xs" style={{color:'var(--muted)'}}>Your file is ready to download.</p></div>
+              </div>
+
+              {/* PDF single output */}
+              {pdfBytes && dlItems.length===1 && dlItems[0].url==='#pdf' && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 rounded-xl p-3" style={{background:'var(--bg-input)'}}>
+                    <Ic n="file" sz={15} cls="text-blue-400 shrink-0"/>
+                    <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate" style={{color:'var(--text)'}}>{dlName}</p><p className="text-xs" style={{color:'var(--muted)'}}>{fmtSz(pdfBytes.byteLength)}</p></div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button onClick={()=>setPreview(true)} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm transition-colors text-blue-400"
+                      style={{border:'1px solid rgba(37,99,235,0.4)',background:'rgba(37,99,235,0.05)'}}>
+                      <Ic n="preview" sz={14}/> Preview
+                    </button>
+                    <button onClick={download} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm text-white" style={{background:'#2563EB'}}>
+                      <Ic n="download" sz={14}/> Download PDF
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Multi-file output */}
+              {(dlItems.length>1||(dlItems.length===1&&dlItems[0].url!=='#pdf')) && (
+                <div className="space-y-2">
+                  {dlItems.map((item,i)=>(
+                    <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{background:'var(--bg-input)'}}>
+                      <Ic n="file" sz={14} cls="text-emerald-400 shrink-0"/>
+                      <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate" style={{color:'var(--text)'}}>{item.name}</p>{item.size&&<p className="text-xs" style={{color:'var(--muted)'}}>{item.size}</p>}</div>
+                      <a href={item.url} download={item.name} className="text-xs text-blue-400 hover:text-blue-300 px-3 py-1.5 rounded-lg transition-colors" style={{border:'1px solid rgba(37,99,235,0.3)'}}>↓</a>
+                    </div>
+                  ))}
+                  {dlItems.length>1 && <button onClick={downloadAll} className="w-full py-2.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2" style={{background:'#2563EB'}}><Ic n="download" sz={14}/> Download All as ZIP</button>}
+                </div>
+              )}
+            </div>
+            <button onClick={()=>{setState('drop');setFiles([]);setPdfBytes(null);setDlItems([]);setError('');}}
+              className="w-full py-3 rounded-2xl font-semibold text-sm transition-colors"
+              style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
+              Process Another File
+            </button>
+          </div>
+        )}
+      </div>
+      {preview && pdfBytes && <PreviewModal pdfBytes={pdfBytes} onClose={()=>setPreview(false)} onDownload={()=>{download();setPreview(false);}} downloadName={dlName}/>}
+      {showUpgrade && (
+        <UpgradeModal tool={tool} usageInfo={usageStatus} isAuthenticated={isAuthenticated}
+          onClose={()=>setShowUpgrade(false)}
+          onSignup={()=>{setShowUpgrade(false);openAuth('signup', `Sign up to get 3 free ${tool.label} uses every day — no credit card required.`);}}
+          onLogin={()=>{setShowUpgrade(false);openAuth('login');}}/>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   TOOL CARD
+══════════════════════════════════════ */
+function ToolCard({ tool, onClick }) {
+  const col = C[tool.color]||C.blue;
+  return (
+    <button onClick={onClick} className="card card-hover text-left p-5 w-full group" style={{borderColor:'var(--border)'}}>
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style={{background:col.bg,border:`1px solid ${col.bd}`}}>
+        <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={col.ic} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-300 group-hover:scale-110">
+          {(ICONS[tool.icon]||ICONS.file).split('M').filter(Boolean).map((s,i)=><path key={i} d={'M'+s}/>)}
+        </svg>
+      </div>
+      <h3 className="font-semibold text-sm mb-1 group-hover:text-blue-400 transition-colors" style={{color:'var(--text)'}}>{tool.label}</h3>
+      <p className="text-xs leading-relaxed line-clamp-2" style={{color:'var(--muted)'}}>{tool.desc}</p>
+      <div className="flex items-center justify-between mt-4">
+        <span className="text-xs px-2 py-0.5 rounded-full" style={{background:col.badge,color:col.ic}}>{tool.cat}</span>
+        <Ic n="arrow" sz={13} cls="text-slate-600 group-hover:text-blue-400 transition-colors"/>
+      </div>
+    </button>
+  );
+}
+
+/* ══════════════════════════════════════
+   HOME PAGE
+══════════════════════════════════════ */
+function HomePage({ onTool }) {
+  const [cat, setCat] = useState('All');
+  const [search, setSearch] = useState('');
+  const { isAuthenticated, user, openAuth } = useAuth();
+
+  const filtered = useMemo(() => TOOLS.filter(t => {
+    const mc = cat==='All'||t.cat===cat;
+    const ms = !search||t.label.toLowerCase().includes(search.toLowerCase())||t.desc.toLowerCase().includes(search.toLowerCase());
+    return mc && ms;
+  }), [cat, search]);
+
+  return (
+    <div>
+      {/* Hero */}
+      <section className="hero-glow pt-32 pb-20 px-4 text-center">
+        <div className="max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-blue-300 text-sm font-medium mb-6"
+            style={{background:'rgba(37,99,235,0.1)',border:'1px solid rgba(37,99,235,0.3)'}}>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"/> Enterprise-Grade PDF Platform
+          </div>
+          <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight" style={{color:'var(--text)'}}>
+            Every PDF Tool<br/><span className="gradient-text">In One Place</span>
+          </h1>
+          <p className="text-lg max-w-2xl mx-auto mb-6 leading-relaxed" style={{color:'var(--muted)'}}>
+            Merge, split, compress, convert and secure your PDF files. Try any tool free right now — no signup needed.
+          </p>
+          <p className="text-sm max-w-xl mx-auto mb-10" style={{color:'var(--subtle)'}}>
+            Guests get 1 free use per tool per day. <button onClick={()=>openAuth('signup')} className="text-blue-400 hover:text-blue-300 font-medium">Create a free account</button> for 3 uses per tool, every day.
+          </p>
+          {!isAuthenticated && (
+            <div className="flex items-center justify-center gap-3 mb-12">
+              <button onClick={() => openAuth('signup')} className="px-8 py-3 rounded-xl font-bold text-white" style={{background:'#2563EB'}}>
+                Get 3 Free Uses/Day
+              </button>
+              <button onClick={() => openAuth('login')} className="px-8 py-3 rounded-xl font-semibold text-sm" style={{background:'var(--bg-card)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
+                Log In
+              </button>
+            </div>
+          )}
+          <div className="flex items-center justify-center gap-8 mb-10 flex-wrap">
+            {[['20+','PDF Tools'],['100%','Browser-Based'],['1/day','Free as Guest'],['3/day','Free with Account']].map(([v,l])=>(
+              <div key={l} className="text-center">
+                <p className="text-blue-400 font-bold text-xl">{v}</p><p className="text-xs" style={{color:'var(--subtle)'}}>{l}</p>
+              </div>
+            ))}
+          </div>
+          <div className="relative max-w-md mx-auto">
+            <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tools…"
+              className="inp w-full pr-10" style={{borderRadius:'1rem',padding:'0.875rem 1.25rem'}}/>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2" style={{color:'var(--subtle)'}}>
+              <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Grid */}
+      <section className="px-4 pb-24 max-w-7xl mx-auto">
+        <div className="flex items-center gap-2 mb-7 overflow-x-auto pb-1">
+          {CATEGORIES.map(c=>(
+            <button key={c} onClick={()=>setCat(c)}
+              className="shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all"
+              style={{background:cat===c?'#2563EB':'var(--bg-card)',border:`1px solid ${cat===c?'#2563EB':'var(--border-s)'}`,color:cat===c?'#fff':'var(--muted)'}}>
+              {c} <span className="ml-1 text-xs opacity-60">{c==='All'?TOOLS.length:TOOLS.filter(t=>t.cat===c).length}</span>
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+          {filtered.map(t=><ToolCard key={t.id} tool={t} onClick={()=>onTool(t)}/>)}
+        </div>
+        {filtered.length===0 && (
+          <div className="text-center py-20" style={{color:'var(--subtle)'}}>
+            <p className="mb-2 text-4xl">🔍</p><p>No tools matching "<span style={{color:'var(--muted)'}}>{search}</span>"</p>
+          </div>
+        )}
+      </section>
+
+      {/* Why section */}
+      <section className="px-4 pb-24 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-5">
+          {[
+            {icon:'protect',t:'100% Secure',d:'Client-side tools never upload files. Your data stays in your browser.'},
+            {icon:'compress',t:'Lightning Fast',d:'WebAssembly-powered PDF engine processes large files in seconds.'},
+            {icon:'sparkle',t:'Free to Start',d:'Try any tool instantly. Sign up free for 3 uses per tool, every day.'},
+          ].map(f=>(
+            <div key={f.t} className="card p-6 text-center">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center mx-auto mb-4" style={{background:'rgba(37,99,235,0.1)',border:'1px solid rgba(37,99,235,0.3)'}}>
+                <Ic n={f.icon} sz={20} cls="text-blue-400"/>
+              </div>
+              <h3 className="font-semibold mb-2" style={{color:'var(--text)'}}>{f.t}</h3>
+              <p className="text-sm leading-relaxed" style={{color:'var(--muted)'}}>{f.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   NAVBAR
+══════════════════════════════════════ */
+function Navbar({ onHome }) {
+  const { isDark, toggle } = useTheme();
+  const { user, logout, openAuth, isAuthenticated } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  return (
+    <nav className="fixed top-0 inset-x-0 z-40 nav-blur" style={{background:'var(--bg-nav)',backdropFilter:'blur(16px)',borderBottom:'1px solid var(--border)'}}>
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <button onClick={onHome} className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-sm">L</div>
+          <span className="font-bold text-sm" style={{color:'var(--text)'}}>LetsConvertPDF</span>
+        </button>
+
+        <div className="hidden md:flex items-center gap-1">
+          {CATEGORIES.slice(1).map(c=>(
+            <span key={c} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-default" style={{color:'var(--muted)'}}>{c}</span>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Theme toggle */}
+          <button onClick={toggle}
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105"
+            style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--muted)'}}
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'} aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
+            <Ic n={isDark ? 'sun' : 'moon'} sz={16}/>
+          </button>
+
+          {/* Auth area */}
+          {isAuthenticated ? (
+            <div className="relative">
+              <button onClick={() => setMenuOpen(o=>!o)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors"
+                style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
+                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                  {user?.name?.[0]?.toUpperCase()||'U'}
+                </div>
+                <span className="hidden sm:block max-w-24 truncate">{user?.name}</span>
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-48 card shadow-xl anim-up" style={{zIndex:50}}>
+                  <div className="p-3 border-b" style={{borderColor:'var(--border)'}}>
+                    <p className="text-xs font-semibold truncate" style={{color:'var(--text)'}}>{user?.name}</p>
+                    <p className="text-xs truncate" style={{color:'var(--muted)'}}>{user?.email}</p>
+                  </div>
+                  <button onClick={()=>{logout();setMenuOpen(false);}}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-red-500/10 text-red-400 transition-colors">
+                    <Ic n="logOut" sz={14}/> Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button onClick={() => openAuth('login')} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" style={{color:'var(--muted)'}}>Log In</button>
+              <button onClick={() => openAuth('signup')} className="px-4 py-2 rounded-lg text-xs font-bold text-white" style={{background:'#2563EB'}}>Sign Up</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+/* ══════════════════════════════════════
+   FOOTER
+══════════════════════════════════════ */
+function Footer() {
+  return (
+    <footer style={{borderTop:'1px solid var(--border)'}}>
+      <div className="max-w-7xl mx-auto px-4 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-xs">L</div>
+          <span className="font-semibold text-sm" style={{color:'var(--text)'}}>LetsConvertPDF</span>
+        </div>
+        <div className="flex flex-wrap gap-5 text-xs" style={{color:'var(--subtle)'}}>
+          {TOOLS.slice(0,6).map(t=><span key={t.id}>{t.label}</span>)}
+        </div>
+        <p className="text-xs" style={{color:'var(--subtle)'}}>© {new Date().getFullYear()} Maqsusi Digital Industries</p>
+      </div>
+    </footer>
+  );
+}
+
+/* ══════════════════════════════════════
+   APP ROOT
+══════════════════════════════════════ */
+function App() {
+  const [activeTool, setActiveTool] = useState(null);
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <div className="min-h-screen flex flex-col" style={{background:'var(--bg)'}}>
+          <Navbar onHome={() => setActiveTool(null)}/>
+          <main className="flex-1">
+            {activeTool
+              ? <Workspace key={activeTool.id} tool={activeTool} onBack={() => setActiveTool(null)}/>
+              : <HomePage onTool={setActiveTool}/>
+            }
+          </main>
+          <Footer/>
+          <ChatWidget/>
+        </div>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
