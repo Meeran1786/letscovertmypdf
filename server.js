@@ -1,5 +1,5 @@
 /**
- * LetsConvertPDF — Server v2.1
+ * LetsConvertPDF — Server v2.2
  * Maqsusi Digital Industries Software
  *
  * Handles:
@@ -34,6 +34,9 @@ try { nodemailer = require('nodemailer'); } catch { console.warn('[Email] nodema
 
 let rateLimit;
 try { rateLimit = require('express-rate-limit'); } catch { console.warn('[Security] express-rate-limit not installed — run: npm install express-rate-limit'); }
+
+let OAuth2Client;
+try { ({ OAuth2Client } = require('google-auth-library')); } catch { console.warn('[Google Sign-In] google-auth-library not installed — run: npm install google-auth-library'); }
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -170,15 +173,32 @@ if (nodemailer && process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
     .catch(e => console.warn('[Email] SMTP error:', e.message));
 }
 
+/** Sends an email and reports whether it was actually delivered.
+ *  Returns false (never throws) when SMTP isn't configured — that's stub
+ *  mode, not a failure, and callers use the return value to tell the user
+ *  when a code genuinely didn't go out. Throws only on a real SMTP error,
+ *  which callers should catch and treat the same as "not delivered". */
 async function sendEmail(to, subject, textBody, htmlBody) {
   if (!transporter) {
     console.log(`\n[Email stub] ─────────────────────────\nTo: ${to}\nSubject: ${subject}\n${textBody}\n──────────────────────────────────────\n`);
-    return;
+    console.warn('[Email] SMTP is not configured (EMAIL_USER / EMAIL_APP_PASSWORD missing) — the code above was NOT emailed, only logged.');
+    return false;
   }
   await transporter.sendMail({
     from: `"LetsConvertPDF" <${process.env.EMAIL_USER}>`,
     to, subject, text: textBody, html: htmlBody,
   });
+  return true;
+}
+
+/* ─── Google Sign-In (ID-token verification — no client secret needed) ─── */
+const googleClient = (OAuth2Client && process.env.GOOGLE_CLIENT_ID)
+  ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+  : null;
+if (process.env.GOOGLE_CLIENT_ID && !OAuth2Client) {
+  console.warn('[Google Sign-In] GOOGLE_CLIENT_ID is set but google-auth-library is missing — run: npm install google-auth-library');
+} else if (googleClient) {
+  console.log('[Google Sign-In] Ready (Client ID configured)');
 }
 
 function otpEmailHTML(code, purpose) {
@@ -194,11 +214,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'","'unsafe-inline'","'unsafe-eval'",'cdn.tailwindcss.com','unpkg.com','cdnjs.cloudflare.com','fonts.googleapis.com'],
+      scriptSrc:  ["'self'","'unsafe-inline'","'unsafe-eval'",'cdn.tailwindcss.com','unpkg.com','cdnjs.cloudflare.com','fonts.googleapis.com','https://accounts.google.com/gsi/client'],
       styleSrc:   ["'self'","'unsafe-inline'",'fonts.googleapis.com','cdn.tailwindcss.com'],
       fontSrc:    ["'self'",'fonts.gstatic.com','data:'],
-      imgSrc:     ["'self'",'data:','blob:'],
-      connectSrc: ["'self'"],
+      imgSrc:     ["'self'",'data:','blob:','https://*.googleusercontent.com'],
+      connectSrc: ["'self'",'https://accounts.google.com'],
+      frameSrc:   ["'self'",'https://accounts.google.com'],
       workerSrc:  ["'self'",'blob:','cdnjs.cloudflare.com'],
     },
   },
@@ -337,10 +358,17 @@ app.post('/api/auth/register', async (req, res) => {
   const code = generateOTP();
   otps[key] = { code, expires: Date.now() + 10 * 60 * 1000, purpose: 'register' };
 
-  try { await sendEmail(email, 'Verify your LetsConvertPDF account', `Your verification code is: ${code}`, otpEmailHTML(code, 'register')); }
-  catch (e) { console.error('[Email error]', e.message); }
+  let emailSent = false;
+  try { emailSent = await sendEmail(email, 'Verify your LetsConvertPDF account', `Your verification code is: ${code}`, otpEmailHTML(code, 'register')); }
+  catch (e) { console.error('[Email error] register:', e.message); }
 
-  res.json({ message: 'Account created. Check your email for the verification code.', email: key });
+  res.json({
+    message: emailSent
+      ? 'Account created. Check your email for the verification code.'
+      : "Account created, but we couldn't deliver the verification email just now. Tap \"Resend code\" in a moment, or contact support if this keeps happening.",
+    email: key,
+    emailSent,
+  });
 });
 
 /* Login */
@@ -348,16 +376,26 @@ app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   const key = email?.toLowerCase();
   const user = users[key];
-  if (!user || hashPassword(password, user.salt) !== user.passwordHash)
+  if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
+  if (!user.passwordHash) return res.status(401).json({ error: 'This account was created with Google Sign-In. Use "Continue with Google" to log in.' });
+  if (hashPassword(password, user.salt) !== user.passwordHash)
     return res.status(401).json({ error: 'Invalid email or password.' });
 
   const code = generateOTP();
   otps[key] = { code, expires: Date.now() + 10 * 60 * 1000, purpose: 'login' };
 
-  try { await sendEmail(email, 'Your LetsConvertPDF login code', `Your login code is: ${code}`, otpEmailHTML(code, 'login')); }
-  catch (e) { console.error('[Email error]', e.message); }
+  let emailSent = false;
+  try { emailSent = await sendEmail(email, 'Your LetsConvertPDF login code', `Your login code is: ${code}`, otpEmailHTML(code, 'login')); }
+  catch (e) { console.error('[Email error] login:', e.message); }
 
-  res.json({ message: 'Login code sent to your email.', email: key, name: user.name });
+  res.json({
+    message: emailSent
+      ? 'Login code sent to your email.'
+      : "We couldn't deliver your login code just now. Tap \"Resend code\" in a moment, or contact support if this keeps happening.",
+    email: key,
+    name: user.name,
+    emailSent,
+  });
 });
 
 /* Verify OTP */
@@ -383,8 +421,13 @@ app.post('/api/auth/resend-otp', async (req, res) => {
   if (!users[key]) return res.status(404).json({ error: 'No account found.' });
   const code = generateOTP();
   otps[key] = { code, expires: Date.now() + 10 * 60 * 1000, purpose: purpose || 'login' };
-  try { await sendEmail(email, 'Your new LetsConvertPDF code', `Your new code is: ${code}`, otpEmailHTML(code, purpose || 'login')); } catch {}
-  res.json({ message: 'New code sent.' });
+  let emailSent = false;
+  try { emailSent = await sendEmail(email, 'Your new LetsConvertPDF code', `Your new code is: ${code}`, otpEmailHTML(code, purpose || 'login')); }
+  catch (e) { console.error('[Email error] resend-otp:', e.message); }
+  res.json({
+    message: emailSent ? 'New code sent.' : "We couldn't deliver that email just now. Please try again shortly.",
+    emailSent,
+  });
 });
 
 /* Session check */
@@ -402,12 +445,61 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ message: 'Logged out' });
 });
 
-/* Google OAuth stub — wire up real credentials when ready */
-app.post('/api/auth/google', (req, res) => {
-  res.status(501).json({
-    error: 'Google OAuth is not configured yet.',
-    hint: 'Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env, then install google-auth-library.',
+/* Public runtime config — safe to expose (a Google Client ID is meant to be
+ * embedded client-side; it is not a secret). Lets the frontend render the
+ * real Google button only when sign-in is actually configured. */
+app.get('/api/config', (req, res) => {
+  res.json({
+    googleSignInEnabled: !!googleClient,
+    googleClientId: googleClient ? process.env.GOOGLE_CLIENT_ID : null,
   });
+});
+
+/* Google Sign-In — verifies the ID token Google's client-side library hands
+ * back after the user picks their Google account. No redirect, no client
+ * secret: Google already proved the user owns that email, so we skip OTP
+ * and issue our own session token directly. */
+app.post('/api/auth/google', async (req, res) => {
+  if (!googleClient) {
+    return res.status(501).json({
+      error: 'Google Sign-In is not configured on this server yet.',
+      hint: 'Set GOOGLE_CLIENT_ID in .env (from Google Cloud Console → APIs & Services → Credentials) and restart the server. No client secret is needed for this flow.',
+    });
+  }
+
+  const { idToken } = req.body || {};
+  if (!idToken) return res.status(400).json({ error: 'Missing Google credential.' });
+
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
+    payload = ticket.getPayload();
+  } catch (e) {
+    console.error('[Google Sign-In] Token verification failed:', e.message);
+    return res.status(401).json({ error: 'Google sign-in could not be verified. Please try again.' });
+  }
+
+  if (!payload?.email) return res.status(400).json({ error: 'Your Google account has no email on file.' });
+  if (!payload.email_verified) return res.status(400).json({ error: 'Your Google email address is not verified.' });
+
+  const key = payload.email.toLowerCase();
+  if (!users[key]) {
+    users[key] = {
+      name: payload.name || key.split('@')[0],
+      passwordHash: null, // Google-only account — no local password
+      salt: null,
+      verified: true,     // Google already verified this email
+      premium: false,
+      authProvider: 'google',
+      createdAt: new Date().toISOString(),
+    };
+  } else if (!users[key].verified) {
+    users[key].verified = true;
+  }
+  saveUsers();
+
+  const token = createToken(key);
+  res.json({ token, user: { email: key, name: users[key].name } });
 });
 
 /* Forgot password */
@@ -416,7 +508,11 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   if (users[key]) {
     const code = generateOTP();
     otps[key] = { code, expires: Date.now() + 10 * 60 * 1000, purpose: 'reset' };
-    try { await sendEmail(key, 'Reset your LetsConvertPDF password', `Your reset code is: ${code}`, otpEmailHTML(code, 'reset')); } catch {}
+    try { await sendEmail(key, 'Reset your LetsConvertPDF password', `Your reset code is: ${code}`, otpEmailHTML(code, 'reset')); }
+    catch (e) { console.error('[Email error] forgot-password:', e.message); }
+    // Note: the response below stays identical whether the account exists or the
+    // send failed, by design — revealing either would let an attacker enumerate
+    // registered emails. Check server logs / GET /api/health to confirm SMTP health.
   }
   res.json({ message: 'If an account exists with that email, a reset code has been sent.', email: key });
 });
@@ -468,7 +564,16 @@ app.post('/api/chat/message', async (req, res) => {
 ═══════════════════════════════════════════ */
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'LetsConvertPDF API', version: '2.1.0', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    service: 'LetsConvertPDF API',
+    version: '2.2.0',
+    timestamp: new Date().toISOString(),
+    // Booleans only — never exposes credentials — so ops can confirm config
+    // via a plain curl instead of grepping server logs or SSHing in.
+    emailConfigured: !!transporter,
+    googleSignInConfigured: !!googleClient,
+  });
 });
 
 app.post('/api/convert/to-pdf', upload.single('file'), async (req, res) => {
@@ -599,12 +704,13 @@ cron.schedule('*/30 * * * *', async () => {
 app.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════════════════╗
-║        LetsConvertPDF — Server v2.1                  ║
+║        LetsConvertPDF — Server v2.2                  ║
 ║        Maqsusi Digital Industries Software           ║
 ╠══════════════════════════════════════════════════════╣
 ║  URL  : http://localhost:${PORT}                        ║
-║  Email: ${process.env.EMAIL_USER ? '✓ ' + process.env.EMAIL_USER : '✗ Not configured (stub mode)'}
-║  Mode : ${process.env.NODE_ENV || 'development'}                             ║
+║  Email : ${transporter ? '✓ SMTP ready — ' + process.env.EMAIL_USER : '✗ NOT configured — OTPs will only print to this log, not send'}
+║  Google: ${googleClient ? '✓ Sign-In ready' : '✗ Not configured — "Continue with Google" returns 501'}
+║  Mode  : ${process.env.NODE_ENV || 'development'}                             ║
 ║  Free tier: guest ${LIMITS.anonDaily}/tool/day · account ${LIMITS.userDaily}/tool/day
 ╚══════════════════════════════════════════════════════╝
   `);

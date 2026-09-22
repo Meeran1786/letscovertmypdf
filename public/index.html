@@ -43,6 +43,7 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
     /* ── CSS custom properties for theming ── */
@@ -300,6 +301,9 @@ function AuthModal({ mode, intro, onMode, onClose }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  const [deliveryWarning, setDeliveryWarning] = useState('');
+  const [googleConfig, setGoogleConfig] = useState(null); // null = loading, else { googleSignInEnabled, googleClientId }
+  const googleBtnRef = useRef(null);
 
   // form state
   const [f, setF] = useState({ name:'', email:'', password:'', confirmPw:'', resetEmail:'', newPw:'', confirmNewPw:'' });
@@ -316,6 +320,7 @@ function AuthModal({ mode, intro, onMode, onClose }) {
     e.preventDefault(); setError(''); setLoading(true);
     try {
       const d = await post('/api/auth/login', { email: f.email, password: f.password });
+      setDeliveryWarning(d.emailSent === false ? d.message : '');
       setPendingEmail(d.email); setOtpPurpose('login'); setStep('otp');
     } catch(e) { setError(e.message); }
     setLoading(false);
@@ -327,6 +332,7 @@ function AuthModal({ mode, intro, onMode, onClose }) {
     setLoading(true);
     try {
       const d = await post('/api/auth/register', { name: f.name, email: f.email, password: f.password });
+      setDeliveryWarning(d.emailSent === false ? d.message : '');
       setPendingEmail(d.email); setPendingName(f.name); setOtpPurpose('register'); setStep('otp');
     } catch(e) { setError(e.message); }
     setLoading(false);
@@ -341,11 +347,38 @@ function AuthModal({ mode, intro, onMode, onClose }) {
     setLoading(false);
   };
 
-  const handleGoogle = async () => {
+  // Fetch whether Google Sign-In is configured server-side (Client ID is public,
+  // safe to hand to the browser — no secret involved in this flow).
+  useEffect(() => {
+    fetch('/api/config').then(r => r.json()).then(setGoogleConfig).catch(() => setGoogleConfig({ googleSignInEnabled: false }));
+  }, []);
+
+  const handleGoogleCredential = useCallback(async (response) => {
     setError('');
-    try { await post('/api/auth/google', {}); }
-    catch(e) { setError('Google sign-in not configured yet. Use email login instead.'); }
-  };
+    try {
+      const d = await post('/api/auth/google', { idToken: response.credential });
+      login(d.token, d.user); // Google already verified the email — skip OTP entirely.
+    } catch (e) { setError(e.message); }
+  }, [login]);
+
+  // Once we know Google Sign-In is enabled and the GIS script has loaded, render
+  // Google's real button into our container (a custom-styled button isn't allowed
+  // by Google's branding terms for this flow).
+  useEffect(() => {
+    if (!googleConfig?.googleSignInEnabled || mode === 'reset' || !googleBtnRef.current) return;
+    let cancelled = false;
+    const tryRender = (triesLeft) => {
+      if (cancelled) return;
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.initialize({ client_id: googleConfig.googleClientId, callback: handleGoogleCredential });
+        window.google.accounts.id.renderButton(googleBtnRef.current, { theme: 'outline', size: 'large', shape: 'pill', width: 336, text: 'continue_with' });
+      } else if (triesLeft > 0) {
+        setTimeout(() => tryRender(triesLeft - 1), 150);
+      }
+    };
+    tryRender(20);
+    return () => { cancelled = true; };
+  }, [googleConfig, mode, handleGoogleCredential]);
 
   return (
     <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.65)'}}>
@@ -368,7 +401,7 @@ function AuthModal({ mode, intro, onMode, onClose }) {
 
         {step === 'otp' ? (
           <OTPStep email={pendingEmail} purpose={otpPurpose} newPw={otpPurpose==='reset' ? f.newPw : null}
-            onBack={() => setStep('form')} onSuccess={login}/>
+            warning={deliveryWarning} onBack={() => setStep('form')} onSuccess={login}/>
         ) : (
           <>
             {/* Tabs */}
@@ -393,12 +426,18 @@ function AuthModal({ mode, intro, onMode, onClose }) {
 
             {error && <div className="mb-4 text-sm rounded-xl p-3" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
 
-            {/* Google button */}
-            {mode !== 'reset' && (
-              <button onClick={handleGoogle}
-                className="w-full flex items-center justify-center gap-2.5 py-2.5 mb-4 rounded-xl font-medium text-sm transition-all hover:opacity-80"
+            {/* Google button — real Google Identity Services button when configured,
+                a disabled explainer button otherwise. */}
+            {mode !== 'reset' && googleConfig?.googleSignInEnabled && (
+              <div className="flex justify-center mb-4">
+                <div ref={googleBtnRef}/>
+              </div>
+            )}
+            {mode !== 'reset' && googleConfig && !googleConfig.googleSignInEnabled && (
+              <button type="button" disabled title="Google Sign-In isn't set up on this server yet"
+                className="w-full flex items-center justify-center gap-2.5 py-2.5 mb-4 rounded-xl font-medium text-sm opacity-50 cursor-not-allowed"
                 style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
-                <Ic n="google" sz={18}/> Continue with Google
+                <Ic n="google" sz={18}/> Continue with Google (not set up yet)
               </button>
             )}
             {mode !== 'reset' && (
@@ -476,11 +515,12 @@ function AuthModal({ mode, intro, onMode, onClose }) {
 }
 
 /* ─── OTP Step ─── */
-function OTPStep({ email, purpose, newPw, onBack, onSuccess }) {
+function OTPStep({ email, purpose, newPw, warning, onBack, onSuccess }) {
   const [digits, setDigits] = useState(['','','','','','']);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resent, setResent] = useState(false);
+  const [deliveryWarning, setDeliveryWarning] = useState(warning || '');
   const [step2, setStep2] = useState(purpose === 'reset' ? 'otp' : 'otp'); // otp | newpw
   const [newPwState, setNewPwState] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -523,7 +563,11 @@ function OTPStep({ email, purpose, newPw, onBack, onSuccess }) {
   };
 
   const resend = async () => {
-    await fetch('/api/auth/resend-otp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, purpose }) });
+    try {
+      const r = await fetch('/api/auth/resend-otp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, purpose }) });
+      const d = await r.json().catch(() => ({}));
+      setDeliveryWarning(d.emailSent === false ? (d.message || "We couldn't deliver that email just now.") : '');
+    } catch { setDeliveryWarning("We couldn't reach the server to resend that code. Check your connection and try again."); }
     setResent(true); setTimeout(() => setResent(false), 30000);
   };
 
@@ -551,6 +595,7 @@ function OTPStep({ email, purpose, newPw, onBack, onSuccess }) {
       <h2 className="text-xl font-bold mb-1" style={{color:'var(--text)'}}>Enter verification code</h2>
       <p className="text-sm mb-6" style={{color:'var(--muted)'}}>We sent a 6-digit code to <strong>{email}</strong></p>
 
+      {deliveryWarning && <div className="mb-4 text-sm rounded-xl p-3" style={{background:'rgba(245,158,11,0.1)',color:'#FBBF24',border:'1px solid rgba(245,158,11,0.3)'}}>{deliveryWarning}</div>}
       {error && <div className="mb-4 text-sm rounded-xl p-3" style={{background:'rgba(239,68,68,0.1)',color:'#F87171'}}>{error}</div>}
 
       <div className="flex gap-2 justify-center mb-6" onPaste={handlePaste}>
