@@ -128,6 +128,7 @@
 <body>
 <div id="root"></div>
 
+<script type="text/babel" src="/js/tools.jsx"></script>
 <script type="text/babel" src="/js/r2.jsx"></script>
 <script type="text/babel">
 const { useState, useCallback, useRef, useEffect, useContext, createContext, useMemo } = React;
@@ -266,6 +267,13 @@ const ICONS = {
   sparkle:'M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4L12 2z',
   ocr:'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 9h10M7 13h10M7 17h6',
   summary:'M4 6h16M4 10h16M4 14h10M4 18h6M17 15l2 2 3-4',
+  redact:'M4 5h16v4H4zM4 11h10v4H4zM4 17h16v2H4z',
+  form:'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 12h6M9 16h4',
+  compare:'M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M12 2v20',
+  numbers:'M7 20l4-16m2 16l4-16M6 9h14M4 15h14',
+  flow:'M4 6h4v4H4zM16 14h4v4h-4zM8 8h4a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2',
+  layers:'M12 2l10 5-10 5L2 7l10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  edit:'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
 };
 
 function Ic({ n, sz=20, cls='' }) {
@@ -281,17 +289,17 @@ function Ic({ n, sz=20, cls='' }) {
 /* ══════════════════════════════════════
    TOOLS CONFIG
 ══════════════════════════════════════ */
-const CATEGORIES = ['All','AI','Organize','Convert','Optimize','Security'];
+const CATEGORIES = ['All','AI','Organize','Convert','Optimize','Security','Workflows'];
 const TOOLS = [
   { id:'chat',     slug:'chat-with-pdf',  label:'Chat with PDF',  desc:'Ask questions and get answers with page references.',  icon:'chat',     cat:'AI',       color:'cyan',    accept:'.pdf',       multi:false, engine:'client', ai:true, isNew:true },
   { id:'summarize',slug:'summarize-pdf',  label:'Summarize PDF',  desc:'Key points and action items in seconds, on your device.', icon:'summary', cat:'AI',     color:'cyan',    accept:'.pdf',       multi:false, engine:'client', ai:true, isNew:true },
-  { id:'ocr',      slug:'ocr-pdf',        label:'OCR PDF',        desc:'Make scanned PDFs searchable and selectable.',          icon:'ocr',      cat:'AI',       color:'blue',    accept:'.pdf',       multi:false, engine:'client', isNew:true },
+  { id:'ocr',      slug:'ocr-pdf',        label:'OCR PDF',        desc:'Make scanned PDFs searchable and selectable.',          icon:'ocr',      cat:'AI',       color:'blue',    accept:'.pdf',       multi:false, engine:'client', batch:true, isNew:true },
   { id:'merge',    slug:'merge-pdf',      label:'Merge PDF',      desc:'Combine multiple PDFs into one.',                       icon:'merge',    cat:'Organize', color:'blue',    accept:'.pdf',       multi:true,  engine:'client' },
   { id:'split',    slug:'split-pdf',      label:'Split PDF',      desc:'Separate PDF pages into individual files.',             icon:'split',    cat:'Organize', color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
   { id:'organize', slug:'organize-pdf',   label:'Organize Pages', desc:'Reorder, delete and rearrange PDF pages.',             icon:'organize', cat:'Organize', color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
-  { id:'crop',     slug:'crop-pdf',       label:'Crop PDF',       desc:'Trim PDF page margins and resize the content area.',   icon:'crop',     cat:'Organize', color:'cyan',    accept:'.pdf',       multi:false, engine:'client' },
-  { id:'rotate',   slug:'rotate-pdf',     label:'Rotate PDF',     desc:'Rotate all or specific pages of a PDF.',               icon:'rotate',   cat:'Organize', color:'emerald', accept:'.pdf',       multi:false, engine:'client' },
-  { id:'compress', slug:'compress-pdf',   label:'Compress PDF',   desc:'Shrink images inside your PDF without uploading it.',  icon:'compress', cat:'Optimize', color:'emerald', accept:'.pdf',       multi:false, engine:'client' },
+  { id:'crop',     slug:'crop-pdf',       label:'Crop PDF',       desc:'Trim PDF page margins and resize the content area.',   icon:'crop',     cat:'Organize', color:'cyan',    accept:'.pdf',       multi:false, engine:'client', batch:true },
+  { id:'rotate',   slug:'rotate-pdf',     label:'Rotate PDF',     desc:'Rotate all or specific pages of a PDF.',               icon:'rotate',   cat:'Organize', color:'emerald', accept:'.pdf',       multi:false, engine:'client', batch:true },
+  { id:'compress', slug:'compress-pdf',   label:'Compress PDF',   desc:'Shrink images inside your PDF without uploading it.',  icon:'compress', cat:'Optimize', color:'emerald', accept:'.pdf',       multi:false, engine:'client', batch:true },
   { id:'img2pdf',  slug:'jpg-to-pdf',     label:'Image to PDF',   desc:'Convert JPG, PNG, WebP images to a PDF document.',    icon:'img2pdf',  cat:'Convert',  color:'blue',    accept:'image/*',    multi:true,  engine:'client' },
   { id:'pdf2jpg',  slug:'pdf-to-jpg',     label:'PDF to JPG',     desc:'Extract every page as a high-quality JPEG image.',    icon:'pdf2jpg',  cat:'Convert',  color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
   { id:'word2pdf', slug:'word-to-pdf',    label:'Word to PDF',    desc:'Convert DOCX/DOC to PDF preserving formatting.',      icon:'word',     cat:'Convert',  color:'blue',    accept:'.docx,.doc,.odt,.rtf', multi:false, engine:'server' },
@@ -300,12 +308,21 @@ const TOOLS = [
   { id:'pdf2word', slug:'pdf-to-word',    label:'PDF to Word',    desc:'Convert PDF back to editable Word documents.',        icon:'pdf2word', cat:'Convert',  color:'blue',    accept:'.pdf',       multi:false, engine:'server' },
   { id:'pdf2excel',slug:'pdf-to-excel',   label:'PDF to Excel',   desc:'Extract PDF tables into editable spreadsheets.',      icon:'pdf2excel',cat:'Convert',  color:'emerald', accept:'.pdf',       multi:false, engine:'server' },
   { id:'pdf2ppt',  slug:'pdf-to-ppt',     label:'PDF to PPT',     desc:'Convert PDF slides into editable PowerPoint files.',  icon:'pdf2ppt',  cat:'Convert',  color:'cyan',    accept:'.pdf',       multi:false, engine:'server' },
-  { id:'watermark',slug:'watermark-pdf',  label:'Watermark PDF',  desc:'Add text watermarks to your PDF pages.',              icon:'watermark',cat:'Security', color:'cyan',    accept:'.pdf',       multi:false, engine:'client' },
+  { id:'watermark',slug:'watermark-pdf',  label:'Watermark PDF',  desc:'Add text watermarks to your PDF pages.',              icon:'watermark',cat:'Security', color:'cyan',    accept:'.pdf',       multi:false, engine:'client', batch:true },
   { id:'sign',     slug:'sign-pdf',       label:'Sign PDF',       desc:'Draw, type or upload a signature and place it anywhere.', icon:'sign',  cat:'Security', color:'cyan',    accept:'.pdf',       multi:false, engine:'client' },
-  { id:'protect',  slug:'protect-pdf',    label:'Protect PDF',    desc:'Encrypt PDF with a password for secure sharing.',     icon:'protect',  cat:'Security', color:'red',     accept:'.pdf',       multi:false, engine:'client' },
-  { id:'unlock',   slug:'unlock-pdf',     label:'Unlock PDF',     desc:'Remove password protection from PDF files.',          icon:'unlock',   cat:'Security', color:'emerald', accept:'.pdf',       multi:false, engine:'client' },
-  { id:'repair',   slug:'repair-pdf',     label:'Repair PDF',     desc:'Fix corrupted or damaged PDF documents.',             icon:'repair',   cat:'Optimize', color:'emerald', accept:'.pdf',       multi:false, engine:'client' },
-  { id:'edit',     slug:'edit-pdf',       label:'Edit PDF',       desc:'Add text overlays, highlights and annotations.',      icon:'watermark',cat:'Organize', color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
+  { id:'protect',  slug:'protect-pdf',    label:'Protect PDF',    desc:'Encrypt PDF with a password for secure sharing.',     icon:'protect',  cat:'Security', color:'red',     accept:'.pdf',       multi:false, engine:'client', batch:true },
+  { id:'unlock',   slug:'unlock-pdf',     label:'Unlock PDF',     desc:'Remove password protection from PDF files.',          icon:'unlock',   cat:'Security', color:'emerald', accept:'.pdf',       multi:false, engine:'client', batch:true },
+  { id:'repair',   slug:'repair-pdf',     label:'Repair PDF',     desc:'Fix corrupted or damaged PDF documents.',             icon:'repair',   cat:'Optimize', color:'emerald', accept:'.pdf',       multi:false, engine:'client', batch:true },
+  { id:'edit',     slug:'edit-pdf',       label:'Edit PDF',       desc:'Add text, white-out, highlights, boxes and images anywhere.', icon:'edit', cat:'Organize', color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
+  { id:'fillform', slug:'fill-pdf-form',  label:'Fill PDF Form',  desc:'Fill forms in one click from a profile kept on your device.', icon:'form', cat:'AI',     color:'cyan',    accept:'.pdf',       multi:false, engine:'client', isNew:true },
+  { id:'redact',   slug:'redact-pdf',     label:'Redact PDF',     desc:'Find and permanently remove emails, phone and ID numbers.', icon:'redact', cat:'AI',     color:'red',     accept:'.pdf',       multi:false, engine:'client', batch:true, isNew:true },
+  { id:'compare',  slug:'compare-pdf',    label:'Compare PDF',    desc:'See every text and visual change between two versions.', icon:'compare', cat:'Organize', color:'cyan',  accept:'.pdf',       multi:true,  engine:'client', custom:'compare', isNew:true },
+  { id:'pagenumbers',slug:'add-page-numbers',label:'Page Numbers', desc:'Add page numbers or Bates numbering to every page.', icon:'numbers',  cat:'Organize', color:'blue',    accept:'.pdf',       multi:false, engine:'client', batch:true, isNew:true },
+  { id:'flatten',  slug:'flatten-pdf',    label:'Flatten PDF',    desc:'Lock form answers into the page so they can\'t be changed.', icon:'layers', cat:'Optimize', color:'emerald', accept:'.pdf',     multi:false, engine:'client', batch:true, isNew:true },
+  { id:'pdf2png',  slug:'pdf-to-png',     label:'PDF to PNG',     desc:'Save every page as a lossless PNG image.',            icon:'pdf2jpg',  cat:'Convert',  color:'blue',    accept:'.pdf',       multi:false, engine:'client', isNew:true },
+  { id:'pdfa',     slug:'pdf-to-pdfa',    label:'PDF to PDF/A',   desc:'Convert to PDF/A-2b for long-term archiving.',        icon:'file',     cat:'Convert',  color:'emerald', accept:'.pdf',       multi:false, engine:'server', isNew:true },
+  { id:'html2pdf', slug:'html-to-pdf',    label:'HTML to PDF',    desc:'Convert saved web pages and HTML files to PDF.',      icon:'word',     cat:'Convert',  color:'cyan',    accept:'.html,.htm', multi:false, engine:'server', isNew:true },
+  { id:'workflow', slug:'pdf-workflows',  label:'Workflows',      desc:'Chain tools like compress, number and protect, and run them on many files.', icon:'flow', cat:'Workflows', color:'blue', accept:'.pdf', multi:true, engine:'client', isNew:true },
 ];
 const C = {
   blue:    { bg:'rgba(37,99,235,0.1)',    bd:'rgba(37,99,235,0.3)',    ic:'#60A5FA', badge:'rgba(37,99,235,0.15)' },
@@ -939,17 +956,6 @@ async function processImageToPDF(files) {
   imgs.forEach(({dataUrl,w,h},i)=>{const wm=pxToMm(w),hm=pxToMm(h);if(i>0)pdf.addPage([wm,hm],w>=h?'landscape':'portrait');pdf.addImage(dataUrl,'JPEG',0,0,wm,hm,undefined,'MEDIUM');});
   return new Uint8Array(await pdf.output('blob').arrayBuffer());
 }
-async function processPDFtoJPG(file) {
-  const arr=new Uint8Array(await readFileAsArrayBuffer(file)); const pdf=await pdfjsLib.getDocument({data:arr}).promise;
-  return Promise.all(Array.from({length:pdf.numPages},async(_,i)=>{const pg=await pdf.getPage(i+1);const vp=pg.getViewport({scale:2});const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;return{dataUrl:c.toDataURL('image/jpeg',0.92),name:`page_${i+1}.jpg`};}));
-}
-async function processEdit(file, text, x, y, { page=1, size=14, color='#1D4ED8' } = {}) {
-  if (!text) throw new Error('Enter the text to add.');
-  const {PDFDocument,rgb}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file)); const font=await d.embedFont(PDFLib.StandardFonts.Helvetica);
-  const pages=d.getPages(); const pg=pages[Math.min(Math.max(1,parseInt(page)||1),pages.length)-1]; const{height}=pg.getSize();
-  const r=parseInt(color.slice(1,3),16)/255,g=parseInt(color.slice(3,5),16)/255,b=parseInt(color.slice(5,7),16)/255;
-  pg.drawText(text,{x:x||50,y:height-(y||100),size:parseInt(size)||14,font,color:rgb(r,g,b)}); return d.save();
-}
 
 /* ══════════════════════════════════════
    PREVIEW MODAL
@@ -1004,25 +1010,27 @@ function PreviewModal({ pdfBytes, onClose, onDownload, downloadName, initialPage
 function DropZone({ tool, onFiles, disabled }) {
   const ref = useRef(); const [drag, setDrag] = useState(false);
   const col = C[tool.color]||C.blue;
-  const handle = files => { if (disabled) return; onFiles(tool.multi ? files : [files[0]]); };
+  const handle = files => { if (disabled) return; onFiles(tool.multi || tool.batch ? files : [files[0]]); };
   return (
     <div onDragOver={e=>{e.preventDefault();if(!disabled)setDrag(true)}} onDragLeave={()=>setDrag(false)}
       onDrop={e=>{e.preventDefault();setDrag(false);handle(Array.from(e.dataTransfer.files))}} onClick={()=>!disabled&&ref.current.click()}
       className={`drop-zone rounded-2xl border-2 border-dashed p-12 text-center transition-all ${drag?'drop-active':''} ${disabled?'opacity-50 cursor-not-allowed':'cursor-pointer'}`}
       style={{borderColor:drag?'#2563EB':'var(--border-s)', background:drag?'rgba(37,99,235,0.06)':'var(--bg-card)'}}>
-      <input ref={ref} type="file" className="hidden" accept={tool.accept} multiple={tool.multi} disabled={disabled} onChange={e=>{handle(Array.from(e.target.files));e.target.value='';}}/>
+      <input ref={ref} type="file" className="hidden" accept={tool.accept} multiple={tool.multi || tool.batch} disabled={disabled} onChange={e=>{handle(Array.from(e.target.files));e.target.value='';}}/>
       <div className="mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-6" style={{background:col.bg,border:`1px solid ${col.bd}`}}>
         <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={col.ic} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           {(ICONS[tool.icon]||ICONS.file).split('M').filter(Boolean).map((s,i)=><path key={i} d={'M'+s}/>)}
         </svg>
       </div>
-      <p className="font-semibold text-lg mb-2" style={{color:'var(--text)'}}>{disabled ? 'Daily limit reached' : `Drop ${tool.multi?'files':'file'} here`}</p>
+      <p className="font-semibold text-lg mb-2" style={{color:'var(--text)'}}>{disabled ? 'Daily limit reached' : tool.id==='compare' ? 'Drop the old and new versions here' : `Drop ${tool.multi||tool.batch?'files':'file'} here`}</p>
       <p className="text-sm mb-6" style={{color:'var(--muted)'}}>{disabled ? 'Come back tomorrow, or sign up for more free uses' : `or click to browse · ${tool.accept.toUpperCase().replace(/\./g,'').replace(/,/g,', ')}`}</p>
       {!disabled && (
         <button className="px-8 py-2.5 rounded-xl font-semibold text-sm text-white flex items-center gap-2 mx-auto" style={{background:'#2563EB'}}>
-          <Ic n="upload" sz={15}/> Select File{tool.multi?'s':''}
+          <Ic n="upload" sz={15}/> Select File{tool.multi||tool.batch?'s':''}
         </button>
       )}
+      {!disabled && <CloudImport tool={tool} onFiles={handle}/>}
+      {!disabled && tool.batch && <p className="text-xs mt-3" style={{color:'var(--subtle)'}}>Tip: select several files to process them all at once.</p>}
     </div>
   );
 }
@@ -1090,14 +1098,13 @@ function ConfigPanel({ tool, config, set, file }) {
   if (tool.id==='sign') return file ? <SignStudio file={file} config={config} set={set}/> : null;
   if (tool.id==='ocr') return <p className="text-sm" style={{color:'var(--muted)'}}>We'll recognise the text on every page and add an invisible text layer, so you can search, select and copy it. Your pages look exactly the same. English text is supported today.</p>;
   if (tool.id==='repair') return <p className="text-sm" style={{color:'var(--muted)'}}>We'll rebuild the file's structure on your device. If it is badly damaged, we recreate each page from what can still be read.</p>;
-  if (tool.id==='edit') return (
-    <div className="space-y-3">
-      {inp('overlayText','Text to add','text','Your annotation...')}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {inp('page','Page','number','1',{min:1})}{inp('x','X from left (pt)','number','50')}{inp('y','Y from top (pt)','number','100')}{inp('size','Font size','number','14')}
-      </div>
-    </div>
-  );
+  if (tool.id==='edit') return file ? <EditorStudio file={file} config={config} set={set}/> : null;
+  if (tool.id==='pagenumbers') return <PageNumbersPanel config={config} set={set}/>;
+  if (tool.id==='redact') return file ? <RedactPanel file={file} config={config} set={set}/> : null;
+  if (tool.id==='fillform') return file ? <FormFiller file={file} config={config} set={set}/> : null;
+  if (tool.id==='workflow') return <WorkflowBuilder config={config} set={set}/>;
+  if (tool.id==='flatten') return <p className="text-sm" style={{color:'var(--muted)'}}>Form answers and fields become part of the page, so they print correctly and can't be edited.</p>;
+  if (tool.id==='pdfa') return <p className="text-sm" style={{color:'var(--muted)'}}>Converts to PDF/A-2b: fonts are embedded and colours fixed so the file opens the same way decades from now. This needs our server; your file is deleted within 60 seconds.</p>;
   return <p className="text-sm" style={{color:'var(--muted)'}}>Click the button below to process your file.</p>;
 }
 
@@ -1175,7 +1182,7 @@ function Workspace({ tool, onBack }) {
     try {
       tick(10);
       if (tool.engine==='server') {
-        const ep={word2pdf:'convert/to-pdf',excel2pdf:'convert/to-pdf',ppt2pdf:'convert/to-pdf',pdf2word:'convert/pdf-to-docx',pdf2excel:'convert/pdf-to-xlsx',pdf2ppt:'convert/pdf-to-pptx'}[tool.id];
+        const ep={word2pdf:'convert/to-pdf',excel2pdf:'convert/to-pdf',ppt2pdf:'convert/to-pdf',html2pdf:'convert/to-pdf',pdf2word:'convert/pdf-to-docx',pdf2excel:'convert/pdf-to-xlsx',pdf2ppt:'convert/pdf-to-pptx',pdfa:'convert/pdf-to-pdfa'}[tool.id];
         setStatus('Uploading securely and converting…'); tick(30);
         const{blob,filename}=await callServerAPI(ep,files[0],tool.id,token);
         tick(85);
@@ -1184,39 +1191,27 @@ function Workspace({ tool, onBack }) {
       } else {
         // Client-side tools still spend from the same daily quota — consume before processing locally.
         if (tool.id==='sign' && !config.sigData) throw new Error('Add your signature first.');
-        if (tool.id==='protect') {
-          if (!config.password || config.password.length<4) throw new Error('Choose a password of at least 4 characters.');
-          if (config.password!==config.confirmPw) throw new Error('Passwords do not match.');
-        }
-        if (tool.id==='edit' && !config.overlayText) throw new Error('Enter the text to add.');
+        if (tool.id==='protect' && config.password!==config.confirmPw) throw new Error('Passwords do not match.');
         if (tool.id==='merge' && files.length<2) throw new Error('Add at least two PDFs to merge.');
         setStatus('Checking your free-use quota…'); tick(15);
         await consumeUsage(tool.id, token);
-        setStatus('Processing file…');tick(20);
-        let bytes=null;let multi=[];let name='output.pdf';
-        switch(tool.id){
-          case'merge':    if(files.length<2)throw new Error('Add at least two PDFs to merge.');bytes=await processMerge(files);name='merged.pdf';break;
-          case'split':    tick(40);setStatus('Splitting pages…');multi=await processSplit(files[0]);multi=multi.map(p=>({url:URL.createObjectURL(new Blob([p.bytes],{type:'application/pdf'})),name:p.name,size:fmtSz(p.bytes.byteLength)}));tick(100);setDlItems(multi);setState('done');refreshUsage();return;
-          case'compress': {setStatus('Shrinking images on your device…');const r=await LCP.compressPdf(files[0],config.level||'recommended',v=>tick(20+Math.round(v*70)));bytes=r.bytes;name=`compressed_${files[0].name}`;
-            const saved=files[0].size-bytes.byteLength;setResultNote(!r.kept&&saved>1024?`Reduced from ${fmtSz(files[0].size)} to ${fmtSz(bytes.byteLength)} (${Math.round(saved/files[0].size*100)}% smaller), without uploading it.`:'This PDF is already well optimised, so we kept the original quality.');break;}
-          case'protect':  setStatus('Encrypting on your device…');bytes=await LCP.protectPdf(files[0],config.password);name=`protected_${files[0].name}`;break;
-          case'unlock':   setStatus('Unlocking on your device…');bytes=await LCP.unlockPdf(files[0],config.password||'');name=`unlocked_${files[0].name}`;break;
-          case'repair':   {setStatus('Repairing on your device…');const r=await LCP.repairPdf(files[0],v=>tick(20+Math.round(v*70)));bytes=r.bytes;name=`repaired_${files[0].name}`;
-            setResultNote(r.method==='rebuilt'?'The file was badly damaged, so each page was rebuilt as an image. Run OCR PDF to make the text searchable again.':'The file structure was rebuilt. Check it in the preview.');break;}
-          case'ocr':      {const r=await LCP.ocrPdf(files[0],v=>tick(20+Math.round(v*75)),setStatus);bytes=r.bytes;name=`searchable_${files[0].name}`;
-            setResultNote(r.words?`Recognised ${r.words.toLocaleString()} words. The text is now searchable and selectable.`:'No text was found on these pages.');break;}
-          case'rotate':   bytes=await processRotate(files[0],parseInt(config.degrees)||90);name=`rotated_${files[0].name}`;break;
-          case'organize': {const ord=config.order?config.order.split(',').map(s=>parseInt(s.trim())-1).filter(n=>!isNaN(n)):Array.from({length:9999},(_,i)=>i);bytes=await processOrganize(files[0],ord);name=`organized_${files[0].name}`;break;}
-          case'watermark':bytes=await processWatermark(files[0],config.text||'CONFIDENTIAL',parseFloat(config.opacity)||0.25,parseInt(config.fontSize)||48,config.color);name=`watermarked_${files[0].name}`;break;
-          case'crop':     bytes=await processCrop(files[0],parseInt(config.margin)||20);name=`cropped_${files[0].name}`;break;
-          case'sign':     bytes=await processSignPlaced(files[0],config.sigData,config.place||{page:0,x:0.58,y:0.8,w:0.3});name=`signed_${files[0].name}`;
-            if(config.remember){try{localStorage.setItem('lcpdf-signature',config.sigData);}catch{}}break;
-          case'edit':     bytes=await processEdit(files[0],config.overlayText,parseInt(config.x)||50,parseInt(config.y)||100,{page:config.page,size:config.size});name=`edited_${files[0].name}`;break;
-          case'img2pdf':  bytes=await processImageToPDF(files);name='images_to_pdf.pdf';break;
-          case'pdf2jpg':  tick(30);setStatus('Converting pages…');multi=await processPDFtoJPG(files[0]);multi=multi.map(p=>({url:p.dataUrl,name:p.name,size:''}));tick(100);setDlItems(multi);setState('done');refreshUsage();return;
-          default:        throw new Error('This tool is not available yet.');
-        }
-        if(bytes){setPdfBytes(bytes);setDlName(name);setDlItems([{url:'#pdf',name,size:fmtSz(bytes.byteLength)}]);}
+        setStatus('Processing on your device…');tick(20);
+        const batch = tool.batch && files.length > 1;
+        let result;
+        if (batch) {
+          // Same tool, same settings, every file. Bates numbers carry on across files.
+          const items=[]; let cfg={...config};
+          for (let i=0;i<files.length;i++) {
+            setStatus(`File ${i+1} of ${files.length}: ${files[i].name}`); tick(20+Math.round(75*i/files.length));
+            const r=await runTool(tool.id,[files[i]],cfg,{});
+            items.push({bytes:r.bytes,name:r.name});
+            if (tool.id==='pagenumbers'&&cfg.bates) cfg={...cfg,start:(parseInt(cfg.start)||1)+(await PDFLib.PDFDocument.load(r.bytes)).getPageCount()};
+          }
+          result={items,note:`Processed ${files.length} files on your device.`};
+        } else result = await runTool(tool.id, files, config, { tick, setStatus });
+        setResultNote(result.note||'');
+        if (result.items) setDlItems(toItems(result.items));
+        else { setPdfBytes(result.bytes); setDlName(result.name); setDlItems([{url:'#pdf',name:result.name,size:fmtSz(result.bytes.byteLength)}]); }
       }
       tick(100); setState('done'); refreshUsage();
     } catch(e) {
@@ -1269,8 +1264,21 @@ function Workspace({ tool, onBack }) {
           </div>
         )}
 
+        {/* Compare: needs exactly two files, shows results in place */}
+        {state==='config' && tool.custom==='compare' && (files.length<2
+          ? <div className="space-y-3"><div className="card p-4 text-sm" style={{color:'var(--text)'}}>Got <strong>{files[0]?.name}</strong>. Now add the other version.</div><DropZone tool={{...tool,multi:false}} onFiles={f=>setFiles(prev=>[...prev,...f].slice(0,2))}/></div>
+          : <div className="space-y-4">
+              <div className="card p-3 text-sm flex flex-wrap items-center gap-2" style={{color:'var(--text)'}}><span className="text-red-400">Old:</span> {files[0].name} <span className="text-emerald-400 ml-2">New:</span> {files[1].name}
+                <button onClick={()=>setFiles(f=>[f[1],f[0]])} className="text-xs text-blue-400 ml-auto">Swap</button>
+                <button onClick={()=>{setState('drop');setFiles([]);setError('');}} className="text-xs text-blue-400">Start over</button></div>
+              {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
+              <CompareWorkspace key={files.map(f=>f.name+f.size).join('|')} files={files}
+                onQuota={async()=>{try{await consumeUsage(tool.id,token);refreshUsage();}catch(e){if(e.status===429){setShowUpgrade(true);setState('drop');setFiles([]);refreshUsage();}throw e;}}}
+                onError={e=>{if(e&&e.status===429)return;setError(e.message||'Something went wrong.');}}/>
+            </div>)}
+
         {/* Config */}
-        {state==='config' && !tool.ai && (
+        {state==='config' && !tool.ai && !tool.custom && (
           <div className="space-y-5 anim-up">
             {/* Files */}
             <div className="card p-4 space-y-2">
@@ -1278,14 +1286,14 @@ function Workspace({ tool, onBack }) {
                 <div key={i} className="flex items-center gap-3 rounded-xl p-2" style={{background:'var(--bg-input)'}}>
                   <Ic n="file" sz={16} cls="text-blue-400 shrink-0"/>
                   <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate" style={{color:'var(--text)'}}>{f.name}</p><p className="text-xs" style={{color:'var(--muted)'}}>{fmtSz(f.size)}</p></div>
-                  {tool.multi && files.length>1 && <>
+                  {(tool.multi||tool.batch) && files.length>1 && <>
                     <button onClick={()=>moveFile(i,-1)} disabled={i===0} className="p-1 rounded-lg disabled:opacity-30 hover:text-blue-400" style={{color:'var(--muted)'}} aria-label={`Move ${f.name} up`}><Ic n="left" sz={13} cls="rotate-90"/></button>
                     <button onClick={()=>moveFile(i,1)} disabled={i===files.length-1} className="p-1 rounded-lg disabled:opacity-30 hover:text-blue-400" style={{color:'var(--muted)'}} aria-label={`Move ${f.name} down`}><Ic n="right" sz={13} cls="rotate-90"/></button>
                   </>}
                   <button onClick={()=>removeFile(i)} className="p-1 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors" aria-label={`Remove ${f.name}`}><Ic n="trash" sz={13}/></button>
                 </div>
               ))}
-              {tool.multi && <label className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 cursor-pointer mt-1"><input type="file" className="hidden" accept={tool.accept} multiple onChange={e=>{const added=Array.from(e.target.files);e.target.value='';setFiles(f=>[...f,...added]);}}/><Ic n="upload" sz={12}/> Add more</label>}
+              {(tool.multi||tool.batch) && <label className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 cursor-pointer mt-1"><input type="file" className="hidden" accept={tool.accept} multiple onChange={e=>{const added=Array.from(e.target.files);e.target.value='';setFiles(f=>[...f,...added]);}}/><Ic n="upload" sz={12}/> Add more</label>}
             </div>
             {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
             <div className="card p-5 space-y-4">

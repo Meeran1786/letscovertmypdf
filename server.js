@@ -237,7 +237,8 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'","'unsafe-inline'","'unsafe-eval'",'cdn.tailwindcss.com','unpkg.com','cdnjs.cloudflare.com','fonts.googleapis.com','https://accounts.google.com/gsi/client'],
+      scriptSrc:  ["'self'","'unsafe-inline'","'unsafe-eval'",'cdn.tailwindcss.com','unpkg.com','cdnjs.cloudflare.com','fonts.googleapis.com','https://accounts.google.com/gsi/client',
+        'https://apis.google.com','https://www.dropbox.com'],
       // Google's sign-in button loads its own stylesheet; blocking it left the button unstyled/broken.
       styleSrc:   ["'self'","'unsafe-inline'",'fonts.googleapis.com','cdn.tailwindcss.com','https://accounts.google.com/gsi/style'],
       fontSrc:    ["'self'",'fonts.gstatic.com','data:'],
@@ -248,8 +249,10 @@ app.use(helmet({
       // The CDN hosts are also listed so the service worker can cache the app
       // shell for offline use.
       connectSrc: ["'self'",'https://accounts.google.com','cdnjs.cloudflare.com','unpkg.com','cdn.tailwindcss.com','fonts.googleapis.com','fonts.gstatic.com',
-        'https://huggingface.co','https://*.huggingface.co','https://*.hf.co','https://raw.githubusercontent.com'],
-      frameSrc:   ["'self'",'https://accounts.google.com'],
+        'https://huggingface.co','https://*.huggingface.co','https://*.hf.co','https://raw.githubusercontent.com',
+        // Cloud import downloads the picked file directly into the browser.
+        'https://www.googleapis.com','https://*.dropboxusercontent.com'],
+      frameSrc:   ["'self'",'https://accounts.google.com','https://docs.google.com','https://www.dropbox.com'],
       workerSrc:  ["'self'",'blob:','cdnjs.cloudflare.com'],
     },
   },
@@ -328,11 +331,11 @@ const upload = multer({
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'image/jpeg','image/png','image/gif','image/webp','image/tiff','image/bmp',
+      'image/jpeg','image/png','image/gif','image/webp','image/tiff','image/bmp','text/html',
     ];
     // Browsers often send Office files as application/octet-stream (or an
     // empty type), so fall back to the file extension before rejecting.
-    const allowedExt = ['.pdf','.doc','.docx','.xls','.xlsx','.ppt','.pptx','.odt','.ods','.odp','.rtf','.jpg','.jpeg','.png','.gif','.webp','.tif','.tiff','.bmp'];
+    const allowedExt = ['.html','.htm','.pdf','.doc','.docx','.xls','.xlsx','.ppt','.pptx','.odt','.ods','.odp','.rtf','.jpg','.jpeg','.png','.gif','.webp','.tif','.tiff','.bmp'];
     const ext = path.extname(file.originalname || '').toLowerCase();
     (allowed.includes(file.mimetype) || allowedExt.includes(ext))
       ? cb(null, true)
@@ -559,6 +562,9 @@ app.get('/api/config', (req, res) => {
   res.json({
     googleSignInEnabled: !!googleClient,
     googleClientId: googleClient ? process.env.GOOGLE_CLIENT_ID : null,
+    // Optional cloud import. Files go from Drive/Dropbox straight to the browser.
+    googlePickerApiKey: googleClient ? (process.env.GOOGLE_PICKER_API_KEY || null) : null,
+    dropboxAppKey: process.env.DROPBOX_APP_KEY || null,
   });
 });
 
@@ -732,10 +738,37 @@ function requirePdf(req) {
   if (!isPdfUpload(req)) throw Object.assign(new Error('Please upload a PDF file.'), { status: 400 });
 }
 
-app.post('/api/convert/to-pdf', upload.single('file'), conversionRoute('to-pdf', async (req, dir) => ({
-  file: await libreOfficeConvert(req.file.path, dir, 'pdf'),
-  name: `${baseName(req.file)}.pdf`,
-}), { acceptBodyToolId: true }));
+app.post('/api/convert/to-pdf', upload.single('file'), conversionRoute('to-pdf', async (req, dir) => {
+  // HTML opens in Writer/Web, which needs its own PDF export filter.
+  const html = /\.html?$/i.test(req.file.originalname || '');
+  return {
+    file: await libreOfficeConvert(req.file.path, dir, html ? 'pdf:writer_web_pdf_Export' : 'pdf'),
+    name: `${baseName(req.file)}.pdf`,
+  };
+}, { acceptBodyToolId: true }));
+
+/* PDF → PDF/A-2b via Ghostscript (embeds fonts, converts colour to sRGB).
+   PDF/A requires an output intent, so we write a small PostScript prologue
+   that attaches Ghostscript's own sRGB ICC profile. */
+const SRGB_ICC = ['/usr/share/color/icc/ghostscript/srgb.icc', '/usr/share/ghostscript/iccprofiles/srgb.icc', '/usr/local/share/ghostscript/iccprofiles/srgb.icc']
+  .find(p => fs.existsSync(p));
+app.post('/api/convert/pdf-to-pdfa', upload.single('file'), conversionRoute('pdfa', async (req, dir) => {
+  requirePdf(req);
+  if (!SRGB_ICC) throw Object.assign(new Error('PDF/A conversion is not available on this server yet.'), { status: 503 });
+  const out = path.join(dir, 'pdfa.pdf');
+  const def = path.join(dir, 'PDFA_def.ps');
+  await fs.writeFile(def, `%!
+[/_objdef {icc_PDFA} /type /stream /OBJ pdfmark
+[{icc_PDFA} <</N 3>> /PUT pdfmark
+[{icc_PDFA} (${SRGB_ICC}) (r) file /PUT pdfmark
+[/_objdef {OutputIntent_PDFA} /type /dict /OBJ pdfmark
+[{OutputIntent_PDFA} <</Type /OutputIntent /S /GTS_PDFA1 /DestOutputProfile {icc_PDFA} /OutputConditionIdentifier (sRGB)>> /PUT pdfmark
+[{Catalog} <</OutputIntents [ {OutputIntent_PDFA} ]>> /PUT pdfmark
+`);
+  await run('gs', ['-q', '-dPDFA=2', '-dBATCH', '-dNOPAUSE', '-dNOOUTERSAVE', '-sColorConversionStrategy=RGB',
+    '-dPDFACompatibilityPolicy=1', `--permit-file-read=${SRGB_ICC}`, '-sDEVICE=pdfwrite', `-sOutputFile=${out}`, def, req.file.path]);
+  return { file: out, name: `${baseName(req.file)}_pdfa.pdf` };
+}));
 
 /* PDF → Word: pdf2docx rebuilds real paragraphs/tables; LibreOffice's PDF
    import (text boxes only) is the fallback if Python isn't available. */
