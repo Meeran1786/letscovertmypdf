@@ -562,5 +562,6 @@
     loadScript, protectPdf, unlockPdf, repairPdf, compressPdf,
     extractText, ocrPdf, buildIndex, search, quickAnswer, quickSummary,
     aiSupport, modelCached, loadModel, aiAnswer, aiSummary, pagesIn,
+    complete: stream,
   };
 })();

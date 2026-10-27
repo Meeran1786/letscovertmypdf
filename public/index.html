@@ -130,6 +130,7 @@
 
 <script type="text/babel" src="/js/tools.jsx"></script>
 <script type="text/babel" src="/js/r2.jsx"></script>
+<script type="text/babel" src="/js/r3.jsx"></script>
 <script type="text/babel">
 const { useState, useCallback, useRef, useEffect, useContext, createContext, useMemo } = React;
 
@@ -272,6 +273,9 @@ const ICONS = {
   compare:'M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M12 2v20',
   numbers:'M7 20l4-16m2 16l4-16M6 9h14M4 15h14',
   flow:'M4 6h4v4H4zM16 14h4v4h-4zM8 8h4a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2',
+  translate:'M4 5h8M8 3v2M6 5c0 4 2 7 5 8M10 5c-1 4-3 7-6 8M13 21l4-10 4 10M14.5 17h5',
+  table:'M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 9h18M3 15h18M9 3v18M15 3v18',
+  review:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4',
   layers:'M12 2l10 5-10 5L2 7l10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
   edit:'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
 };
@@ -292,6 +296,9 @@ function Ic({ n, sz=20, cls='' }) {
 const CATEGORIES = ['All','AI','Organize','Convert','Optimize','Security','Workflows'];
 const TOOLS = [
   { id:'chat',     slug:'chat-with-pdf',  label:'Chat with PDF',  desc:'Ask questions and get answers with page references.',  icon:'chat',     cat:'AI',       color:'cyan',    accept:'.pdf',       multi:false, engine:'client', ai:true, isNew:true },
+  { id:'translate',slug:'translate-pdf',  label:'Translate PDF',  desc:'Translate into 22 languages and keep the layout, on your device.', icon:'translate', cat:'AI', color:'cyan', accept:'.pdf', multi:false, engine:'client', custom:'translate', isNew:true },
+  { id:'review',   slug:'review-contract',label:'Review Contract',desc:'Flag risky clauses, blanks and unsigned pages before you sign.', icon:'review', cat:'AI', color:'cyan', accept:'.pdf', multi:false, engine:'client', custom:'review', isNew:true },
+  { id:'extract',  slug:'pdf-data-to-excel', label:'Invoices to Excel', desc:'Pull tables, invoice and receipt totals into clean Excel rows.', icon:'table', cat:'AI', color:'cyan', accept:'.pdf', multi:true, engine:'client', custom:'extract', isNew:true },
   { id:'summarize',slug:'summarize-pdf',  label:'Summarize PDF',  desc:'Key points and action items in seconds, on your device.', icon:'summary', cat:'AI',     color:'cyan',    accept:'.pdf',       multi:false, engine:'client', ai:true, isNew:true },
   { id:'ocr',      slug:'ocr-pdf',        label:'OCR PDF',        desc:'Make scanned PDFs searchable and selectable.',          icon:'ocr',      cat:'AI',       color:'blue',    accept:'.pdf',       multi:false, engine:'client', batch:true, isNew:true },
   { id:'merge',    slug:'merge-pdf',      label:'Merge PDF',      desc:'Combine multiple PDFs into one.',                       icon:'merge',    cat:'Organize', color:'blue',    accept:'.pdf',       multi:true,  engine:'client' },
@@ -898,7 +905,8 @@ function loadImageToCanvas(file) {
   });
 }
 async function renderPdfPage(pdfBytes, pageNum, scale=1.5) {
-  const arr = pdfBytes instanceof Uint8Array ? pdfBytes : new Uint8Array(pdfBytes);
+  // Copy: PDF.js transfers the buffer to its worker, which would empty the caller's bytes.
+  const arr = new Uint8Array(pdfBytes).slice();
   const pdf = await pdfjsLib.getDocument({ data:arr }).promise;
   const page = await pdf.getPage(Math.min(pageNum, pdf.numPages));
   const vp = page.getViewport({ scale });
@@ -1130,11 +1138,11 @@ function GuestBanner({ tool }) {
 /* ══════════════════════════════════════
    WORKSPACE
 ══════════════════════════════════════ */
-function Workspace({ tool, onBack }) {
+function Workspace({ tool, onBack, preset }) {
   const { isAuthenticated, token, openAuth } = useAuth();
   const [state, setState] = useState('drop');
   const [files, setFiles] = useState([]);
-  const [config, setConfig] = useState({ degrees:90, text:'CONFIDENTIAL', fontSize:48, opacity:0.25, color:'#3B82F6' });
+  const [config, setConfig] = useState(() => ({ degrees:90, text:'CONFIDENTIAL', fontSize:48, opacity:0.25, color:'#3B82F6', ...(preset || {}) }));
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
   const [pdfBytes, setPdfBytes] = useState(null);
@@ -1261,6 +1269,26 @@ function Workspace({ tool, onBack }) {
             <AiWorkspace key={files[0]?.name+files[0]?.size} tool={tool} file={files[0]}
               onQuota={async()=>{try{await consumeUsage(tool.id,token);refreshUsage();}catch(e){if(e.status===429){setShowUpgrade(true);setState('drop');setFiles([]);refreshUsage();}throw e;}}}
               onError={e=>{if(e&&e.status===429)return;console.error(e);setError(e.message||'Something went wrong.');}}/>
+          </div>
+        )}
+
+        {/* Translate, review and extract: results shown in place */}
+        {state==='config' && ['translate','review','extract'].includes(tool.custom) && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 card p-3">
+              <Ic n="file" sz={16} cls="text-blue-400 shrink-0"/>
+              <p className="text-sm font-medium truncate flex-1" style={{color:'var(--text)'}}>{files.length > 1 ? `${files.length} files` : files[0]?.name}</p>
+              <button onClick={()=>{setState('drop');setFiles([]);setError('');}} className="text-xs text-blue-400 hover:text-blue-300">Change file{files.length>1?'s':''}</button>
+            </div>
+            {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
+            {(()=>{
+              const onQuota = async()=>{try{await consumeUsage(tool.id,token);refreshUsage();}catch(e){if(e.status===429){setShowUpgrade(true);setState('drop');setFiles([]);refreshUsage();}throw e;}};
+              const onError = e=>{if(e&&e.status===429)return;console.error(e);setError(e.message||'Something went wrong.');};
+              const key = files.map(f=>f.name+f.size).join('|');
+              if (tool.custom==='translate') return <TranslateWorkspace key={key} file={files[0]} initialTo={config.to} onQuota={onQuota} onError={onError}/>;
+              if (tool.custom==='review') return <ReviewWorkspace key={key} file={files[0]} onQuota={onQuota} onError={onError}/>;
+              return <ExtractWorkspace key={key} files={files} onQuota={onQuota} onError={onError}/>;
+            })()}
           </div>
         )}
 
@@ -1422,7 +1450,7 @@ function ToolCard({ tool, onClick }) {
 /* ══════════════════════════════════════
    HOME PAGE
 ══════════════════════════════════════ */
-function HomePage({ onTool, cat, setCat, onPrivacy }) {
+function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
   const [search, setSearch] = useState('');
   const { isAuthenticated, user, openAuth } = useAuth();
 
@@ -1467,6 +1495,7 @@ function HomePage({ onTool, cat, setCat, onPrivacy }) {
               </div>
             ))}
           </div>
+          <div className="max-w-2xl mx-auto mb-6"><CommandBar onRun={onCommand}/></div>
           <div className="relative max-w-md mx-auto">
             <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tools…"
               className="inp w-full pr-10" style={{borderRadius:'1rem',padding:'0.875rem 1.25rem'}}/>
@@ -1527,7 +1556,7 @@ function HomePage({ onTool, cat, setCat, onPrivacy }) {
 /* ══════════════════════════════════════
    NAVBAR
 ══════════════════════════════════════ */
-function Navbar({ onHome, onCategory, onPrivacy }) {
+function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
   const { isDark, toggle } = useTheme();
   const { user, logout, openAuth, isAuthenticated } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1553,6 +1582,7 @@ function Navbar({ onHome, onCategory, onPrivacy }) {
             <button key={c} onClick={() => onCategory(c)} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400" style={{color:'var(--muted)'}}>{c}</button>
           ))}
           <a href="/privacy" onClick={e=>{e.preventDefault();onPrivacy();}} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400 flex items-center gap-1" style={{color:'#34D399'}}><Ic n="lock" sz={12}/>Privacy</a>
+          <button onClick={onCommand} className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 hover:text-blue-400" style={{color:'var(--muted)',border:'1px solid var(--border-s)'}} aria-label="Open the command bar" title="Tell LetsConvertPDF what to do (Ctrl+K)"><Ic n="sparkle" sz={12}/>Ask <kbd className="text-[10px] opacity-70">⌘K</kbd></button>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -1649,7 +1679,14 @@ function App() {
     document.title = route.view === 'tool' ? `${route.tool.label} — Free & Private | LetsConvertPDF`
       : route.view === 'privacy' ? 'Private by design | LetsConvertPDF' : TITLE_HOME;
   }, [route]);
-  const openTool = t => go({ view:'tool', tool:t }, `/${t.slug}`);
+  const openTool = (t, preset) => go({ view:'tool', tool:t, preset }, `/${t.slug}`);
+  const [palette, setPalette] = useState(false);
+  const runCommand = plan => { const t = TOOLS.find(x => x.id === plan.tool); if (t) openTool(t, plan.preset); };
+  useEffect(() => {
+    const k = e => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPalette(p => !p); } };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, []);
   const openPrivacy = () => go({ view:'privacy' }, '/privacy');
   const goHome = () => go({ view:'home' }, '/');
   const showCategory = c => {
@@ -1660,16 +1697,17 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <div className="min-h-screen flex flex-col" style={{background:'var(--bg)'}}>
-          <Navbar onHome={goHome} onCategory={showCategory} onPrivacy={openPrivacy}/>
+          <Navbar onHome={goHome} onCategory={showCategory} onPrivacy={openPrivacy} onCommand={() => setPalette(true)}/>
           <main className="flex-1">
             {route.view === 'tool'
-              ? <Workspace key={route.tool.id} tool={route.tool} onBack={goHome}/>
+              ? <Workspace key={route.tool.id + (route.preset ? JSON.stringify(route.preset) : '')} tool={route.tool} preset={route.preset} onBack={goHome}/>
               : route.view === 'privacy'
                 ? <PrivacyPage onTool={openTool}/>
-                : <HomePage onTool={openTool} cat={cat} setCat={setCat} onPrivacy={openPrivacy}/>
+                : <HomePage onTool={openTool} cat={cat} setCat={setCat} onPrivacy={openPrivacy} onCommand={runCommand}/>
             }
           </main>
           <Footer onTool={openTool} onPrivacy={openPrivacy}/>
+          {palette && <CommandPalette onRun={runCommand} onClose={() => setPalette(false)}/>}
           <ChatWidget/>
         </div>
       </AuthProvider>

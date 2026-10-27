@@ -260,6 +260,43 @@ const PAGES = {
     ],
     local: true,
   },
+  'translate-pdf': {
+    title: 'Translate PDF Free — Keep the Layout, Private On-Device Translation',
+    h1: 'Translate a PDF and keep its layout',
+    desc: 'Translate PDFs into 22 languages including Spanish, Arabic, Urdu, Hindi and Chinese. The layout stays put and the file never leaves your device. Free.',
+    intro: 'Most PDF translators upload your document to a server. This one translates in your browser, then writes each translated paragraph back into the same place on the page, so tables, images and headings stay where they were. Compare the original and the translation side by side before you download.',
+    steps: ['Choose a PDF.', 'Pick the language to translate into.', 'Check the side-by-side view, then download the translated PDF or just the text.'],
+    faq: [
+      ['Which languages are supported?', 'English, Spanish, French, German, Italian, Portuguese, Dutch, Polish, Turkish, Swedish, Indonesian, Vietnamese, Russian, Ukrainian, Arabic, Urdu, Persian, Hindi, Bengali, Chinese, Japanese and Korean.'],
+      ['Is my document uploaded?', 'No. Translation uses the translator built into your browser, or our on-device AI, so the text stays on your device.'],
+      ['Can I translate a scanned PDF?', 'Yes. We recognise the text with on-device OCR first, then translate it.'],
+    ],
+    local: true,
+  },
+  'review-contract': {
+    title: 'Review a Contract Free — Find Risky Clauses Before You Sign',
+    h1: 'Review a contract before you sign',
+    desc: 'Flags auto-renewal, unlimited liability, non-competes, penalties, blanks left to fill and unsigned pages, with page references. Checked on your device. Free.',
+    intro: 'Get a quick checklist of what to look at in a contract, lease or NDA: risky clauses, missing basics like governing law or termination, blanks nobody filled in, and signature lines that still look empty. Each finding links to the page it came from. With Smart AI, get a plain-English explanation too.',
+    steps: ['Choose the contract PDF.', 'Read the flagged clauses and key terms, each with its page.', 'Download the report to share or keep.'],
+    faq: [
+      ['Is this legal advice?', 'No. It is a checklist to help you spot things worth asking about. For important agreements, talk to a lawyer.'],
+      ['Is my contract uploaded?', 'No. The review runs entirely in your browser.'],
+    ],
+    local: true,
+  },
+  'pdf-data-to-excel': {
+    title: 'Invoices and Receipts to Excel Free — Extract PDF Data Privately',
+    h1: 'Pull invoice and receipt data into Excel',
+    desc: 'Extract tables, invoice numbers, dates and totals from many PDFs into one clean Excel file. Works on scans too. Processed on your device. Free.',
+    intro: 'Drop a batch of invoices, receipts or statements and get one spreadsheet: a summary row per document (vendor, invoice number, dates, tax and total), every table on its own sheet, and all "Label: value" fields. Your financial documents never leave your device.',
+    steps: ['Choose one or more PDFs.', 'Check the preview of what was found.', 'Download the Excel file.'],
+    faq: [
+      ['Does it work with scanned receipts?', 'Yes. Scans are read with on-device OCR first.'],
+      ['How is this different from PDF to Excel?', 'PDF to Excel converts a whole document. This tool picks out the data you need, like totals and line items, across many files at once.'],
+    ],
+    local: true,
+  },
   'compare-pdf': {
     title: 'Compare PDF Free — See Changes Between Two Versions',
     h1: 'Compare two PDFs',
