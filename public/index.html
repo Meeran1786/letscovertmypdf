@@ -40,9 +40,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
@@ -52,6 +52,7 @@
       --bg-card:  rgba(255,255,255,0.04);
       --bg-input: #0F2040;
       --bg-nav:   rgba(10,22,40,0.9);
+      --bg-elev:  #101E36;
       --border:   rgba(255,255,255,0.08);
       --border-s: rgba(255,255,255,0.16);
       --text:     #E2E8F0;
@@ -64,6 +65,7 @@
       --bg-card:  #FFFFFF;
       --bg-input: #F8FAFC;
       --bg-nav:   rgba(255,255,255,0.95);
+      --bg-elev:  #FFFFFF;
       --border:   rgba(0,0,0,0.08);
       --border-s: rgba(0,0,0,0.16);
       --text:     #1E293B;
@@ -88,6 +90,11 @@
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: #2563EB; border-radius: 3px; }
     .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 1rem; }
+    /* Modals, menus and the chat panel float above content, so they need an
+       opaque surface; the translucent .card background let the page show through. */
+    .card-solid { background: var(--bg-elev); border: 1px solid var(--border-s); border-radius: 1rem; box-shadow: 0 24px 64px rgba(0,0,0,0.35); }
+    .overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 1rem; background: rgba(2,6,15,0.72); backdrop-filter: blur(4px); }
+    .overlay > * { margin: auto 0; }
     .card-hover:hover { border-color: rgba(37,99,235,0.5); transform: translateY(-1px); }
     .card-hover { transition: all 0.25s; }
     .inp { background: var(--bg-input); border: 1px solid var(--border-s); color: var(--text); border-radius: 0.75rem; padding: 0.625rem 0.875rem; font-size: 0.875rem; width: 100%; outline: none; font-family: inherit; transition: border-color 0.2s; }
@@ -103,7 +110,8 @@
     .anim-fade  { animation: fadeIn  0.25s ease; }
     .anim-up    { animation: slideUp 0.3s ease; }
     .anim-in    { animation: slideIn 0.3s ease; }
-    .otp-input { width:3rem; height:3.5rem; font-size:1.5rem; font-weight:700; text-align:center; }
+    .otp-input { width:3rem; height:3.5rem; font-size:1.5rem; font-weight:700; text-align:center; padding:0 !important; }
+    @media (max-width: 420px) { .otp-input { width:2.4rem; height:3rem; font-size:1.25rem; } }
     .chat-bubble-in  { background:#2563EB; color:#fff; border-radius:1rem 1rem 1rem 0.25rem; }
     .chat-bubble-out { background:var(--bg-input); border:1px solid var(--border); border-radius:1rem 1rem 0.25rem 1rem; }
     .drop-zone:hover { border-color: #2563EB; background: rgba(37,99,235,0.05); }
@@ -158,6 +166,7 @@ function AuthProvider({ children }) {
   const [authIntro, setAuthIntro] = useState('');
 
   const login = (tok, usr) => {
+    if (!tok) { setAuthOpen(false); return; }
     setToken(tok); setUser(usr);
     localStorage.setItem('lcpdf-token', tok);
     localStorage.setItem('lcpdf-user', JSON.stringify(usr));
@@ -172,6 +181,13 @@ function AuthProvider({ children }) {
   };
 
   const openAuth = (mode = 'login', intro = '') => { setAuthMode(mode); setAuthIntro(intro); setAuthOpen(true); };
+
+  useEffect(() => {
+    if (!authOpen) return;
+    const onKey = e => { if (e.key === 'Escape') setAuthOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [authOpen]);
 
   // Validate saved token on load
   useEffect(() => {
@@ -266,10 +282,10 @@ const TOOLS = [
   { id:'organize', label:'Organize Pages', desc:'Reorder, delete and rearrange PDF pages.',             icon:'organize', cat:'Organize', color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
   { id:'crop',     label:'Crop PDF',       desc:'Trim PDF page margins and resize the content area.',   icon:'crop',     cat:'Organize', color:'cyan',    accept:'.pdf',       multi:false, engine:'client' },
   { id:'rotate',   label:'Rotate PDF',     desc:'Rotate all or specific pages of a PDF.',               icon:'rotate',   cat:'Organize', color:'emerald', accept:'.pdf',       multi:false, engine:'client' },
-  { id:'compress', label:'Compress PDF',   desc:'Reduce file size while maintaining quality.',          icon:'compress', cat:'Optimize', color:'emerald', accept:'.pdf',       multi:false, engine:'client' },
+  { id:'compress', label:'Compress PDF',   desc:'Reduce file size while maintaining quality.',          icon:'compress', cat:'Optimize', color:'emerald', accept:'.pdf',       multi:false, engine:'server' },
   { id:'img2pdf',  label:'Image to PDF',   desc:'Convert JPG, PNG, WebP images to a PDF document.',    icon:'img2pdf',  cat:'Convert',  color:'blue',    accept:'image/*',    multi:true,  engine:'client' },
   { id:'pdf2jpg',  label:'PDF to JPG',     desc:'Extract every page as a high-quality JPEG image.',    icon:'pdf2jpg',  cat:'Convert',  color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
-  { id:'word2pdf', label:'Word to PDF',    desc:'Convert DOCX/DOC to PDF preserving formatting.',      icon:'word',     cat:'Convert',  color:'blue',    accept:'.docx,.doc', multi:false, engine:'server' },
+  { id:'word2pdf', label:'Word to PDF',    desc:'Convert DOCX/DOC to PDF preserving formatting.',      icon:'word',     cat:'Convert',  color:'blue',    accept:'.docx,.doc,.odt,.rtf', multi:false, engine:'server' },
   { id:'excel2pdf',label:'Excel to PDF',   desc:'Transform Excel spreadsheets into PDF files.',        icon:'excel',    cat:'Convert',  color:'emerald', accept:'.xlsx,.xls', multi:false, engine:'server' },
   { id:'ppt2pdf',  label:'PPT to PDF',     desc:'Convert PowerPoint presentations to PDF.',            icon:'ppt',      cat:'Convert',  color:'cyan',    accept:'.pptx,.ppt', multi:false, engine:'server' },
   { id:'pdf2word', label:'PDF to Word',    desc:'Convert PDF back to editable Word documents.',        icon:'pdf2word', cat:'Convert',  color:'blue',    accept:'.pdf',       multi:false, engine:'server' },
@@ -277,8 +293,8 @@ const TOOLS = [
   { id:'pdf2ppt',  label:'PDF to PPT',     desc:'Convert PDF slides into editable PowerPoint files.',  icon:'pdf2ppt',  cat:'Convert',  color:'cyan',    accept:'.pdf',       multi:false, engine:'server' },
   { id:'watermark',label:'Watermark PDF',  desc:'Add text watermarks to your PDF pages.',              icon:'watermark',cat:'Security', color:'cyan',    accept:'.pdf',       multi:false, engine:'client' },
   { id:'sign',     label:'Sign PDF',       desc:'Draw your signature directly on PDF pages.',          icon:'sign',     cat:'Security', color:'cyan',    accept:'.pdf',       multi:false, engine:'client' },
-  { id:'protect',  label:'Protect PDF',    desc:'Encrypt PDF with a password for secure sharing.',     icon:'protect',  cat:'Security', color:'red',     accept:'.pdf',       multi:false, engine:'client' },
-  { id:'unlock',   label:'Unlock PDF',     desc:'Remove password protection from PDF files.',          icon:'unlock',   cat:'Security', color:'emerald', accept:'.pdf',       multi:false, engine:'client' },
+  { id:'protect',  label:'Protect PDF',    desc:'Encrypt PDF with a password for secure sharing.',     icon:'protect',  cat:'Security', color:'red',     accept:'.pdf',       multi:false, engine:'server' },
+  { id:'unlock',   label:'Unlock PDF',     desc:'Remove password protection from PDF files.',          icon:'unlock',   cat:'Security', color:'emerald', accept:'.pdf',       multi:false, engine:'server' },
   { id:'repair',   label:'Repair PDF',     desc:'Fix corrupted or damaged PDF documents.',             icon:'repair',   cat:'Optimize', color:'emerald', accept:'.pdf',       multi:false, engine:'server' },
   { id:'edit',     label:'Edit PDF',       desc:'Add text overlays, highlights and annotations.',      icon:'watermark',cat:'Organize', color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
 ];
@@ -288,6 +304,25 @@ const C = {
   emerald: { bg:'rgba(16,185,129,0.1)',   bd:'rgba(16,185,129,0.3)',   ic:'#34D399', badge:'rgba(16,185,129,0.15)' },
   red:     { bg:'rgba(239,68,68,0.1)',    bd:'rgba(239,68,68,0.3)',    ic:'#F87171', badge:'rgba(239,68,68,0.15)' },
 };
+
+/* ══════════════════════════════════════
+   GOOGLE SIGN-IN
+   Google Identity Services must be initialised once per page; re-initialising
+   on every render (as before) dropped the credential callback. The modal
+   swaps in its handler through gisCallback.
+══════════════════════════════════════ */
+const gisCallback = { current: null };
+let gisInitialisedFor = null;
+function waitForGis(timeoutMs = 8000) {
+  return new Promise(resolve => {
+    const start = Date.now();
+    (function check() {
+      if (window.google?.accounts?.id) return resolve(window.google.accounts.id);
+      if (Date.now() - start > timeoutMs) return resolve(null);
+      setTimeout(check, 150);
+    })();
+  });
+}
 
 /* ══════════════════════════════════════
    AUTH MODAL
@@ -303,6 +338,8 @@ function AuthModal({ mode, intro, onMode, onClose }) {
   const [showPw, setShowPw] = useState(false);
   const [deliveryWarning, setDeliveryWarning] = useState('');
   const [googleConfig, setGoogleConfig] = useState(null); // null = loading, else { googleSignInEnabled, googleClientId }
+  const [googleBlocked, setGoogleBlocked] = useState(false);
+  const [notice, setNotice] = useState('');
   const googleBtnRef = useRef(null);
 
   // form state
@@ -353,36 +390,44 @@ function AuthModal({ mode, intro, onMode, onClose }) {
     fetch('/api/config').then(r => r.json()).then(setGoogleConfig).catch(() => setGoogleConfig({ googleSignInEnabled: false }));
   }, []);
 
-  const handleGoogleCredential = useCallback(async (response) => {
-    setError('');
+  gisCallback.current = async (response) => {
+    setError(''); setLoading(true);
     try {
       const d = await post('/api/auth/google', { idToken: response.credential });
       login(d.token, d.user); // Google already verified the email — skip OTP entirely.
     } catch (e) { setError(e.message); }
-  }, [login]);
+    setLoading(false);
+  };
 
   // Once we know Google Sign-In is enabled and the GIS script has loaded, render
   // Google's real button into our container (a custom-styled button isn't allowed
-  // by Google's branding terms for this flow).
+  // by Google's branding terms for this flow). Re-runs when the form re-mounts
+  // (tab switch, coming back from the code step) so the button never vanishes.
   useEffect(() => {
-    if (!googleConfig?.googleSignInEnabled || mode === 'reset' || !googleBtnRef.current) return;
+    if (!googleConfig?.googleSignInEnabled || mode === 'reset' || step !== 'form') return;
     let cancelled = false;
-    const tryRender = (triesLeft) => {
-      if (cancelled) return;
-      if (window.google?.accounts?.id) {
-        window.google.accounts.id.initialize({ client_id: googleConfig.googleClientId, callback: handleGoogleCredential });
-        window.google.accounts.id.renderButton(googleBtnRef.current, { theme: 'outline', size: 'large', shape: 'pill', width: 336, text: 'continue_with' });
-      } else if (triesLeft > 0) {
-        setTimeout(() => tryRender(triesLeft - 1), 150);
+    waitForGis().then(gis => {
+      if (cancelled || !googleBtnRef.current) return;
+      if (!gis) { setGoogleBlocked(true); return; }
+      if (gisInitialisedFor !== googleConfig.googleClientId) {
+        gis.initialize({ client_id: googleConfig.googleClientId, callback: r => gisCallback.current?.(r), ux_mode: 'popup' });
+        gisInitialisedFor = googleConfig.googleClientId;
       }
-    };
-    tryRender(20);
+      const width = Math.max(200, Math.min(400, googleBtnRef.current.offsetWidth || 320));
+      googleBtnRef.current.innerHTML = '';
+      gis.renderButton(googleBtnRef.current, { theme: 'outline', size: 'large', shape: 'pill', width, text: 'continue_with', logo_alignment: 'center' });
+    });
     return () => { cancelled = true; };
-  }, [googleConfig, mode, handleGoogleCredential]);
+  }, [googleConfig, mode, step]);
+
+  const handleResetDone = () => {
+    setStep('form'); onMode('login'); setError('');
+    setNotice('Your password has been reset. Log in with your new password.');
+  };
 
   return (
-    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.65)'}}>
-      <div className="card anim-up w-full max-w-md relative" style={{padding:'2rem'}}>
+    <div className="anim-fade overlay" role="dialog" aria-modal="true">
+      <div className="card-solid anim-up w-full max-w-md relative p-6 sm:p-8">
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors" aria-label="Close">
           <Ic n="close" sz={16}/>
         </button>
@@ -401,7 +446,8 @@ function AuthModal({ mode, intro, onMode, onClose }) {
 
         {step === 'otp' ? (
           <OTPStep email={pendingEmail} purpose={otpPurpose} newPw={otpPurpose==='reset' ? f.newPw : null}
-            warning={deliveryWarning} onBack={() => setStep('form')} onSuccess={login}/>
+            warning={deliveryWarning} onBack={() => setStep('form')}
+            onSuccess={otpPurpose === 'reset' ? handleResetDone : login}/>
         ) : (
           <>
             {/* Tabs */}
@@ -425,13 +471,19 @@ function AuthModal({ mode, intro, onMode, onClose }) {
             )}
 
             {error && <div className="mb-4 text-sm rounded-xl p-3" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
+            {notice && !error && <div className="mb-4 text-sm rounded-xl p-3" style={{background:'rgba(16,185,129,0.1)',color:'#34D399',border:'1px solid rgba(16,185,129,0.3)'}}>{notice}</div>}
 
             {/* Google button — real Google Identity Services button when configured,
                 a disabled explainer button otherwise. */}
-            {mode !== 'reset' && googleConfig?.googleSignInEnabled && (
-              <div className="flex justify-center mb-4">
-                <div ref={googleBtnRef}/>
+            {mode !== 'reset' && googleConfig?.googleSignInEnabled && !googleBlocked && (
+              <div className="mb-4 flex justify-center" style={{minHeight:44}}>
+                <div ref={googleBtnRef} className="w-full flex justify-center"/>
               </div>
+            )}
+            {mode !== 'reset' && googleBlocked && (
+              <p className="mb-4 text-xs text-center rounded-xl p-3" style={{background:'var(--bg-input)',color:'var(--muted)'}}>
+                Google sign-in couldn't load. An ad or tracker blocker may be blocking accounts.google.com — allow it for this site, or use email below.
+              </p>
             )}
             {mode !== 'reset' && googleConfig && !googleConfig.googleSignInEnabled && (
               <button type="button" disabled title="Google Sign-In isn't set up on this server yet"
@@ -680,8 +732,8 @@ function UsageBadge({ status, isAuthenticated, onUpgrade }) {
 function UpgradeModal({ tool, usageInfo, isAuthenticated, onClose, onSignup, onLogin }) {
   const col = C[tool.color] || C.blue;
   return (
-    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.65)'}}>
-      <div className="card anim-up w-full max-w-md relative p-8 text-center">
+    <div className="anim-fade overlay" role="dialog" aria-modal="true">
+      <div className="card-solid anim-up w-full max-w-md relative p-6 sm:p-8 text-center">
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors" aria-label="Close">
           <Ic n="close" sz={16}/>
         </button>
@@ -731,10 +783,10 @@ function ChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-3">
       {/* Chat Panel */}
       {open && (
-        <div className="card anim-in w-80 shadow-2xl overflow-hidden" style={{boxShadow:'0 20px 60px rgba(0,0,0,0.4)'}}>
+        <div className="card-solid anim-in w-[calc(100vw-2rem)] max-w-xs sm:w-80 overflow-hidden">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3" style={{background:'#2563EB'}}>
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
@@ -753,7 +805,7 @@ function ChatWidget() {
           </div>
 
           {/* Body */}
-          <div className="p-4" style={{background:'var(--bg-card)'}}>
+          <div className="p-4">
             {sent ? (
               <div className="text-center py-6 anim-up">
                 <div className="w-12 h-12 mx-auto rounded-full bg-emerald-500/20 flex items-center justify-center mb-3">
@@ -784,7 +836,7 @@ function ChatWidget() {
 
       {/* Bubble button */}
       <button onClick={() => setOpen(o => !o)}
-        className="w-14 h-14 rounded-full text-white shadow-lg flex items-center justify-center transition-all hover:scale-105"
+        className="w-12 h-12 sm:w-14 sm:h-14 rounded-full text-white shadow-lg flex items-center justify-center transition-all hover:scale-105"
         style={{background:'#2563EB', boxShadow:'0 4px 20px rgba(37,99,235,0.5)'}} aria-label={open ? 'Close support chat' : 'Open support chat'}>
         {open ? <Ic n="close" sz={22}/> : <Ic n="chat" sz={22}/>}
       </button>
@@ -828,8 +880,10 @@ async function renderPdfPage(pdfBytes, pageNum, scale=1.5) {
   await page.render({ canvasContext:canvas.getContext('2d'), viewport:vp }).promise;
   return { dataUrl: canvas.toDataURL(), numPages: pdf.numPages };
 }
-async function callServerAPI(endpoint, file, toolId, token) {
-  const fd = new FormData(); fd.append('file', file); fd.append('toolId', toolId);
+async function callServerAPI(endpoint, file, toolId, token, fields = {}) {
+  const fd = new FormData(); fd.append('toolId', toolId);
+  Object.entries(fields).forEach(([k, v]) => v != null && fd.append(k, v));
+  fd.append('file', file);
   const r = await fetch(`/api/${endpoint}`, { method:'POST', headers: authHeaders(token), body:fd });
   if (!r.ok) {
     const e = await r.json().catch(()=>({}));
@@ -858,11 +912,19 @@ async function processOrganize(file,order) { const {PDFDocument}=PDFLib; const s
 async function processWatermark(file,text,opacity,fontSize,color) {
   const {PDFDocument,rgb,degrees}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true}); const font=await d.embedFont(PDFLib.StandardFonts.HelveticaBold);
   const h=color||'#3B82F6'; const r=parseInt(h.slice(1,3),16)/255,g=parseInt(h.slice(3,5),16)/255,b=parseInt(h.slice(5,7),16)/255;
-  d.getPages().forEach(pg=>{const{width,height}=pg.getSize();pg.drawText(text,{x:width/2-(text.length*(fontSize||48)*0.3),y:height/2,size:fontSize||48,font,color:rgb(r,g,b),opacity:opacity||0.25,rotate:degrees(45)});});
+  const size=fontSize||48; const tw=font.widthOfTextAtSize(text,size); const k=Math.SQRT1_2;
+  // Rotate 45° around the page centre: offset the start point along the rotated baseline.
+  d.getPages().forEach(pg=>{const{width,height}=pg.getSize();pg.drawText(text,{x:width/2-(tw/2)*k+(size/3)*k,y:height/2-(tw/2)*k-(size/3)*k,size,font,color:rgb(r,g,b),opacity:opacity||0.25,rotate:degrees(45)});});
   return d.save();
 }
-async function processUnlock(file) { const {PDFDocument}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true}); return d.save(); }
-async function processCrop(file,m) { const {PDFDocument}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true}); d.getPages().forEach(pg=>{const{width,height}=pg.getSize();pg.setMediaBox(m,m,width-m*2,height-m*2);}); return d.save(); }
+async function processCrop(file,m) {
+  const {PDFDocument}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file));
+  d.getPages().forEach(pg=>{
+    const b=pg.getCropBox(); const mm=Math.max(0,Math.min(m,b.width/2-10,b.height/2-10));
+    pg.setCropBox(b.x+mm,b.y+mm,b.width-mm*2,b.height-mm*2); pg.setMediaBox(b.x+mm,b.y+mm,b.width-mm*2,b.height-mm*2);
+  });
+  return d.save();
+}
 async function processImageToPDF(files) {
   const imgs=await Promise.all(files.map(loadImageToCanvas)); const{jsPDF}=window.jspdf; const f=imgs[0];
   const pdf=new jsPDF({orientation:f.w>=f.h?'landscape':'portrait',unit:'mm',format:[pxToMm(f.w),pxToMm(f.h)]});
@@ -873,14 +935,32 @@ async function processPDFtoJPG(file) {
   const arr=new Uint8Array(await readFileAsArrayBuffer(file)); const pdf=await pdfjsLib.getDocument({data:arr}).promise;
   return Promise.all(Array.from({length:pdf.numPages},async(_,i)=>{const pg=await pdf.getPage(i+1);const vp=pg.getViewport({scale:2});const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;return{dataUrl:c.toDataURL('image/jpeg',0.92),name:`page_${i+1}.jpg`};}));
 }
-async function processSign(file, sigData) {
-  const {PDFDocument}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true});
-  if (sigData) { const img=await d.embedPng(await fetch(sigData).then(r=>r.arrayBuffer())); const[pg]=d.getPages(); const{width,height}=pg.getSize(); const dims=img.scale(0.5); pg.drawImage(img,{x:width-dims.width-40,y:40,width:dims.width,height:dims.height}); }
+function pickPages(pages, which) {
+  if (which === 'all') return pages;
+  if (which === 'first') return pages.slice(0, 1);
+  if (which === 'last' || !which) return pages.slice(-1);
+  const n = parseInt(which); return pages[n-1] ? [pages[n-1]] : pages.slice(-1);
+}
+async function processSign(file, sigData, { pages='last', position='bottom-right', size=180 } = {}) {
+  if (!sigData) throw new Error('Draw your signature first.');
+  const {PDFDocument}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file));
+  // Decode the data: URL directly; fetch() on data: URLs is blocked by the site's CSP.
+  const img=await d.embedPng(Uint8Array.from(atob(sigData.split(',')[1]),c=>c.charCodeAt(0)));
+  const w=Math.max(60,parseInt(size)||180), h=w*img.height/img.width, pad=36;
+  pickPages(d.getPages(), pages).forEach(pg=>{
+    const{width,height}=pg.getSize();
+    const x=position.endsWith('left')?pad:position.endsWith('center')?(width-w)/2:width-w-pad;
+    const y=position.startsWith('top')?height-h-pad:pad;
+    pg.drawImage(img,{x,y,width:w,height:h});
+  });
   return d.save();
 }
-async function processEdit(file, text, x, y) {
-  const {PDFDocument,rgb}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file),{ignoreEncryption:true}); const font=await d.embedFont(PDFLib.StandardFonts.Helvetica);
-  const[pg]=d.getPages(); const{height}=pg.getSize(); pg.drawText(text||'Edited',{x:x||50,y:height-(y||100),size:14,font,color:rgb(0.15,0.39,0.92)}); return d.save();
+async function processEdit(file, text, x, y, { page=1, size=14, color='#1D4ED8' } = {}) {
+  if (!text) throw new Error('Enter the text to add.');
+  const {PDFDocument,rgb}=PDFLib; const d=await PDFDocument.load(await readFileAsArrayBuffer(file)); const font=await d.embedFont(PDFLib.StandardFonts.Helvetica);
+  const pages=d.getPages(); const pg=pages[Math.min(Math.max(1,parseInt(page)||1),pages.length)-1]; const{height}=pg.getSize();
+  const r=parseInt(color.slice(1,3),16)/255,g=parseInt(color.slice(3,5),16)/255,b=parseInt(color.slice(5,7),16)/255;
+  pg.drawText(text,{x:x||50,y:height-(y||100),size:parseInt(size)||14,font,color:rgb(r,g,b)}); return d.save();
 }
 
 /* ══════════════════════════════════════
@@ -899,9 +979,9 @@ function PreviewModal({ pdfBytes, onClose, onDownload, downloadName }) {
   }, [pdfBytes, page, zoom]);
 
   return (
-    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.7)'}}
+    <div className="anim-fade overlay" role="dialog" aria-modal="true"
       onClick={e => e.target===e.currentTarget && onClose()}>
-      <div className="card w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="card-solid w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3.5" style={{borderBottom:'1px solid var(--border)'}}>
           <span className="font-semibold text-sm" style={{color:'var(--text)'}}>{downloadName}</span>
           <div className="flex items-center gap-1">
@@ -959,17 +1039,20 @@ function DropZone({ tool, onFiles, disabled }) {
   );
 }
 
+/* The canvas stays transparent and the ink is dark, so the stamped signature
+   looks like a real one on the white page (previously it was a dark box). A
+   white backdrop sits behind the canvas only on screen. */
 function SignaturePad({ onSign }) {
-  const ref = useRef(); const drawing = useRef(false);
-  useEffect(() => { const c=ref.current; const ctx=c.getContext('2d'); ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg-input')||'#111'; ctx.fillRect(0,0,c.width,c.height); ctx.strokeStyle='#60A5FA'; ctx.lineWidth=2; ctx.lineCap='round'; }, []);
-  const pos=(e,c)=>{const r=c.getBoundingClientRect();const t=e.touches?.[0]||e;return[t.clientX-r.left,t.clientY-r.top];};
-  const start=e=>{drawing.current=true;const c=ref.current;const ctx=c.getContext('2d');const[x,y]=pos(e,c);ctx.beginPath();ctx.moveTo(x,y);};
-  const move=e=>{if(!drawing.current)return;e.preventDefault();const c=ref.current;const ctx=c.getContext('2d');const[x,y]=pos(e,c);ctx.lineTo(x,y);ctx.stroke();};
-  const stop=()=>{drawing.current=false;onSign&&onSign(ref.current.toDataURL());};
-  const clear=()=>{const c=ref.current;const ctx=c.getContext('2d');ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg-input')||'#111';ctx.fillRect(0,0,c.width,c.height);};
+  const ref = useRef(); const drawing = useRef(false); const dirty = useRef(false);
+  const ctxOf = () => { const ctx=ref.current.getContext('2d'); ctx.strokeStyle='#0F172A'; ctx.lineWidth=2.5; ctx.lineCap='round'; ctx.lineJoin='round'; return ctx; };
+  const pos=(e,c)=>{const r=c.getBoundingClientRect();const t=e.touches?.[0]||e;return[(t.clientX-r.left)*c.width/r.width,(t.clientY-r.top)*c.height/r.height];};
+  const start=e=>{drawing.current=true;const c=ref.current;const ctx=ctxOf();const[x,y]=pos(e,c);ctx.beginPath();ctx.moveTo(x,y);};
+  const move=e=>{if(!drawing.current)return;e.preventDefault();const c=ref.current;const ctx=ctxOf();const[x,y]=pos(e,c);ctx.lineTo(x,y);ctx.stroke();dirty.current=true;};
+  const stop=()=>{if(!drawing.current)return;drawing.current=false;if(dirty.current&&onSign)onSign(ref.current.toDataURL('image/png'));};
+  const clear=()=>{const c=ref.current;c.getContext('2d').clearRect(0,0,c.width,c.height);dirty.current=false;onSign&&onSign(null);};
   return (
     <div>
-      <canvas ref={ref} width={340} height={130} className="rounded-xl w-full cursor-crosshair touch-none" style={{border:'1px solid var(--border-s)'}}
+      <canvas ref={ref} width={680} height={260} className="rounded-xl w-full cursor-crosshair touch-none" style={{border:'1px solid var(--border-s)',background:'#FFFFFF',aspectRatio:'680/260'}}
         onMouseDown={start} onMouseMove={move} onMouseUp={stop} onMouseLeave={stop}
         onTouchStart={start} onTouchMove={move} onTouchEnd={stop}/>
       <button onClick={clear} className="mt-2 text-xs flex items-center gap-1 hover:text-red-400 transition-colors" style={{color:'var(--muted)'}}>
@@ -999,11 +1082,48 @@ function ConfigPanel({ tool, config, set }) {
     </div>
   );
   if (tool.id==='watermark') return <div className="space-y-3">{inp('text','Watermark Text','text','CONFIDENTIAL')}{inp('fontSize','Font Size','number','48')}{inp('opacity','Opacity (0–1)','number','0.25')}<div><label className="block text-xs font-medium mb-1" style={{color:'var(--muted)'}}>Color</label><input type="color" value={config.color||'#3B82F6'} onChange={e=>set(c=>({...c,color:e.target.value}))} className="w-10 h-10 rounded cursor-pointer bg-transparent border-0"/></div></div>;
-  if (tool.id==='protect') return <div className="space-y-3">{inp('password','Password','password','Enter strong password')}{inp('confirmPw','Confirm Password','password','Re-enter password')}</div>;
+  const sel=(k,label,opts,def)=>(
+    <div><label className="block text-xs font-medium mb-1" style={{color:'var(--muted)'}}>{label}</label>
+      <select className="inp" value={config[k]||def} onChange={e=>set(c=>({...c,[k]:e.target.value}))}>
+        {opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}
+      </select></div>
+  );
+  if (tool.id==='protect') return <div className="space-y-3">{inp('password','Password','password','Enter strong password',{autoComplete:'new-password'})}{inp('confirmPw','Confirm Password','password','Re-enter password',{autoComplete:'new-password'})}<p className="text-xs" style={{color:'var(--muted)'}}>Encrypted with AES-256. Anyone opening the PDF will need this password.</p></div>;
+  if (tool.id==='unlock') return <div className="space-y-3">{inp('password','Current password','password','Password used to open this PDF',{autoComplete:'off'})}<p className="text-xs" style={{color:'var(--muted)'}}>Only unlock files you own or are allowed to edit. Leave empty if the PDF only has editing/printing restrictions.</p></div>;
+  if (tool.id==='compress') return (
+    <div>
+      <label className="block text-xs font-medium mb-2" style={{color:'var(--muted)'}}>Compression level</label>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        {[['low','Light','Best quality'],['recommended','Recommended','Good quality, smaller'],['extreme','Strong','Smallest file']].map(([v,l,d])=>{
+          const on=(config.level||'recommended')===v;
+          return <button key={v} onClick={()=>set(c=>({...c,level:v}))} className="p-3 rounded-xl text-left transition-all"
+            style={{background:on?'rgba(37,99,235,0.15)':'var(--bg-input)',border:`1px solid ${on?'#2563EB':'var(--border-s)'}`}}>
+            <p className="text-sm font-semibold" style={{color:'var(--text)'}}>{l}</p><p className="text-xs" style={{color:'var(--muted)'}}>{d}</p></button>;
+        })}
+      </div>
+    </div>
+  );
   if (tool.id==='crop') return inp('margin','Margin to crop (pt)','number','20');
   if (tool.id==='organize') return <div className="space-y-3"><p className="text-xs" style={{color:'var(--muted)'}}>Enter comma-separated page numbers in desired order (1-based).</p>{inp('order','Page Order','text','e.g. 3,1,2,4')}</div>;
-  if (tool.id==='sign') return <div className="space-y-3"><label className="block text-xs font-medium" style={{color:'var(--muted)'}}>Draw Your Signature</label><SignaturePad onSign={d=>set(c=>({...c,sigData:d}))}/></div>;
-  if (tool.id==='edit') return <div className="space-y-3">{inp('overlayText','Text to add','text','Your annotation...')}{inp('x','X position (pt)','number','50')}{inp('y','Y from top (pt)','number','100')}</div>;
+  if (tool.id==='sign') return (
+    <div className="space-y-3">
+      <label className="block text-xs font-medium" style={{color:'var(--muted)'}}>Draw your signature</label>
+      <SignaturePad onSign={d=>set(c=>({...c,sigData:d}))}/>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {sel('sigPages','Pages',[['last','Last page'],['first','First page'],['all','Every page']],'last')}
+        {sel('sigPos','Position',[['bottom-right','Bottom right'],['bottom-left','Bottom left'],['bottom-center','Bottom centre'],['top-right','Top right'],['top-left','Top left']],'bottom-right')}
+        {inp('sigSize','Width (pt)','number','180')}
+      </div>
+    </div>
+  );
+  if (tool.id==='edit') return (
+    <div className="space-y-3">
+      {inp('overlayText','Text to add','text','Your annotation...')}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {inp('page','Page','number','1',{min:1})}{inp('x','X from left (pt)','number','50')}{inp('y','Y from top (pt)','number','100')}{inp('size','Font size','number','14')}
+      </div>
+    </div>
+  );
   return <p className="text-sm" style={{color:'var(--muted)'}}>Click the button below to process your file.</p>;
 }
 
@@ -1043,6 +1163,7 @@ function Workspace({ tool, onBack }) {
   const [status, setStatus] = useState('Processing…');
   const [usageStatus, setUsageStatus] = useState(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [resultNote, setResultNote] = useState('');
   const col = C[tool.color]||C.blue;
 
   const refreshUsage = useCallback(() => {
@@ -1051,8 +1172,15 @@ function Workspace({ tool, onBack }) {
 
   useEffect(() => { refreshUsage(); }, [refreshUsage]);
 
-  const handleFiles = files => { setFiles(files); setState('config'); setError(''); };
-  const removeFile  = i => setFiles(f=>f.filter((_,idx)=>idx!==i));
+  const accepts = f => tool.accept.split(',').some(a => a.endsWith('/*') ? f.type.startsWith(a.slice(0,-1)) : f.name.toLowerCase().endsWith(a.trim()));
+  const handleFiles = picked => {
+    const ok = picked.filter(Boolean).filter(accepts);
+    if (!ok.length) { setError(`Please choose a ${tool.accept.toUpperCase().replace(/\./g,'').replace(/,/g,' / ')} file.`); return; }
+    setFiles(ok); setState('config');
+    setError(ok.length < picked.length ? 'Some files were skipped because they are not the right type.' : '');
+  };
+  const removeFile  = i => setFiles(f=>{const n=f.filter((_,idx)=>idx!==i); if(!n.length) setState('drop'); return n;});
+  const moveFile    = (i,dir) => setFiles(f=>{const n=[...f];const j=i+dir;if(j<0||j>=n.length)return f;[n[i],n[j]]=[n[j],n[i]];return n;});
   const fmtSz = b => b>1048576?`${(b/1048576).toFixed(2)} MB`:`${(b/1024).toFixed(1)} KB`;
 
   const download = () => {
@@ -1068,40 +1196,50 @@ function Workspace({ tool, onBack }) {
   };
 
   const process = async () => {
-    setState('processing'); setProgress(0); setError('');
+    setState('processing'); setProgress(0); setError(''); setResultNote('');
     const tick=v=>setProgress(v);
     try {
       tick(10);
       if (tool.engine==='server') {
-        const ep={word2pdf:'convert/to-pdf',excel2pdf:'convert/to-pdf',ppt2pdf:'convert/to-pdf',pdf2word:'convert/pdf-to-docx',pdf2excel:'convert/pdf-to-xlsx',pdf2ppt:'convert/pdf-to-pptx',repair:'repair'}[tool.id];
-        setStatus('Uploading to server…'); tick(20);
-        const{blob,filename}=await callServerAPI(ep,files[0],tool.id,token);
+        const ep={word2pdf:'convert/to-pdf',excel2pdf:'convert/to-pdf',ppt2pdf:'convert/to-pdf',pdf2word:'convert/pdf-to-docx',pdf2excel:'convert/pdf-to-xlsx',pdf2ppt:'convert/pdf-to-pptx',repair:'repair',compress:'compress',protect:'protect',unlock:'unlock'}[tool.id];
+        const fields={};
+        if (tool.id==='protect') {
+          if (!config.password || config.password.length<4) throw new Error('Choose a password of at least 4 characters.');
+          if (config.password!==config.confirmPw) throw new Error('Passwords do not match.');
+          fields.password=config.password;
+        }
+        if (tool.id==='unlock') fields.password=config.password||'';
+        if (tool.id==='compress') fields.level=config.level||'recommended';
+        setStatus(tool.id==='compress'?'Compressing…':'Uploading and converting…'); tick(30);
+        const{blob,filename}=await callServerAPI(ep,files[0],tool.id,token,fields);
         tick(85);
-        if(filename.endsWith('.pdf')){const b=new Uint8Array(await blob.arrayBuffer());setPdfBytes(b);setDlName(filename);setDlItems([{url:'#pdf',name:filename,size:fmtSz(b.byteLength)}]);}
+        if(filename.endsWith('.pdf')){const b=new Uint8Array(await blob.arrayBuffer());setPdfBytes(b);setDlName(filename);setDlItems([{url:'#pdf',name:filename,size:fmtSz(b.byteLength)}]);
+          if(tool.id==='compress'){const saved=files[0].size-b.byteLength;setResultNote(saved>1024?`Reduced from ${fmtSz(files[0].size)} to ${fmtSz(b.byteLength)} (${Math.round(saved/files[0].size*100)}% smaller).`:'This PDF is already well optimised, so we kept the original quality.');}}
         else{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();setDlItems([{url,name:filename,size:fmtSz(blob.size)}]);}
       } else {
         // Client-side tools still spend from the same daily quota — consume before processing locally.
+        if (tool.id==='sign' && !config.sigData) throw new Error('Draw your signature first.');
+        if (tool.id==='edit' && !config.overlayText) throw new Error('Enter the text to add.');
+        if (tool.id==='merge' && files.length<2) throw new Error('Add at least two PDFs to merge.');
         setStatus('Checking your free-use quota…'); tick(15);
         await consumeUsage(tool.id, token);
         setStatus('Processing file…');tick(20);
-        let bytes=null;let multi=[];
+        let bytes=null;let multi=[];let name='output.pdf';
         switch(tool.id){
-          case'merge':    bytes=await processMerge(files);setDlName('merged.pdf');break;
+          case'merge':    if(files.length<2)throw new Error('Add at least two PDFs to merge.');bytes=await processMerge(files);name='merged.pdf';break;
           case'split':    tick(40);setStatus('Splitting pages…');multi=await processSplit(files[0]);multi=multi.map(p=>({url:URL.createObjectURL(new Blob([p.bytes],{type:'application/pdf'})),name:p.name,size:fmtSz(p.bytes.byteLength)}));tick(100);setDlItems(multi);setState('done');refreshUsage();return;
-          case'compress': bytes=await processCompress(files[0]);setDlName(`compressed_${files[0].name}`);break;
-          case'rotate':   bytes=await processRotate(files[0],parseInt(config.degrees)||90);setDlName(`rotated_${files[0].name}`);break;
-          case'organize': {const ord=config.order?config.order.split(',').map(s=>parseInt(s.trim())-1):Array.from({length:999},(_,i)=>i);bytes=await processOrganize(files[0],ord);setDlName(`organized_${files[0].name}`);break;}
-          case'watermark':bytes=await processWatermark(files[0],config.text||'CONFIDENTIAL',parseFloat(config.opacity)||0.25,parseInt(config.fontSize)||48,config.color);setDlName(`watermarked_${files[0].name}`);break;
-          case'unlock':   bytes=await processUnlock(files[0]);setDlName(`unlocked_${files[0].name}`);break;
-          case'crop':     bytes=await processCrop(files[0],parseInt(config.margin)||20);setDlName(`cropped_${files[0].name}`);break;
-          case'sign':     bytes=await processSign(files[0],config.sigData);setDlName(`signed_${files[0].name}`);break;
-          case'edit':     bytes=await processEdit(files[0],config.overlayText,parseInt(config.x)||50,parseInt(config.y)||100);setDlName(`edited_${files[0].name}`);break;
-          case'img2pdf':  bytes=await processImageToPDF(files);setDlName('images_to_pdf.pdf');break;
+          case'compress': bytes=await processCompress(files[0]);name=`compressed_${files[0].name}`;break;
+          case'rotate':   bytes=await processRotate(files[0],parseInt(config.degrees)||90);name=`rotated_${files[0].name}`;break;
+          case'organize': {const ord=config.order?config.order.split(',').map(s=>parseInt(s.trim())-1).filter(n=>!isNaN(n)):Array.from({length:9999},(_,i)=>i);bytes=await processOrganize(files[0],ord);name=`organized_${files[0].name}`;break;}
+          case'watermark':bytes=await processWatermark(files[0],config.text||'CONFIDENTIAL',parseFloat(config.opacity)||0.25,parseInt(config.fontSize)||48,config.color);name=`watermarked_${files[0].name}`;break;
+          case'crop':     bytes=await processCrop(files[0],parseInt(config.margin)||20);name=`cropped_${files[0].name}`;break;
+          case'sign':     bytes=await processSign(files[0],config.sigData,{pages:config.sigPages,position:config.sigPos,size:config.sigSize});name=`signed_${files[0].name}`;break;
+          case'edit':     bytes=await processEdit(files[0],config.overlayText,parseInt(config.x)||50,parseInt(config.y)||100,{page:config.page,size:config.size});name=`edited_${files[0].name}`;break;
+          case'img2pdf':  bytes=await processImageToPDF(files);name='images_to_pdf.pdf';break;
           case'pdf2jpg':  tick(30);setStatus('Converting pages…');multi=await processPDFtoJPG(files[0]);multi=multi.map(p=>({url:p.dataUrl,name:p.name,size:''}));tick(100);setDlItems(multi);setState('done');refreshUsage();return;
-          case'protect':  bytes=await processUnlock(files[0]);setDlName(`protected_${files[0].name}`);break;
-          default:        bytes=await processCompress(files[0]);setDlName(`output_${files[0].name}`);
+          default:        bytes=await processCompress(files[0]);name=`output_${files[0].name}`;
         }
-        if(bytes){setPdfBytes(bytes);setDlItems([{url:'#pdf',name:dlName||'output.pdf',size:fmtSz(bytes.byteLength)}]);}
+        if(bytes){setPdfBytes(bytes);setDlName(name);setDlItems([{url:'#pdf',name,size:fmtSz(bytes.byteLength)}]);}
       }
       tick(100); setState('done'); refreshUsage();
     } catch(e) {
@@ -1135,6 +1273,7 @@ function Workspace({ tool, onBack }) {
         {!isAuthenticated && !quotaExhausted && <GuestBanner tool={tool}/>}
 
         {/* Drop */}
+        {state==='drop' && error && <div className="rounded-xl p-3 mb-4 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
         {state==='drop' && <DropZone tool={tool} onFiles={handleFiles} disabled={quotaExhausted}/>}
 
         {/* Config */}
@@ -1146,10 +1285,14 @@ function Workspace({ tool, onBack }) {
                 <div key={i} className="flex items-center gap-3 rounded-xl p-2" style={{background:'var(--bg-input)'}}>
                   <Ic n="file" sz={16} cls="text-blue-400 shrink-0"/>
                   <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate" style={{color:'var(--text)'}}>{f.name}</p><p className="text-xs" style={{color:'var(--muted)'}}>{fmtSz(f.size)}</p></div>
+                  {tool.multi && files.length>1 && <>
+                    <button onClick={()=>moveFile(i,-1)} disabled={i===0} className="p-1 rounded-lg disabled:opacity-30 hover:text-blue-400" style={{color:'var(--muted)'}} aria-label={`Move ${f.name} up`}><Ic n="left" sz={13} cls="rotate-90"/></button>
+                    <button onClick={()=>moveFile(i,1)} disabled={i===files.length-1} className="p-1 rounded-lg disabled:opacity-30 hover:text-blue-400" style={{color:'var(--muted)'}} aria-label={`Move ${f.name} down`}><Ic n="right" sz={13} cls="rotate-90"/></button>
+                  </>}
                   <button onClick={()=>removeFile(i)} className="p-1 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors" aria-label={`Remove ${f.name}`}><Ic n="trash" sz={13}/></button>
                 </div>
               ))}
-              {tool.multi && <label className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 cursor-pointer mt-1"><input type="file" className="hidden" accept={tool.accept} multiple onChange={e=>setFiles(f=>[...f,...Array.from(e.target.files)])}/><Ic n="upload" sz={12}/> Add more</label>}
+              {tool.multi && <label className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 cursor-pointer mt-1"><input type="file" className="hidden" accept={tool.accept} multiple onChange={e=>{const added=Array.from(e.target.files);e.target.value='';setFiles(f=>[...f,...added]);}}/><Ic n="upload" sz={12}/> Add more</label>}
             </div>
             {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
             <div className="card p-5 space-y-4">
@@ -1195,7 +1338,7 @@ function Workspace({ tool, onBack }) {
                 <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center">
                   <Ic n="check" sz={18} cls="text-emerald-400"/>
                 </div>
-                <div><p className="font-semibold" style={{color:'var(--text)'}}>Processing Complete!</p><p className="text-xs" style={{color:'var(--muted)'}}>Your file is ready to download.</p></div>
+                <div><p className="font-semibold" style={{color:'var(--text)'}}>Processing Complete!</p><p className="text-xs" style={{color:'var(--muted)'}}>{resultNote||'Your file is ready to download.'}</p></div>
               </div>
 
               {/* PDF single output */}
@@ -1231,7 +1374,7 @@ function Workspace({ tool, onBack }) {
                 </div>
               )}
             </div>
-            <button onClick={()=>{setState('drop');setFiles([]);setPdfBytes(null);setDlItems([]);setError('');}}
+            <button onClick={()=>{setState('drop');setFiles([]);setPdfBytes(null);setDlItems([]);setError('');setResultNote('');}}
               className="w-full py-3 rounded-2xl font-semibold text-sm transition-colors"
               style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
               Process Another File
@@ -1275,8 +1418,7 @@ function ToolCard({ tool, onClick }) {
 /* ══════════════════════════════════════
    HOME PAGE
 ══════════════════════════════════════ */
-function HomePage({ onTool }) {
-  const [cat, setCat] = useState('All');
+function HomePage({ onTool, cat, setCat }) {
   const [search, setSearch] = useState('');
   const { isAuthenticated, user, openAuth } = useAuth();
 
@@ -1289,13 +1431,13 @@ function HomePage({ onTool }) {
   return (
     <div>
       {/* Hero */}
-      <section className="hero-glow pt-32 pb-20 px-4 text-center">
+      <section className="hero-glow pt-28 sm:pt-32 pb-16 sm:pb-20 px-4 text-center">
         <div className="max-w-4xl mx-auto">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-blue-300 text-sm font-medium mb-6"
             style={{background:'rgba(37,99,235,0.1)',border:'1px solid rgba(37,99,235,0.3)'}}>
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"/> Enterprise-Grade PDF Platform
           </div>
-          <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight" style={{color:'var(--text)'}}>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 leading-tight" style={{color:'var(--text)'}}>
             Every PDF Tool<br/><span className="gradient-text">In One Place</span>
           </h1>
           <p className="text-lg max-w-2xl mx-auto mb-6 leading-relaxed" style={{color:'var(--muted)'}}>
@@ -1305,7 +1447,7 @@ function HomePage({ onTool }) {
             Guests get 1 free use per tool per day. <button onClick={()=>openAuth('signup')} className="text-blue-400 hover:text-blue-300 font-medium">Create a free account</button> for 3 uses per tool, every day.
           </p>
           {!isAuthenticated && (
-            <div className="flex items-center justify-center gap-3 mb-12">
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
               <button onClick={() => openAuth('signup')} className="px-8 py-3 rounded-xl font-bold text-white" style={{background:'#2563EB'}}>
                 Get 3 Free Uses/Day
               </button>
@@ -1314,7 +1456,7 @@ function HomePage({ onTool }) {
               </button>
             </div>
           )}
-          <div className="flex items-center justify-center gap-8 mb-10 flex-wrap">
+          <div className="flex items-center justify-center gap-x-8 gap-y-4 mb-10 flex-wrap">
             {[['20+','PDF Tools'],['100%','Browser-Based'],['1/day','Free as Guest'],['3/day','Free with Account']].map(([v,l])=>(
               <div key={l} className="text-center">
                 <p className="text-blue-400 font-bold text-xl">{v}</p><p className="text-xs" style={{color:'var(--subtle)'}}>{l}</p>
@@ -1332,7 +1474,7 @@ function HomePage({ onTool }) {
       </section>
 
       {/* Grid */}
-      <section className="px-4 pb-24 max-w-7xl mx-auto">
+      <section id="tools" className="px-4 pb-24 max-w-7xl mx-auto scroll-mt-20">
         <div className="flex items-center gap-2 mb-7 overflow-x-auto pb-1">
           {CATEGORIES.map(c=>(
             <button key={c} onClick={()=>setCat(c)}
@@ -1377,26 +1519,34 @@ function HomePage({ onTool }) {
 /* ══════════════════════════════════════
    NAVBAR
 ══════════════════════════════════════ */
-function Navbar({ onHome }) {
+function Navbar({ onHome, onCategory }) {
   const { isDark, toggle } = useTheme();
   const { user, logout, openAuth, isAuthenticated } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [menuOpen]);
 
   return (
     <nav className="fixed top-0 inset-x-0 z-40 nav-blur" style={{background:'var(--bg-nav)',backdropFilter:'blur(16px)',borderBottom:'1px solid var(--border)'}}>
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <button onClick={onHome} className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-sm">L</div>
-          <span className="font-bold text-sm" style={{color:'var(--text)'}}>LetsConvertPDF</span>
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+        <button onClick={onHome} className="flex items-center gap-2.5 min-w-0 shrink">
+          <div className="w-8 h-8 shrink-0 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-sm">L</div>
+          <span className="font-bold text-sm truncate hidden min-[400px]:inline" style={{color:'var(--text)'}}>LetsConvertPDF</span>
         </button>
 
         <div className="hidden md:flex items-center gap-1">
           {CATEGORIES.slice(1).map(c=>(
-            <span key={c} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-default" style={{color:'var(--muted)'}}>{c}</span>
+            <button key={c} onClick={() => onCategory(c)} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400" style={{color:'var(--muted)'}}>{c}</button>
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Theme toggle */}
           <button onClick={toggle}
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105"
@@ -1407,8 +1557,8 @@ function Navbar({ onHome }) {
 
           {/* Auth area */}
           {isAuthenticated ? (
-            <div className="relative">
-              <button onClick={() => setMenuOpen(o=>!o)}
+            <div className="relative" ref={menuRef}>
+              <button onClick={() => setMenuOpen(o=>!o)} aria-haspopup="menu" aria-expanded={menuOpen}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors"
                 style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
                 <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
@@ -1417,7 +1567,7 @@ function Navbar({ onHome }) {
                 <span className="hidden sm:block max-w-24 truncate">{user?.name}</span>
               </button>
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 card shadow-xl anim-up" style={{zIndex:50}}>
+                <div className="absolute right-0 top-full mt-2 w-56 card-solid anim-up overflow-hidden" style={{zIndex:50}}>
                   <div className="p-3 border-b" style={{borderColor:'var(--border)'}}>
                     <p className="text-xs font-semibold truncate" style={{color:'var(--text)'}}>{user?.name}</p>
                     <p className="text-xs truncate" style={{color:'var(--muted)'}}>{user?.email}</p>
@@ -1431,8 +1581,8 @@ function Navbar({ onHome }) {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <button onClick={() => openAuth('login')} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" style={{color:'var(--muted)'}}>Log In</button>
-              <button onClick={() => openAuth('signup')} className="px-4 py-2 rounded-lg text-xs font-bold text-white" style={{background:'#2563EB'}}>Sign Up</button>
+              <button onClick={() => openAuth('login')} className="px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap" style={{color:'var(--muted)'}}>Log In</button>
+              <button onClick={() => openAuth('signup')} className="px-3 sm:px-4 py-2 rounded-lg text-xs font-bold text-white whitespace-nowrap" style={{background:'#2563EB'}}>Sign Up</button>
             </div>
           )}
         </div>
@@ -1444,16 +1594,16 @@ function Navbar({ onHome }) {
 /* ══════════════════════════════════════
    FOOTER
 ══════════════════════════════════════ */
-function Footer() {
+function Footer({ onTool }) {
   return (
     <footer style={{borderTop:'1px solid var(--border)'}}>
-      <div className="max-w-7xl mx-auto px-4 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="max-w-7xl mx-auto px-4 pt-10 pb-24 md:pb-10 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-xs">L</div>
           <span className="font-semibold text-sm" style={{color:'var(--text)'}}>LetsConvertPDF</span>
         </div>
         <div className="flex flex-wrap gap-5 text-xs" style={{color:'var(--subtle)'}}>
-          {TOOLS.slice(0,6).map(t=><span key={t.id}>{t.label}</span>)}
+          {TOOLS.slice(0,6).map(t=><button key={t.id} onClick={() => onTool(t)} className="hover:text-blue-400 transition-colors">{t.label}</button>)}
         </div>
         <p className="text-xs" style={{color:'var(--subtle)'}}>© {new Date().getFullYear()} Maqsusi Digital Industries</p>
       </div>
@@ -1466,18 +1616,24 @@ function Footer() {
 ══════════════════════════════════════ */
 function App() {
   const [activeTool, setActiveTool] = useState(null);
+  const [cat, setCat] = useState('All');
+  const openTool = t => { setActiveTool(t); window.scrollTo(0, 0); };
+  const showCategory = c => {
+    setActiveTool(null); setCat(c);
+    setTimeout(() => document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' }), 0);
+  };
   return (
     <ThemeProvider>
       <AuthProvider>
         <div className="min-h-screen flex flex-col" style={{background:'var(--bg)'}}>
-          <Navbar onHome={() => setActiveTool(null)}/>
+          <Navbar onHome={() => { setActiveTool(null); window.scrollTo(0, 0); }} onCategory={showCategory}/>
           <main className="flex-1">
             {activeTool
               ? <Workspace key={activeTool.id} tool={activeTool} onBack={() => setActiveTool(null)}/>
-              : <HomePage onTool={setActiveTool}/>
+              : <HomePage onTool={openTool} cat={cat} setCat={setCat}/>
             }
           </main>
-          <Footer/>
+          <Footer onTool={openTool}/>
           <ChatWidget/>
         </div>
       </AuthProvider>
