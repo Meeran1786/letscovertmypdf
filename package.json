@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "echo 'No build step required — SPA served as static files'"
+    "build": "echo 'No build step required — SPA served as static files'",
+    "check:guides": "node scripts/check-guides.js"
   },
   "keywords": [
     "pdf",

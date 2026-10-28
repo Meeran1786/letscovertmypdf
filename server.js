@@ -307,6 +307,14 @@ const readIndex = () => {
   if (!indexHtml || process.env.NODE_ENV !== 'production') indexHtml = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
   return indexHtml;
 };
+const guides = require('./guides');
+app.get('/guides', (req, res) => res.type('html').send(guides.renderIndex(seo.PAGES)));
+app.get('/guides/:slug', (req, res) => {
+  const html = guides.renderGuide(req.params.slug, seo.PAGES);
+  // A real 404 (not the app shell), so search engines drop removed guides.
+  if (!html) return res.status(404).type('html').send(guides.renderIndex(seo.PAGES));
+  res.type('html').send(html);
+});
 app.get('/:slug', (req, res, next) => {
   const page = seo.renderPage(readIndex(), req.params.slug);
   if (!page) return next();

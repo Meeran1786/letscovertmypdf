@@ -379,8 +379,10 @@ function article(page, slug) {
   const privacy = page.local === undefined ? '' : `<p><strong>Privacy:</strong> ${page.local ? LOCAL : SERVER}</p>`;
   const faq = page.faq ? `<h2>Questions</h2>${page.faq.map(([q, a]) => `<h3>${esc(q)}</h3><p>${esc(a)}</p>`).join('')}` : '';
   const links = Object.entries(PAGES).filter(([s]) => s !== slug).map(([s, p]) => `<li><a href="/${s}">${esc(p.h1)}</a></li>`).join('');
+  const guides = require('./guides').load(Object.keys(PAGES)).filter(g => g.tool === slug).slice(0, 5);
+  const guideLinks = guides.length ? `<h2>Guides</h2><ul>${guides.map(g => `<li><a href="/guides/${g.slug}">${esc(g.title)}</a></li>`).join('')}</ul>` : '';
   return `<main style="max-width:720px;margin:0 auto;padding:96px 16px;font-family:system-ui,sans-serif;color:#E2E8F0">
-<h1>${esc(page.h1)}</h1><p>${esc(page.intro)}</p>${steps}${privacy}${faq}
+<h1>${esc(page.h1)}</h1><p>${esc(page.intro)}</p>${steps}${privacy}${faq}${guideLinks}
 <h2>More free, private PDF tools</h2><ul>${links}</ul><p><a href="/privacy">How we keep your files private</a></p></main>`;
 }
 
@@ -411,9 +413,10 @@ function renderPage(html, slug) {
 
 function sitemap() {
   const today = new Date().toISOString().slice(0, 10);
-  const urls = ['', 'privacy', ...Object.keys(PAGES)];
+  const urls = ['', 'privacy', ...Object.keys(PAGES)].map(u => ({ loc: `${SITE}/${u}`, lastmod: today, priority: u === '' ? '1.0' : '0.8' }));
+  urls.push(...require('./guides').sitemapEntries(PAGES).map(e => ({ ...e, lastmod: e.lastmod || today })));
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u =>
-    `  <url><loc>${SITE}/${u}</loc><lastmod>${today}</lastmod><priority>${u === '' ? '1.0' : '0.8'}</priority></url>`).join('\n')}\n</urlset>\n`;
+    `  <url><loc>${u.loc}</loc><lastmod>${u.lastmod}</lastmod><priority>${u.priority}</priority></url>`).join('\n')}\n</urlset>\n`;
 }
 
 const robots = () => `User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${SITE}/sitemap.xml\n`;

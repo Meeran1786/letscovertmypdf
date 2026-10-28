@@ -1643,6 +1643,7 @@ function Footer({ onTool, onPrivacy }) {
         </div>
         <div className="flex flex-wrap gap-5 text-xs" style={{color:'var(--subtle)'}}>
           {TOOLS.slice(0,8).map(t=><a key={t.id} href={`/${t.slug}`} onClick={e=>{e.preventDefault();onTool(t);}} className="hover:text-blue-400 transition-colors">{t.label}</a>)}
+          <a href="/guides" className="hover:text-blue-400 transition-colors">Guides</a>
           <a href="/privacy" onClick={e=>{e.preventDefault();onPrivacy();}} className="hover:text-blue-400 transition-colors">Privacy</a>
         </div>
         <p className="text-xs" style={{color:'var(--subtle)'}}>© {new Date().getFullYear()} Maqsusi Digital Industries</p>
