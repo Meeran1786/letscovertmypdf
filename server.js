@@ -28,6 +28,7 @@ const crypto       = require('crypto');
 const { execFile } = require('child_process');
 const { v4: uuidv4 } = require('uuid');
 const cron         = require('node-cron');
+const seo          = require('./seo');
 
 let nodemailer;
 try { nodemailer = require('nodemailer'); } catch { console.warn('[Email] nodemailer not installed — run: npm install nodemailer'); }
@@ -241,7 +242,13 @@ app.use(helmet({
       styleSrc:   ["'self'","'unsafe-inline'",'fonts.googleapis.com','cdn.tailwindcss.com','https://accounts.google.com/gsi/style'],
       fontSrc:    ["'self'",'fonts.gstatic.com','data:'],
       imgSrc:     ["'self'",'data:','blob:','https://*.googleusercontent.com'],
-      connectSrc: ["'self'",'https://accounts.google.com','cdnjs.cloudflare.com','unpkg.com'],
+      // The on-device AI downloads its open model weights from Hugging Face and
+      // the matching WebGPU kernels from GitHub. Only model files travel this
+      // way; document text never leaves the browser.
+      // The CDN hosts are also listed so the service worker can cache the app
+      // shell for offline use.
+      connectSrc: ["'self'",'https://accounts.google.com','cdnjs.cloudflare.com','unpkg.com','cdn.tailwindcss.com','fonts.googleapis.com','fonts.gstatic.com',
+        'https://huggingface.co','https://*.huggingface.co','https://*.hf.co','https://raw.githubusercontent.com'],
       frameSrc:   ["'self'",'https://accounts.google.com'],
       workerSrc:  ["'self'",'blob:','cdnjs.cloudflare.com'],
     },
@@ -276,6 +283,35 @@ if (rateLimit) {
   console.warn('[Security] Rate limiting is DISABLED (express-rate-limit missing). Not recommended for production.');
 }
 
+/* On-device engines, self-hosted so the privacy promise doesn't depend on a
+   third-party CDN: qpdf (encrypt/decrypt), Tesseract (OCR) and WebLLM (AI). */
+const VENDOR = {
+  qpdf:             '@neslinesli93/qpdf-wasm/dist',
+  tesseract:        'tesseract.js/dist',
+  'tesseract-core': 'tesseract.js-core',
+  tessdata:         '@tesseract.js-data/eng/4.0.0_best_int',
+  'web-llm':        '@mlc-ai/web-llm/lib',
+};
+for (const [route, dir] of Object.entries(VENDOR)) {
+  app.use(`/vendor/${route}`, express.static(path.join(__dirname, 'node_modules', dir), { maxAge: '30d', immutable: true, index: false }));
+}
+
+/* SEO: robots, sitemap and a server-rendered landing page per tool. */
+app.get('/robots.txt', (req, res) => res.type('text/plain').send(seo.robots()));
+app.get('/sitemap.xml', (req, res) => res.type('application/xml').send(seo.sitemap()));
+let indexHtml = null;
+const readIndex = () => {
+  if (!indexHtml || process.env.NODE_ENV !== 'production') indexHtml = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+  return indexHtml;
+};
+app.get('/:slug', (req, res, next) => {
+  const page = seo.renderPage(readIndex(), req.params.slug);
+  if (!page) return next();
+  res.type('html').send(page);
+});
+
+// The service worker must never be cached long, or app updates get stuck.
+app.get('/sw.js', (req, res, next) => { res.set('Cache-Control', 'no-cache'); next(); });
 app.use(express.static(path.join(__dirname, 'public')));
 
 /* ─── Multer ─── */
@@ -655,7 +691,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'LetsConvertPDF API',
-    version: '2.3.0',
+    version: '2.4.0',
     timestamp: new Date().toISOString(),
     // Booleans only — never exposes credentials — so ops can confirm config
     // via a plain curl instead of grepping server logs or SSHing in.
