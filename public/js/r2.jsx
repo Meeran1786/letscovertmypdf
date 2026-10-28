@@ -345,9 +345,11 @@ function AiWorkspace({ tool, file, onQuota, onError }) {
     setBusy(false);
   };
 
-  const copy = (t) => navigator.clipboard?.writeText(t.replace(/\[p\.?\s*(\d+)\]/gi, '(page $1)'));
+  // Shared summaries carry a small credit line back to the site.
+  const forSharing = (t) => `${t.replace(/\[p\.?\s*(\d+)\]/gi, '(page $1)')}\n\nSummary made privately on-device with LetsConvertPDF: https://letsconvertpdf.com/summarize-pdf`;
+  const copy = (t) => navigator.clipboard?.writeText(forSharing(t));
   const saveTxt = (t) => {
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t.replace(/\[p\.?\s*(\d+)\]/gi, '(page $1)')], { type: 'text/plain' }));
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([forSharing(t)], { type: 'text/plain' }));
     a.download = `${file.name.replace(/\.pdf$/i, '')}_summary.txt`; a.click();
   };
 

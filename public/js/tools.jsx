@@ -92,7 +92,7 @@ async function runTool(id, files, config, ui = {}) {
       return { bytes: r, name: `redacted_${f.name}`, note: `Redacted ${chosen.length} item${chosen.length === 1 ? '' : 's'}. Affected pages were rebuilt so the hidden text is truly gone.` };
     }
     case 'fillform': {
-      const r = await fillForm(f, config.values || {}, !!config.flatten);
+      const r = config.flat ? await fillFlat(f, config.fields || [], config.values || {}) : await fillForm(f, config.values || {}, !!config.flatten);
       if (config.saveProfile) saveProfileFrom(config.fields || [], config.values || {});
       return { bytes: r, name: `filled_${f.name}` };
     }
@@ -328,6 +328,52 @@ async function readFormFields(file) {
   }).filter(f => ['TextField', 'CheckBox', 'Dropdown', 'OptionList', 'RadioGroup'].includes(f.type));
 }
 
+/** Forms without real fields: find "Label: ____" blanks and "Label:" at the
+ *  end of a line, so they can be filled like a real form. */
+async function detectFlatFields(file) {
+  const pdf = await openPdfDoc(file);
+  const out = []; const seen = {};
+  const add = (label, page, x, y, w, size) => {
+    label = label.replace(/[:：\s]+$/, '').trim(); if (!label || label.length > 40 || label.split(/\s+/).length > 6) return;
+    seen[label] = (seen[label] || 0) + 1;
+    out.push({ name: seen[label] > 1 ? `${label} (${seen[label]})` : label, type: 'TextField', value: '', flat: { page, x, y, w: Math.max(40, w), size: Math.min(11, size) } });
+  };
+  for (let p = 1; p <= Math.min(pdf.numPages, 30); p++) {
+    const { lines, width } = await pageLines(pdf, p);
+    for (const l of lines) {
+      l.cells.forEach((c, ci) => {
+        const scale = c.w / (measureText(c.str) || 1);
+        const re = /([A-Za-z][A-Za-z0-9 .'\/()&-]{1,38}?)?\s*[:：]?\s*(_{3,})/g; let m, prevEnd = 0;
+        while ((m = re.exec(c.str))) {
+          const label = (m[1] || (ci > 0 && prevEnd === 0 ? l.cells[ci - 1].str : '')).trim();
+          const ux = c.x + measureText(c.str.slice(0, m.index + m[0].length - m[2].length)) * scale;
+          add(label, p, ux, l.y, measureText(m[2]) * scale, l.size); prevEnd = re.lastIndex;
+        }
+        if (!prevEnd && ci === l.cells.length - 1 && /[:：]\s*$/.test(c.str)) {
+          const x = c.x + c.w + 6; add(c.str, p, x, l.y, Math.min(240, width - 36 - x), l.size);
+        }
+      });
+    }
+  }
+  return out;
+}
+
+async function fillFlat(file, fields, values) {
+  const d = await PDFLib.PDFDocument.load(await readFileAsArrayBuffer(file), { ignoreEncryption: true });
+  const font = await d.embedFont(PDFLib.StandardFonts.Helvetica);
+  let n = 0;
+  for (const f of fields) {
+    const v = String(values[f.name] ?? '').trim(); if (!v || !f.flat) continue;
+    const { page, x, y, w, size } = f.flat;
+    let sz = size; const safe = v.replace(/[^\x20-\x7E\u00A0-\u00FF]/g, '?');
+    while (sz > 6 && font.widthOfTextAtSize(safe, sz) > w - 2) sz -= 0.5;
+    d.getPage(page - 1).drawText(safe, { x: x + 2, y: y + 1.5, size: sz, font, color: PDFLib.rgb(0.05, 0.1, 0.35) });
+    n++;
+  }
+  if (!n) throw new Error('Type at least one answer first.');
+  return d.save();
+}
+
 async function fillForm(file, values, flatten) {
   const d = await PDFLib.PDFDocument.load(await readFileAsArrayBuffer(file));
   const form = d.getForm();
@@ -353,10 +399,13 @@ function FormFiller({ file, config, set }) {
   const values = config.values || {};
   useEffect(() => {
     let live = true;
-    readFormFields(file).then(fs => {
+    readFormFields(file).then(async fs => {
+      if (!live) return;
+      let flat = false;
+      if (!fs.length) { fs = await detectFlatFields(file).catch(() => []); flat = fs.length > 0; }
       if (!live) return;
       const v = {}; fs.forEach(f => { v[f.name] = f.value; });
-      set(c => ({ ...c, fields: fs, values: v })); setState(fs.length ? 'ready' : 'none');
+      set(c => ({ ...c, fields: fs, values: v, flat })); setState(fs.length ? 'ready' : 'none');
     }).catch(() => live && setState('none'));
     return () => { live = false; };
   }, [file]);
@@ -376,9 +425,10 @@ function FormFiller({ file, config, set }) {
   const hasProfile = Object.values(loadProfile()).some(Boolean);
 
   if (state === 'loading') return <p className="text-sm" style={{color:'var(--muted)'}}>Reading the form…</p>;
-  if (state === 'none') return <p className="text-sm" style={{color:'var(--muted)'}}>This PDF has no fillable fields. Use <a href="/edit-pdf" className="text-blue-400">Edit PDF</a> to type straight onto the page instead.</p>;
+  if (state === 'none') return <p className="text-sm" style={{color:'var(--muted)'}}>We couldn't find any blanks to fill. If this is a scan, run <a href="/ocr-pdf" className="text-blue-400">OCR PDF</a> first and try again, or use <a href="/edit-pdf" className="text-blue-400">Edit PDF</a> to type straight onto the page.</p>;
   return (
     <div className="space-y-4">
+      {config.flat && <p className="text-xs rounded-xl p-2.5" style={{background:'rgba(37,99,235,0.1)',color:'#93C5FD'}}>This form has no fillable fields, so we found {fields.length} blank{fields.length === 1 ? '' : 's'} on the page instead. Your answers are typed onto the lines.</p>}
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={autofill} disabled={!hasProfile} className="px-4 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50 flex items-center gap-1.5" style={{background:'#2563EB'}}><Ic n="sparkle" sz={13}/>Autofill from my profile</button>
         <button onClick={() => setProfileOpen(o => !o)} className="px-4 py-2 rounded-xl text-xs font-semibold" style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>{hasProfile ? 'Edit my profile' : 'Set up my profile'}</button>
@@ -396,7 +446,7 @@ function FormFiller({ file, config, set }) {
       <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
         {fields.map(f => (
           <div key={f.name}>
-            <label className="block text-xs font-medium mb-1" style={{color:'var(--muted)'}}>{f.name}</label>
+            <label className="block text-xs font-medium mb-1" style={{color:'var(--muted)'}}>{f.name}{f.flat && <span style={{color:'var(--subtle)'}}> · page {f.flat.page}</span>}</label>
             {f.type === 'TextField' && <input className="inp" value={values[f.name] || ''} onChange={e => setVal(f.name, e.target.value)}/>}
             {f.type === 'CheckBox' && <input type="checkbox" checked={!!values[f.name]} onChange={e => setVal(f.name, e.target.checked)} aria-label={f.name}/>}
             {(f.type === 'Dropdown' || f.type === 'OptionList' || f.type === 'RadioGroup') && (
@@ -408,7 +458,7 @@ function FormFiller({ file, config, set }) {
         ))}
       </div>
       <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs" style={{color:'var(--text)'}}>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={!!config.flatten} onChange={e => set(c => ({ ...c, flatten: e.target.checked }))}/> Lock the answers (flatten)</label>
+        {!config.flat && <label className="flex items-center gap-2"><input type="checkbox" checked={!!config.flatten} onChange={e => set(c => ({ ...c, flatten: e.target.checked }))}/> Lock the answers (flatten)</label>}
         <label className="flex items-center gap-2"><input type="checkbox" checked={!!config.saveProfile} onChange={e => set(c => ({ ...c, saveProfile: e.target.checked }))}/> Save my answers to my profile</label>
       </div>
     </div>
