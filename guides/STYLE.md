@@ -46,8 +46,6 @@ phone. Many care that their documents stay private.
 
 ## Topic backlog
 Pick from here first, and remove a line once its guide is merged.
-- How to compress a PDF for email (under 10 MB / 25 MB)
-- How to merge PDF files on iPhone without an app
 - How to sign a PDF without printing it
 - How to make a scanned PDF searchable (OCR)
 - How to fill out a PDF form that isn't fillable
@@ -60,3 +58,5 @@ Pick from here first, and remove a line once its guide is merged.
 - How to summarize a long PDF quickly
 - How to convert a PDF to PDF/A for archiving
 - How to rotate one page in a PDF
+- How to combine photos of documents into one PDF on your phone
+- How to reduce a PDF's size for an online application form

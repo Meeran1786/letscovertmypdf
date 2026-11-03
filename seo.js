@@ -55,7 +55,7 @@ const PAGES = {
     h1: 'Merge PDF files',
     desc: 'Combine multiple PDFs into one file in the order you choose. Runs in your browser: files are never uploaded. Free, no signup.',
     intro: 'Put several PDFs together into a single document. Reorder the files before merging; pages keep their original quality.',
-    steps: ['Choose two or more PDFs.', 'Drag them into the order you want.', 'Merge and download one PDF.'],
+    steps: ['Choose two or more PDFs.', 'Use the arrows to put them in the order you want.', 'Merge and download one PDF.'],
     faq: [['Is there a file limit?', 'No fixed limit; it depends on your device\'s memory. Files of several hundred pages merge in seconds.']],
     local: true,
   },
@@ -261,7 +261,7 @@ const PAGES = {
     local: true,
   },
   'translate-pdf': {
-    title: 'Translate PDF Free — Keep the Layout, Private On-Device Translation',
+    title: 'Translate PDF Free — Keep the Layout, Private and On-Device',
     h1: 'Translate a PDF and keep its layout',
     desc: 'Translate PDFs into 22 languages including Spanish, Arabic, Urdu, Hindi and Chinese. The layout stays put and the file never leaves your device. Free.',
     intro: 'Most PDF translators upload your document to a server. This one translates in your browser, then writes each translated paragraph back into the same place on the page, so tables, images and headings stay where they were. Compare the original and the translation side by side before you download.',
@@ -286,7 +286,7 @@ const PAGES = {
     local: true,
   },
   'pdf-data-to-excel': {
-    title: 'Invoices and Receipts to Excel Free — Extract PDF Data Privately',
+    title: 'Invoices and Receipts to Excel Free — Private PDF Extraction',
     h1: 'Pull invoice and receipt data into Excel',
     desc: 'Extract tables, invoice numbers, dates and totals from many PDFs into one clean Excel file. Works on scans too. Processed on your device. Free.',
     intro: 'Drop a batch of invoices, receipts or statements and get one spreadsheet: a summary row per document (vendor, invoice number, dates, tax and total), every table on its own sheet, and all "Label: value" fields. Your financial documents never leave your device.',
@@ -352,7 +352,7 @@ const PAGES = {
     local: false,
   },
   'pdf-workflows': {
-    title: 'PDF Workflows — Automate Compress, Number, Redact and Protect',
+    title: 'PDF Workflows — Automate Compress, Redact and Protect',
     h1: 'Automate your PDF routine',
     desc: 'Chain PDF tools into one-click workflows and run them on many files at once, all on your device. Free.',
     intro: 'Build a workflow such as "redact, watermark, then password-protect", save it, and run it on a whole batch of files in one go. Every step runs in your browser.',
