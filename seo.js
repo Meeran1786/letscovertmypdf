@@ -369,7 +369,7 @@ const PRIVACY_PAGE = {
   title: 'Private by Design — How LetsConvertPDF Keeps Your Files on Your Device',
   h1: 'Private by design',
   desc: 'Most LetsConvertPDF tools, including all AI features, run inside your browser. Your files are never uploaded. See exactly which tools run where.',
-  intro: 'Most online PDF tools upload every file to their servers. LetsConvertPDF runs PDF processing and AI on your own device using WebAssembly and WebGPU, so your documents never leave your browser. Only Word, Excel and PowerPoint conversions use our server, and those files are deleted within 60 seconds.',
+  intro: 'Most online PDF tools upload every file to their servers. LetsConvertPDF runs PDF processing and AI on your own device using WebAssembly and WebGPU, so your documents never leave your browser. Only Word, Excel, PowerPoint, PDF/A and HTML conversions use our server, and those files are deleted within 60 seconds.',
 };
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -394,6 +394,19 @@ function faqSchema(page) {
   }).replace(/</g, '\\u003c')}</script>`;
 }
 
+/* The home page's WebApplication block, re-described for this one tool, so AI
+   answer engines can tell what each page does, that it's free and where it runs. */
+function toolSchema(page, url) {
+  return `<script type="application/ld+json">${JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'WebApplication', name: page.h1, url, description: page.desc,
+    applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web Browser', isAccessibleForFree: true,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    ...(page.local !== undefined && { featureList: [page.local ? LOCAL : SERVER] }),
+    isPartOf: { '@type': 'WebSite', name: 'LetsConvertPDF', url: SITE },
+    creator: { '@type': 'Organization', name: 'Maqsusi Digital Industries Software', url: 'https://maqsusi.com' },
+  }).replace(/</g, '\\u003c')}</script>`;
+}
+
 /** Returns index.html personalised for `slug`, or null for unknown paths. */
 function renderPage(html, slug) {
   const page = slug === 'privacy' ? PRIVACY_PAGE : PAGES[slug];
@@ -407,18 +420,58 @@ function renderPage(html, slug) {
     .replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${esc(page.title)}$2`)
     .replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${esc(page.desc)}$2`)
     .replace(/(<meta name="twitter:title" content=")[^"]*(")/, `$1${esc(page.title)}$2`)
+    .replace(/<script type="application\/ld\+json">\{"@context":"https:\/\/schema.org","@type":"WebApplication"[^<]*<\/script>/, page.h1 && page.steps ? toolSchema(page, url) : '$&')
     .replace('</head>', `${faqSchema(page)}\n</head>`)
     .replace('<div id="root"></div>', `<div id="root">${article(page, slug)}</div>`);
 }
 
-function sitemap() {
+function sitemapUrls() {
   const today = new Date().toISOString().slice(0, 10);
   const urls = ['', 'privacy', ...Object.keys(PAGES)].map(u => ({ loc: `${SITE}/${u}`, lastmod: today, priority: u === '' ? '1.0' : '0.8' }));
   urls.push(...require('./guides').sitemapEntries(PAGES).map(e => ({ ...e, lastmod: e.lastmod || today })));
+  return urls;
+}
+
+function sitemap() {
+  const urls = sitemapUrls();
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u =>
     `  <url><loc>${u.loc}</loc><lastmod>${u.lastmod}</lastmod><priority>${u.priority}</priority></url>`).join('\n')}\n</urlset>\n`;
 }
 
+/* llms.txt (https://llmstxt.org): a plain Markdown map of the site for AI
+   assistants and answer engines. Built from the same data as the pages. */
+function llmsTxt() {
+  const guides = require('./guides').load(Object.keys(PAGES));
+  const tool = ([slug, p]) => `- [${p.h1}](${SITE}/${slug}): ${p.desc}`;
+  const local = Object.entries(PAGES).filter(([, p]) => p.local), server = Object.entries(PAGES).filter(([, p]) => !p.local);
+  return `# LetsConvertPDF
+
+> Free PDF tools that run in your web browser. Most tools, including all AI features (chat with a PDF, summaries, translation, contract review), process files on the user's own device, so the files are never uploaded. No signup is needed. Guests get one free use per tool per day, and a free account gets three.
+
+- Private by design: ${PRIVACY_PAGE.intro}
+- Works on phones, tablets and computers in any modern browser, and can be installed as an app that works offline.
+- Made by Maqsusi Digital Industries Software.
+
+## Tools that run on your device (files are never uploaded)
+
+${local.map(tool).join('\n')}
+
+## Tools that use our server (files deleted within 60 seconds)
+
+${server.map(tool).join('\n')}
+${guides.length ? `
+## Guides
+
+${guides.map(g => `- [${g.title}](${SITE}/guides/${g.slug}): ${g.description}`).join('\n')}
+` : ''}
+## Optional
+
+- [How we keep files private](${SITE}/privacy)
+- [All guides](${SITE}/guides)
+- [Sitemap](${SITE}/sitemap.xml)
+`;
+}
+
 const robots = () => `User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${SITE}/sitemap.xml\n`;
 
-module.exports = { PAGES, renderPage, sitemap, robots };
+module.exports = { PAGES, SITE, renderPage, sitemap, sitemapUrls, robots, llmsTxt };

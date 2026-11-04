@@ -116,6 +116,18 @@ ${body}
 <footer><span>Free PDF tools that never upload your files.</span><a href="/">All tools</a></footer></body></html>`;
 }
 
+/* The "## Questions" section as question/answer pairs, for FAQPage data that
+   answer engines can quote directly. */
+const plain = s => s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[*`]/g, '').trim();
+function questions(body) {
+  const m = body.match(/^## Questions\s*\n([\s\S]*?)(?=^## |(?![\s\S]))/m);
+  if (!m) return [];
+  return m[1].split(/^### /m).slice(1).map(block => {
+    const [q, ...rest] = block.split('\n');
+    return { q: plain(q), a: plain(rest.join(' ').replace(/\s+/g, ' ')) };
+  }).filter(x => x.q && x.a);
+}
+
 const fmtDate = d => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 function renderGuide(slug, pages) {
@@ -130,8 +142,11 @@ function renderGuide(slug, pages) {
 ${markdown(g.body)}</article>
 <div class="cta"><p><strong>${esc(tool.h1)}</strong><br><span style="color:var(--muted)">Free, and your file never leaves your device.</span></p><a class="btn" href="/${g.tool}">Open the tool</a></div>
 ${related.length ? `<h2>More guides</h2><ul class="cards">${related.map(r => `<li><a href="/guides/${r.slug}">${esc(r.title)}</a><p>${esc(r.description)}</p></li>`).join('')}</ul>` : ''}</main>`;
-  const schema = { '@context': 'https://schema.org', '@type': 'Article', headline: g.title, description: g.description, datePublished: g.date, dateModified: g.updated || g.date,
+  const qa = questions(g.body);
+  const articleSchema = { '@type': 'Article', headline: g.title, description: g.description, datePublished: g.date, dateModified: g.updated || g.date,
     mainEntityOfPage: url, author: { '@type': 'Organization', name: 'LetsConvertPDF' }, publisher: { '@type': 'Organization', name: 'LetsConvertPDF', logo: { '@type': 'ImageObject', url: `${SITE}/icon-512.png` } } };
+  const schema = { '@context': 'https://schema.org', '@graph': [articleSchema,
+    ...(qa.length ? [{ '@type': 'FAQPage', mainEntity: qa.map(x => ({ '@type': 'Question', name: x.q, acceptedAnswer: { '@type': 'Answer', text: x.a } })) }] : [])] };
   return shell({ title: `${g.title} | LetsConvertPDF`, desc: g.description, url, body, schema });
 }
 
@@ -149,4 +164,4 @@ function sitemapEntries(pages) {
     ...guides.map(g => ({ loc: `${SITE}/guides/${g.slug}`, lastmod: g.updated || g.date, priority: '0.6' }))];
 }
 
-module.exports = { load, validate, parseFile, renderGuide, renderIndex, sitemapEntries, markdown, DIR };
+module.exports = { load, validate, parseFile, questions, renderGuide, renderIndex, sitemapEntries, markdown, DIR };
