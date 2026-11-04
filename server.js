@@ -302,6 +302,9 @@ for (const [route, dir] of Object.entries(VENDOR)) {
 /* SEO: robots, sitemap and a server-rendered landing page per tool. */
 app.get('/robots.txt', (req, res) => res.type('text/plain').send(seo.robots()));
 app.get('/sitemap.xml', (req, res) => res.type('application/xml').send(seo.sitemap()));
+app.get('/llms.txt', (req, res) => res.type('text/plain; charset=utf-8').send(seo.llmsTxt()));
+const indexNow = require('./indexnow')(DATA_DIR, seo.SITE);
+app.get(`/${indexNow.key}.txt`, (req, res) => res.type('text/plain').send(indexNow.key));
 let indexHtml = null;
 const readIndex = () => {
   if (!indexHtml || process.env.NODE_ENV !== 'production') indexHtml = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
@@ -903,6 +906,12 @@ cron.schedule('*/30 * * * *', async () => {
 
 /* ── Start ── */
 app.listen(PORT, () => {
+  // Tell Bing about new pages and guides once the site is up (production only).
+  if (process.env.NODE_ENV === 'production' && process.env.INDEXNOW !== 'off') {
+    setTimeout(() => indexNow.ping(seo.sitemapUrls())
+      .then(r => r.sent && console.log(`[indexnow] sent ${r.sent} URLs`))
+      .catch(e => console.warn(`[indexnow] ${e.message}`)), 30000);
+  }
   console.log(`
 ╔══════════════════════════════════════════════════════╗
 ║        LetsConvertPDF — Server v2.3                  ║

@@ -36,6 +36,16 @@ phone. Many care that their documents stay private.
 - Allowed formatting: `##`/`###`, lists, `> tips`, **bold**, *italic*,
   `code`, and links. No HTML.
 
+## Writing for AI answers (GEO)
+ChatGPT, Perplexity, Copilot and Google's AI answers quote pages that answer
+clearly. The checker (`npm run check:guides`) prints hints for these.
+- The first two sentences must answer the title's question on their own.
+- Open each `##` section with one sentence that answers its heading, then explain.
+- Use concrete facts from the code (levels, limits, sizes), not vague words.
+- Always include `## Questions` with 3–4 `###` questions. They become FAQ data.
+- Keep the tool's name and the words "free" and "your file never leaves your
+  device" (for local tools) close together, so a quoted sentence carries them.
+
 ## Choosing topics
 - One clear search intent per guide ("how to sign a PDF on iPhone"), not a
   broad topic ("all about PDFs").

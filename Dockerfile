@@ -21,7 +21,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-COPY server.js seo.js guides.js ./
+COPY server.js seo.js guides.js indexnow.js ./
 COPY guides ./guides
 COPY converters ./converters
 COPY public ./public
