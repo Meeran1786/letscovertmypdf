@@ -445,7 +445,7 @@ async function runToolR4(id, files, config, ui = {}) {
   const span = (a, b) => v => tick(a + Math.round(v * (b - a)));
   const f = files[0]; const pl = n => `${n} page${n === 1 ? '' : 's'}`;
   switch (id) {
-    case 'extract': { const r = await r4extract(f, config.pages); return { bytes: r.bytes, name: `extracted_${f.name}`, note: `Kept ${pl(r.n)}.` }; }
+    case 'extractpages': { const r = await r4extract(f, config.pages); return { bytes: r.bytes, name: `extracted_${f.name}`, note: `Kept ${pl(r.n)}.` }; }
     case 'delete': { const r = await r4delete(f, config.pages); return { bytes: r.bytes, name: `edited_${f.name}`, note: `Deleted ${pl(r.n)}.` }; }
     case 'removeblank': {
       status('Looking for blank pages…');
@@ -525,7 +525,7 @@ function R4MetaPanel({ file, config, set }) {
 }
 const r4note = t => <p className="text-sm" style={r4muted}>{t}</p>;
 const R4_PANELS = {
-  extract: ({ config, set, file }) => <div className="space-y-2"><R4Field label="Pages to keep" ph="e.g. 1-3, 5, 8-" value={config.pages} onChange={v => set(c => ({ ...c, pages: v }))} hint="Pages come out in the order you type them."/><R4PageCount file={file}/></div>,
+  extractpages: ({ config, set, file }) => <div className="space-y-2"><R4Field label="Pages to keep" ph="e.g. 1-3, 5, 8-" value={config.pages} onChange={v => set(c => ({ ...c, pages: v }))} hint="Pages come out in the order you type them."/><R4PageCount file={file}/></div>,
   delete: ({ config, set, file }) => <div className="space-y-2"><R4Field label="Pages to delete" ph="e.g. 2, 4-6" value={config.pages} onChange={v => set(c => ({ ...c, pages: v }))}/><R4PageCount file={file}/></div>,
   removeblank: () => r4note('We check every page on your device and remove the ones with no visible content. Pages with only a faint mark are kept.'),
   addblank: ({ config, set, file }) => <div className="space-y-3"><div className="grid grid-cols-2 gap-3"><R4Field label="Insert after page (0 = at the start)" type="number" ph="0" value={config.after} onChange={v => set(c => ({ ...c, after: v }))}/><R4Field label="How many blank pages" type="number" ph="1" value={config.count} onChange={v => set(c => ({ ...c, count: v }))}/></div><R4PageCount file={file}/></div>,
