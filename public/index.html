@@ -295,6 +295,13 @@ function Ic({ n, sz=20, cls='' }) {
 /* ══════════════════════════════════════
    TOOLS CONFIG
 ══════════════════════════════════════ */
+/* Interface language. The server picks it from the URL (/es/merge-pdf) and
+   injects that language's pack; English needs none. Paths keep the prefix. */
+const LANG = window.LCP_LANG || 'en';
+const I18N = window.LCP_I18N || { ui: {}, tools: {} };
+const tr = (key, en) => I18N.ui[key] || en;
+const LP = LANG === 'en' ? '' : `/${LANG}`;
+const LANG_NAMES = { en:'English', es:'Español', pt:'Português', fr:'Français', de:'Deutsch', id:'Bahasa Indonesia', hi:'हिन्दी', ur:'اردو', ar:'العربية' };
 const CATEGORIES = ['All','AI','Organize','Convert','Optimize','Security','Workflows'];
 const TOOLS = [
   { id:'chat',     slug:'chat-with-pdf',  label:'Chat with PDF',  desc:'Ask questions and get answers with page references.',  icon:'chat',     cat:'AI',       color:'cyan',    accept:'.pdf',       multi:false, engine:'client', ai:true, isNew:true },
@@ -358,6 +365,7 @@ const TOOLS = [
   { id:'sanitize', slug:'sanitize-pdf', label:'Sanitize PDF', desc:'Remove JavaScript, hidden files and actions from a PDF.', icon:'protect', cat:'Security', color:'red', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
   { id:'workflow', slug:'pdf-workflows',  label:'Workflows',      desc:'Chain tools like compress, number and protect, and run them on many files.', icon:'flow', cat:'Workflows', color:'blue', accept:'.pdf', multi:true, engine:'client', isNew:true },
 ];
+TOOLS.forEach(x => { const v = I18N.tools[x.id]; if (v) { x.label = v[0]; x.desc = v[1]; } });
 const C = {
   blue:    { bg:'rgba(37,99,235,0.1)',    bd:'rgba(37,99,235,0.3)',    ic:'#60A5FA', badge:'rgba(37,99,235,0.15)' },
   cyan:    { bg:'rgba(6,182,212,0.1)',    bd:'rgba(6,182,212,0.3)',    ic:'#22D3EE', badge:'rgba(6,182,212,0.15)' },
@@ -1049,15 +1057,15 @@ function DropZone({ tool, onFiles, disabled }) {
           {(ICONS[tool.icon]||ICONS.file).split('M').filter(Boolean).map((s,i)=><path key={i} d={'M'+s}/>)}
         </svg>
       </div>
-      <p className="font-semibold text-lg mb-2" style={{color:'var(--text)'}}>{disabled ? 'Daily limit reached' : tool.id==='compare' ? 'Drop the old and new versions here' : `Drop ${tool.multi||tool.batch?'files':'file'} here`}</p>
-      <p className="text-sm mb-6" style={{color:'var(--muted)'}}>{disabled ? 'Come back tomorrow' : `or click to browse · ${tool.accept.toUpperCase().replace(/\./g,'').replace(/,/g,', ')}`}</p>
+      <p className="font-semibold text-lg mb-2" style={{color:'var(--text)'}}>{disabled ? 'Daily limit reached' : tool.id==='compare' ? tr('ws.dropCompare','Drop the old and new versions here') : (tool.multi||tool.batch ? tr('ws.dropN','Drop files here') : tr('ws.drop1','Drop file here'))}</p>
+      <p className="text-sm mb-6" style={{color:'var(--muted)'}}>{disabled ? 'Come back tomorrow' : `${tr('ws.browse','or click to browse')} · ${tool.accept.toUpperCase().replace(/\./g,'').replace(/,/g,', ')}`}</p>
       {!disabled && (
         <button className="px-8 py-2.5 rounded-xl font-semibold text-sm text-white flex items-center gap-2 mx-auto" style={{background:'#2563EB'}}>
-          <Ic n="upload" sz={15}/> Select File{tool.multi||tool.batch?'s':''}
+          <Ic n="upload" sz={15}/> {tool.multi||tool.batch ? tr('ws.selectN','Select Files') : tr('ws.select1','Select File')}
         </button>
       )}
       {!disabled && <CloudImport tool={tool} onFiles={handle}/>}
-      {!disabled && tool.batch && <p className="text-xs mt-3" style={{color:'var(--subtle)'}}>Tip: select several files to process them all at once.</p>}
+      {!disabled && tool.batch && <p className="text-xs mt-3" style={{color:'var(--subtle)'}}>{tr('ws.tip','Tip: select several files to process them all at once.')}</p>}
     </div>
   );
 }
@@ -1220,7 +1228,7 @@ function Workspace({ tool, onBack, preset }) {
         if (tool.id==='sign' && !config.sigData) throw new Error('Add your signature first.');
         if (tool.id==='protect' && config.password!==config.confirmPw) throw new Error('Passwords do not match.');
         if (tool.id==='merge' && files.length<2) throw new Error('Add at least two PDFs to merge.');
-        setStatus('Processing on your device…');tick(20);
+        setStatus(tr('ws.processing','Processing on your device…'));tick(20);
         const batch = tool.batch && files.length > 1;
         let result;
         if (batch) {
@@ -1252,7 +1260,7 @@ function Workspace({ tool, onBack, preset }) {
     <div className="min-h-screen pt-24 pb-16 px-4">
       <div className="max-w-2xl mx-auto">
         <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8 group transition-colors" style={{color:'var(--muted)'}}>
-          <Ic n="left" sz={13} cls="group-hover:-translate-x-0.5 transition-transform"/>All Tools
+          <Ic n="left" sz={13} cls="group-hover:-translate-x-0.5 transition-transform"/>{tr('ws.all','All Tools')}
         </button>
         <div className="flex items-center gap-4 mb-6">
           <div className="w-13 h-13 rounded-2xl flex items-center justify-center" style={{background:col.bg,border:`1px solid ${col.bd}`,width:'3.25rem',height:'3.25rem'}}>
@@ -1337,11 +1345,11 @@ function Workspace({ tool, onBack, preset }) {
                   <button onClick={()=>removeFile(i)} className="p-1 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors" aria-label={`Remove ${f.name}`}><Ic n="trash" sz={13}/></button>
                 </div>
               ))}
-              {(tool.multi||tool.batch) && <label className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 cursor-pointer mt-1"><input type="file" className="hidden" accept={tool.accept} multiple onChange={e=>{const added=Array.from(e.target.files);e.target.value='';setFiles(f=>[...f,...added]);}}/><Ic n="upload" sz={12}/> Add more</label>}
+              {(tool.multi||tool.batch) && <label className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 cursor-pointer mt-1"><input type="file" className="hidden" accept={tool.accept} multiple onChange={e=>{const added=Array.from(e.target.files);e.target.value='';setFiles(f=>[...f,...added]);}}/><Ic n="upload" sz={12}/> {tr('ws.addmore','Add more')}</label>}
             </div>
             {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
             <div className="card p-5 space-y-4">
-              <h3 className="font-semibold text-sm" style={{color:'var(--text)'}}>Options</h3>
+              <h3 className="font-semibold text-sm" style={{color:'var(--text)'}}>{tr('ws.options','Options')}</h3>
               <ConfigPanel tool={tool} config={config} set={setConfig} file={files[0]}/>
             </div>
             <button onClick={process} disabled={files.length===0 || quotaExhausted}
@@ -1383,7 +1391,7 @@ function Workspace({ tool, onBack, preset }) {
                 <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center">
                   <Ic n="check" sz={18} cls="text-emerald-400"/>
                 </div>
-                <div><p className="font-semibold" style={{color:'var(--text)'}}>Processing Complete!</p><p className="text-xs" style={{color:'var(--muted)'}}>{resultNote||'Your file is ready to download.'}</p></div>
+                <div><p className="font-semibold" style={{color:'var(--text)'}}>{tr('ws.done','Processing Complete!')}</p><p className="text-xs" style={{color:'var(--muted)'}}>{resultNote||tr('ws.ready','Your file is ready to download.')}</p></div>
               </div>
 
               {/* PDF single output */}
@@ -1396,10 +1404,10 @@ function Workspace({ tool, onBack, preset }) {
                   <div className="flex gap-3">
                     <button onClick={()=>setPreview(true)} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm transition-colors text-blue-400"
                       style={{border:'1px solid rgba(37,99,235,0.4)',background:'rgba(37,99,235,0.05)'}}>
-                      <Ic n="preview" sz={14}/> Preview
+                      <Ic n="preview" sz={14}/> {tr('ws.preview','Preview')}
                     </button>
                     <button onClick={download} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm text-white" style={{background:'#2563EB'}}>
-                      <Ic n="download" sz={14}/> Download PDF
+                      <Ic n="download" sz={14}/> {tr('ws.download','Download PDF')}
                     </button>
                   </div>
                 </div>
@@ -1415,14 +1423,14 @@ function Workspace({ tool, onBack, preset }) {
                       <a href={item.url} download={item.name} className="text-xs text-blue-400 hover:text-blue-300 px-3 py-1.5 rounded-lg transition-colors" style={{border:'1px solid rgba(37,99,235,0.3)'}}>↓</a>
                     </div>
                   ))}
-                  {dlItems.length>1 && <button onClick={downloadAll} className="w-full py-2.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2" style={{background:'#2563EB'}}><Ic n="download" sz={14}/> Download All as ZIP</button>}
+                  {dlItems.length>1 && <button onClick={downloadAll} className="w-full py-2.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2" style={{background:'#2563EB'}}><Ic n="download" sz={14}/> {tr('ws.zip','Download All as ZIP')}</button>}
                 </div>
               )}
             </div>
             <button onClick={()=>{setState('drop');setFiles([]);setPdfBytes(null);setDlItems([]);setError('');setResultNote('');}}
               className="w-full py-3 rounded-2xl font-semibold text-sm transition-colors"
               style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
-              Process Another File
+              {tr('ws.again','Process Another File')}
             </button>
           </div>
         )}
@@ -1483,23 +1491,23 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
         <div className="max-w-4xl mx-auto">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-blue-300 text-sm font-medium mb-6"
             style={{background:'rgba(37,99,235,0.1)',border:'1px solid rgba(37,99,235,0.3)'}}>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"/> Private by design
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"/> {tr('hero.badge','Private by design')}
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 leading-tight" style={{color:'var(--text)'}}>
-            PDF tools that<br/><span className="gradient-text">never upload your files</span>
+            {tr('hero.t1','PDF tools that')}<br/><span className="gradient-text">{tr('hero.t2','never upload your files')}</span>
           </h1>
           <p className="text-lg max-w-2xl mx-auto mb-6 leading-relaxed" style={{color:'var(--muted)'}}>
-            Merge, compress, sign, OCR, and chat with your PDFs using AI that runs on your own device. Your documents stay with you. No signup, no limits, no watermarks.
+            {tr('hero.sub','Merge, compress, sign, OCR, and chat with your PDFs using AI that runs on your own device. Your documents stay with you. No signup, no limits, no watermarks.')}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
-            {['No signup','Unlimited, free forever','Works offline','On-device AI'].map(l=>(
+            {[tr('chip.nosignup','No signup'),tr('chip.unlimited','Unlimited, free forever'),tr('chip.offline','Works offline'),tr('chip.ai','On-device AI')].map(l=>(
               <span key={l} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium" style={{background:'var(--bg-card)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
                 <span className="text-emerald-400">✓</span>{l}
               </span>
             ))}
           </div>
           <div className="flex items-center justify-center gap-x-8 gap-y-4 mb-10 flex-wrap">
-            {[[`${TOOLS.filter(t=>t.engine==='client').length}/${TOOLS.length}`,'Tools run on your device'],['0','Files uploaded by AI tools'],['100%','Free'],['Offline','Works as an app']].map(([v,l])=>(
+            {[[`${TOOLS.filter(t=>t.engine==='client').length}/${TOOLS.length}`,tr('stat.device','Tools run on your device')],['0',tr('stat.ai','Files uploaded by AI tools')],['100%',tr('stat.free','Free')],[tr('stat.offline','Offline'),tr('stat.app','Works as an app')]].map(([v,l])=>(
               <div key={l} className="text-center">
                 <p className="text-blue-400 font-bold text-xl">{v}</p><p className="text-xs" style={{color:'var(--subtle)'}}>{l}</p>
               </div>
@@ -1507,7 +1515,7 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
           </div>
           <div className="max-w-2xl mx-auto mb-6"><CommandBar onRun={onCommand}/></div>
           <div className="relative max-w-md mx-auto">
-            <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tools…"
+            <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder={tr('search','Search tools…')}
               className="inp w-full pr-10" style={{borderRadius:'1rem',padding:'0.875rem 1.25rem'}}/>
             <div className="absolute right-4 top-1/2 -translate-y-1/2" style={{color:'var(--subtle)'}}>
               <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -1523,7 +1531,7 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
             <button key={c} onClick={()=>setCat(c)}
               className="shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all"
               style={{background:cat===c?'#2563EB':'var(--bg-card)',border:`1px solid ${cat===c?'#2563EB':'var(--border-s)'}`,color:cat===c?'#fff':'var(--muted)'}}>
-              {c} <span className="ml-1 text-xs opacity-60">{c==='All'?TOOLS.length:TOOLS.filter(t=>t.cat===c).length}</span>
+              {tr('cat.'+c, c)} <span className="ml-1 text-xs opacity-60">{c==='All'?TOOLS.length:TOOLS.filter(t=>t.cat===c).length}</span>
             </button>
           ))}
         </div>
@@ -1532,7 +1540,7 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
         </div>
         {filtered.length===0 && (
           <div className="text-center py-20" style={{color:'var(--subtle)'}}>
-            <p className="mb-2 text-4xl">🔍</p><p>No tools matching "<span style={{color:'var(--muted)'}}>{search}</span>"</p>
+            <p className="mb-2 text-4xl">🔍</p><p>{tr('nomatch','No tools matching')} "<span style={{color:'var(--muted)'}}>{search}</span>"</p>
           </div>
         )}
       </section>
@@ -1566,6 +1574,21 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
 /* ══════════════════════════════════════
    NAVBAR
 ══════════════════════════════════════ */
+/** Switching language reloads the same page under the new prefix. */
+function LanguagePicker() {
+  const change = e => {
+    const code = e.target.value;
+    const rest = location.pathname.replace(LP ? new RegExp(`^${LP}(?=/|$)`) : /^$/, '').replace(/^\/+/, '');
+    location.href = (code === 'en' ? '' : `/${code}`) + (rest ? `/${rest}` : (code === 'en' ? '/' : ''));
+  };
+  return (
+    <select value={LANG} onChange={change} aria-label={tr('lang','Language')} title={tr('lang','Language')}
+      className="h-9 rounded-xl text-xs px-2 max-w-[7.5rem]" style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--muted)'}}>
+      {Object.entries(LANG_NAMES).map(([k,n]) => <option key={k} value={k}>{n}</option>)}
+    </select>
+  );
+}
+
 function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
   const { isDark, toggle } = useTheme();
   const { user, logout, openAuth, isAuthenticated } = useAuth();
@@ -1589,13 +1612,14 @@ function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
 
         <div className="hidden md:flex items-center gap-1">
           {CATEGORIES.slice(1).map(c=>(
-            <button key={c} onClick={() => onCategory(c)} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400" style={{color:'var(--muted)'}}>{c}</button>
+            <button key={c} onClick={() => onCategory(c)} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400" style={{color:'var(--muted)'}}>{tr('cat.'+c, c)}</button>
           ))}
-          <a href="/privacy" onClick={e=>{e.preventDefault();onPrivacy();}} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400 flex items-center gap-1" style={{color:'#34D399'}}><Ic n="lock" sz={12}/>Privacy</a>
+          <a href={`${LP}/privacy`} onClick={e=>{e.preventDefault();onPrivacy();}} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400 flex items-center gap-1" style={{color:'#34D399'}}><Ic n="lock" sz={12}/>{tr('nav.privacy','Privacy')}</a>
           <button onClick={onCommand} className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 hover:text-blue-400" style={{color:'var(--muted)',border:'1px solid var(--border-s)'}} aria-label="Open the command bar" title="Tell LetsConvertPDF what to do (Ctrl+K)"><Ic n="sparkle" sz={12}/>Ask <kbd className="text-[10px] opacity-70">⌘K</kbd></button>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <LanguagePicker/>
           {/* Theme toggle */}
           <button onClick={toggle}
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105"
@@ -1623,15 +1647,15 @@ function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
                   </div>
                   <button onClick={()=>{logout();setMenuOpen(false);}}
                     className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-red-500/10 text-red-400 transition-colors">
-                    <Ic n="logOut" sz={14}/> Sign Out
+                    <Ic n="logOut" sz={14}/> {tr('nav.signout','Sign Out')}
                   </button>
                 </div>
               )}
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <button onClick={() => openAuth('login')} className="px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap" style={{color:'var(--muted)'}}>Log In</button>
-              <button onClick={() => openAuth('signup')} className="px-3 sm:px-4 py-2 rounded-lg text-xs font-bold text-white whitespace-nowrap" style={{background:'#2563EB'}}>Sign Up</button>
+              <button onClick={() => openAuth('login')} className="px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap" style={{color:'var(--muted)'}}>{tr('nav.login','Log In')}</button>
+              <button onClick={() => openAuth('signup')} className="px-3 sm:px-4 py-2 rounded-lg text-xs font-bold text-white whitespace-nowrap" style={{background:'#2563EB'}}>{tr('nav.signup','Sign Up')}</button>
             </div>
           )}
         </div>
@@ -1652,9 +1676,9 @@ function Footer({ onTool, onPrivacy }) {
           <span className="font-semibold text-sm" style={{color:'var(--text)'}}>LetsConvertPDF</span>
         </div>
         <div className="flex flex-wrap gap-5 text-xs" style={{color:'var(--subtle)'}}>
-          {TOOLS.slice(0,8).map(t=><a key={t.id} href={`/${t.slug}`} onClick={e=>{e.preventDefault();onTool(t);}} className="hover:text-blue-400 transition-colors">{t.label}</a>)}
-          <a href="/guides" className="hover:text-blue-400 transition-colors">Guides</a>
-          <a href="/privacy" onClick={e=>{e.preventDefault();onPrivacy();}} className="hover:text-blue-400 transition-colors">Privacy</a>
+          {TOOLS.slice(0,8).map(t=><a key={t.id} href={`${LP}/${t.slug}`} onClick={e=>{e.preventDefault();onTool(t);}} className="hover:text-blue-400 transition-colors">{t.label}</a>)}
+          <a href="/guides" className="hover:text-blue-400 transition-colors">{tr('foot.guides','Guides')}</a>
+          <a href={`${LP}/privacy`} onClick={e=>{e.preventDefault();onPrivacy();}} className="hover:text-blue-400 transition-colors">{tr('foot.privacy','Privacy')}</a>
         </div>
         <p className="text-xs" style={{color:'var(--subtle)'}}>© {new Date().getFullYear()} Maqsusi Digital Industries</p>
       </div>
@@ -1666,12 +1690,12 @@ function Footer({ onTool, onPrivacy }) {
    APP ROOT
 ══════════════════════════════════════ */
 function routeFromPath(path) {
-  const slug = (path || '/').replace(/^\/+|\/+$/g, '');
+  const slug = (path || '/').replace(LP ? new RegExp(`^${LP}(?=/|$)`) : /^$/, '').replace(/^\/+|\/+$/g, '');
   if (slug === 'privacy') return { view:'privacy' };
   const tool = TOOLS.find(t => t.slug === slug);
   return tool ? { view:'tool', tool } : { view:'home' };
 }
-const TITLE_HOME = 'LetsConvertPDF — Private PDF Tools That Never Upload Your Files';
+const TITLE_HOME = tr('home.title', 'LetsConvertPDF — Private PDF Tools That Never Upload Your Files');
 
 function App() {
   const [route, setRoute] = useState(() => routeFromPath(location.pathname));
@@ -1687,10 +1711,10 @@ function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
   useEffect(() => {
-    document.title = route.view === 'tool' ? `${route.tool.label} — Free & Private | LetsConvertPDF`
+    document.title = route.view === 'tool' ? `${tr('seo.title', '{tool} — Free & Private').replace('{tool}', route.tool.label)} | LetsConvertPDF`
       : route.view === 'privacy' ? 'Private by design | LetsConvertPDF' : TITLE_HOME;
   }, [route]);
-  const openTool = (t, preset) => go({ view:'tool', tool:t, preset }, `/${t.slug}`);
+  const openTool = (t, preset) => go({ view:'tool', tool:t, preset }, `${LP}/${t.slug}`);
   const [palette, setPalette] = useState(false);
   const runCommand = plan => { const t = TOOLS.find(x => x.id === plan.tool); if (t) openTool(t, plan.preset); };
   useEffect(() => {
@@ -1698,10 +1722,10 @@ function App() {
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, []);
-  const openPrivacy = () => go({ view:'privacy' }, '/privacy');
-  const goHome = () => go({ view:'home' }, '/');
+  const openPrivacy = () => go({ view:'privacy' }, `${LP}/privacy`);
+  const goHome = () => go({ view:'home' }, LP || '/');
   const showCategory = c => {
-    go({ view:'home' }, '/'); setCat(c);
+    go({ view:'home' }, LP || '/'); setCat(c);
     setTimeout(() => document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' }), 0);
   };
   return (

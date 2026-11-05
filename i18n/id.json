@@ -1,0 +1,309 @@
+{
+"ui": {
+"lang": "Bahasa",
+"nav.privacy": "Privasi",
+"nav.login": "Masuk",
+"nav.signup": "Daftar",
+"nav.signout": "Keluar",
+"nav.ask": "Tanya",
+"cat.All": "Semua",
+"cat.AI": "AI",
+"cat.Organize": "Atur",
+"cat.Convert": "Konversi",
+"cat.Optimize": "Optimalkan",
+"cat.Security": "Keamanan",
+"cat.Workflows": "Alur kerja",
+"hero.badge": "Privat sejak awal",
+"hero.t1": "Alat PDF yang",
+"hero.t2": "tidak pernah mengunggah file Anda",
+"hero.sub": "Gabung, kompres, tanda tangani, OCR, dan mengobrol dengan PDF memakai AI yang berjalan di perangkat Anda sendiri. Dokumen Anda tetap bersama Anda. Tanpa daftar, tanpa batas, tanpa watermark.",
+"chip.nosignup": "Tanpa daftar",
+"chip.unlimited": "Tanpa batas, gratis selamanya",
+"chip.offline": "Bisa offline",
+"chip.ai": "AI di perangkat",
+"stat.device": "Alat berjalan di perangkat Anda",
+"stat.ai": "File diunggah oleh AI",
+"stat.free": "Gratis",
+"stat.offline": "Offline",
+"stat.app": "Bisa dipasang sebagai aplikasi",
+"search": "Cari alat…",
+"nomatch": "Tidak ada alat yang cocok dengan",
+"ws.all": "Semua alat",
+"ws.drop1": "Letakkan file di sini",
+"ws.dropN": "Letakkan file di sini",
+"ws.dropCompare": "Letakkan versi lama dan baru di sini",
+"ws.browse": "atau klik untuk memilih",
+"ws.select1": "Pilih file",
+"ws.selectN": "Pilih file",
+"ws.tip": "Tips: pilih beberapa file untuk memproses semuanya sekaligus.",
+"ws.options": "Opsi",
+"ws.done": "Selesai!",
+"ws.ready": "File Anda siap diunduh.",
+"ws.preview": "Pratinjau",
+"ws.download": "Unduh PDF",
+"ws.again": "Proses file lain",
+"ws.zip": "Unduh semua (ZIP)",
+"ws.addmore": "Tambah lagi",
+"ws.processing": "Memproses di perangkat Anda…",
+"badge.local": "Diproses di perangkat Anda. File tidak pernah diunggah.",
+"badge.localShort": "Di perangkat Anda",
+"badge.server": "Dikonversi di server kami lewat HTTPS, lalu dihapus dalam 60 detik.",
+"badge.serverShort": "Server aman",
+"foot.guides": "Panduan",
+"foot.privacy": "Privasi",
+"seo.title": "{tool} gratis: privat, tanpa unggah",
+"seo.local": "File Anda diproses di browser dan tidak pernah diunggah ke server kami.",
+"seo.server": "File Anda dikirim lewat HTTPS ke konverter kami dan dihapus dalam 60 detik.",
+"seo.howto": "Cara memakainya",
+"seo.step1": "Pilih file Anda.",
+"seo.step2": "Atur opsi bila perlu.",
+"seo.step3": "Klik tombolnya dan unduh hasilnya.",
+"seo.more": "Alat PDF gratis dan privat lainnya",
+"seo.privacy": "Privasi",
+"seo.free": "Gratis, tanpa batas, tanpa daftar.",
+"home.title": "LetsConvertPDF: alat PDF privat yang tidak pernah mengunggah file Anda",
+"home.desc": "Alat PDF gratis yang berjalan di perangkat Anda: gabung, pisah, kompres, tanda tangan, OCR, dan mengobrol dengan PDF memakai AI. File tidak pernah keluar dari browser. Tanpa daftar."
+},
+"tools": {
+"chat": [
+"Chat dengan PDF",
+"Ajukan pertanyaan dan dapatkan jawaban beserta rujukan halaman."
+],
+"translate": [
+"Terjemahkan PDF",
+"Terjemahkan ke 22 bahasa dengan tata letak tetap, di perangkat Anda."
+],
+"review": [
+"Tinjau kontrak",
+"Tandai klausul berisiko, bagian kosong, dan halaman belum ditandatangani sebelum Anda tanda tangan."
+],
+"extract": [
+"Faktur ke Excel",
+"Ambil tabel serta total faktur dan kuitansi ke baris Excel yang rapi."
+],
+"summarize": [
+"Ringkas PDF",
+"Poin penting dan tindakan dalam hitungan detik, di perangkat Anda."
+],
+"ocr": [
+"OCR PDF",
+"Jadikan PDF hasil pindai bisa dicari dan dipilih."
+],
+"merge": [
+"Gabung PDF",
+"Satukan beberapa PDF menjadi satu."
+],
+"split": [
+"Pisah PDF",
+"Pisahkan halaman PDF menjadi file tersendiri."
+],
+"organize": [
+"Atur halaman",
+"Urutkan ulang, hapus, dan atur halaman PDF."
+],
+"crop": [
+"Potong PDF",
+"Pangkas margin halaman dan ubah area konten."
+],
+"rotate": [
+"Putar PDF",
+"Putar semua atau sebagian halaman PDF."
+],
+"compress": [
+"Kompres PDF",
+"Perkecil gambar di PDF tanpa mengunggahnya."
+],
+"img2pdf": [
+"Gambar ke PDF",
+"Ubah gambar JPG, PNG, dan WebP menjadi PDF."
+],
+"pdf2jpg": [
+"PDF ke JPG",
+"Simpan setiap halaman sebagai gambar JPEG berkualitas tinggi."
+],
+"word2pdf": [
+"Word ke PDF",
+"Ubah DOCX/DOC ke PDF dengan format tetap."
+],
+"excel2pdf": [
+"Excel ke PDF",
+"Ubah lembar kerja Excel menjadi PDF."
+],
+"ppt2pdf": [
+"PPT ke PDF",
+"Ubah presentasi PowerPoint menjadi PDF."
+],
+"pdf2word": [
+"PDF ke Word",
+"Ubah PDF menjadi dokumen Word yang bisa diedit."
+],
+"pdf2excel": [
+"PDF ke Excel",
+"Ambil tabel PDF ke lembar kerja yang bisa diedit."
+],
+"pdf2ppt": [
+"PDF ke PPT",
+"Ubah slide PDF menjadi PowerPoint yang bisa diedit."
+],
+"watermark": [
+"Watermark PDF",
+"Tambahkan watermark teks ke halaman PDF."
+],
+"sign": [
+"Tanda tangan PDF",
+"Gambar, ketik, atau unggah tanda tangan lalu taruh di mana saja."
+],
+"protect": [
+"Lindungi PDF",
+"Enkripsi PDF dengan kata sandi agar aman dibagikan."
+],
+"unlock": [
+"Buka kunci PDF",
+"Hapus kata sandi dari file PDF."
+],
+"repair": [
+"Perbaiki PDF",
+"Perbaiki dokumen PDF yang rusak."
+],
+"edit": [
+"Edit PDF",
+"Tambahkan teks, penghapus putih, sorotan, kotak, dan gambar di mana saja."
+],
+"fillform": [
+"Isi formulir PDF",
+"Isi formulir dengan sekali klik dari profil yang tersimpan di perangkat Anda."
+],
+"redact": [
+"Sensor PDF",
+"Temukan dan hapus permanen email, nomor telepon, dan nomor identitas."
+],
+"compare": [
+"Bandingkan PDF",
+"Lihat setiap perubahan teks dan tampilan antara dua versi."
+],
+"pagenumbers": [
+"Nomor halaman",
+"Tambahkan nomor halaman atau penomoran Bates di setiap halaman."
+],
+"pdf2png": [
+"PDF ke PNG",
+"Simpan setiap halaman sebagai gambar PNG tanpa kehilangan kualitas."
+],
+"pdfa": [
+"PDF ke PDF/A",
+"Ubah ke PDF/A-2b untuk arsip jangka panjang."
+],
+"html2pdf": [
+"HTML ke PDF",
+"Ubah halaman web tersimpan dan file HTML menjadi PDF."
+],
+"extractpages": [
+"Ambil halaman",
+"Ambil hanya halaman yang Anda perlukan ke PDF baru."
+],
+"delete": [
+"Hapus halaman",
+"Buang halaman yang tidak diperlukan dari PDF."
+],
+"removeblank": [
+"Hapus halaman kosong",
+"Temukan dan hapus halaman kosong secara otomatis."
+],
+"addblank": [
+"Tambah halaman kosong",
+"Sisipkan halaman kosong di mana saja dalam PDF."
+],
+"reverse": [
+"Balik urutan halaman",
+"Balik urutannya, halaman terakhir jadi pertama."
+],
+"nup": [
+"Beberapa halaman per lembar",
+"Cetak 2, 4, 6, atau 9 halaman dalam satu lembar."
+],
+"booklet": [
+"Buat buklet",
+"Susun halaman untuk dicetak, dilipat, dan dijepret menjadi buklet."
+],
+"alternate": [
+"Selang-seling halaman",
+"Sisipkan halaman dari dua PDF bergantian, cocok untuk pindai bolak-balik."
+],
+"headerfooter": [
+"Header & footer",
+"Tambahkan teks, tanggal, dan jumlah halaman di atas atau bawah tiap halaman."
+],
+"removeannots": [
+"Hapus anotasi",
+"Hapus komentar, sorotan, dan coretan."
+],
+"pdf2text": [
+"PDF ke teks",
+"Simpan semua teks di PDF sebagai file .txt."
+],
+"pdf2md": [
+"PDF ke Markdown",
+"Ubah PDF menjadi Markdown rapi dengan judul dan daftar."
+],
+"extractimages": [
+"Ambil gambar",
+"Simpan setiap gambar di dalam PDF sebagai PNG."
+],
+"pdf2webp": [
+"PDF ke WebP",
+"Simpan setiap halaman sebagai gambar WebP yang kecil dan tajam."
+],
+"png2pdf": [
+"PNG ke PDF",
+"Gabungkan gambar PNG menjadi satu PDF."
+],
+"webp2pdf": [
+"WebP ke PDF",
+"Ubah gambar WebP menjadi PDF."
+],
+"svg2pdf": [
+"SVG ke PDF",
+"Ubah gambar dan logo SVG menjadi PDF."
+],
+"txt2pdf": [
+"Teks ke PDF",
+"Ubah file .txt, log, atau kode menjadi PDF yang rapi."
+],
+"md2pdf": [
+"Markdown ke PDF",
+"Ubah Markdown dengan judul, daftar, dan kode menjadi PDF."
+],
+"greyscale": [
+"PDF ke hitam putih",
+"Ubah halaman berwarna menjadi hitam putih untuk dicetak."
+],
+"resize": [
+"Ubah ukuran halaman",
+"Sesuaikan setiap halaman ke A4, Letter, Legal, A3, atau A5."
+],
+"linearize": [
+"Tampilan web cepat",
+"Optimalkan PDF agar langsung terbuka secara online."
+],
+"metadata": [
+"Edit metadata",
+"Ubah judul, penulis, subjek, dan kata kunci."
+],
+"removemeta": [
+"Hapus metadata",
+"Hapus nama penulis, tanggal, dan info tersembunyi sebelum dibagikan."
+],
+"sanitize": [
+"Bersihkan PDF",
+"Hapus JavaScript, file tersembunyi, dan aksi dari PDF."
+],
+"workflow": [
+"Alur kerja",
+"Rangkai alat seperti kompres, beri nomor, dan lindungi, lalu jalankan pada banyak file."
+],
+"flatten": [
+"Ratakan PDF",
+"Kunci isian formulir ke halaman agar tidak bisa diubah."
+]
+}
+}

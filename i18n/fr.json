@@ -1,0 +1,309 @@
+{
+"ui": {
+"lang": "Langue",
+"nav.privacy": "Confidentialité",
+"nav.login": "Connexion",
+"nav.signup": "Inscription",
+"nav.signout": "Déconnexion",
+"nav.ask": "Demander",
+"cat.All": "Tous",
+"cat.AI": "IA",
+"cat.Organize": "Organiser",
+"cat.Convert": "Convertir",
+"cat.Optimize": "Optimiser",
+"cat.Security": "Sécurité",
+"cat.Workflows": "Flux",
+"hero.badge": "Privé par conception",
+"hero.t1": "Des outils PDF qui",
+"hero.t2": "n'envoient jamais vos fichiers",
+"hero.sub": "Fusionnez, compressez, signez, faites de l'OCR et discutez avec vos PDF grâce à une IA qui tourne sur votre appareil. Vos documents restent chez vous. Sans inscription, sans limite, sans filigrane.",
+"chip.nosignup": "Sans inscription",
+"chip.unlimited": "Illimité et gratuit pour toujours",
+"chip.offline": "Fonctionne hors ligne",
+"chip.ai": "IA sur l'appareil",
+"stat.device": "Outils sur votre appareil",
+"stat.ai": "Fichiers envoyés par l'IA",
+"stat.free": "Gratuit",
+"stat.offline": "Hors ligne",
+"stat.app": "S'installe comme une app",
+"search": "Rechercher un outil…",
+"nomatch": "Aucun outil ne correspond à",
+"ws.all": "Tous les outils",
+"ws.drop1": "Déposez le fichier ici",
+"ws.dropN": "Déposez les fichiers ici",
+"ws.dropCompare": "Déposez l'ancienne et la nouvelle version ici",
+"ws.browse": "ou cliquez pour parcourir",
+"ws.select1": "Choisir un fichier",
+"ws.selectN": "Choisir des fichiers",
+"ws.tip": "Astuce : choisissez plusieurs fichiers pour les traiter en une fois.",
+"ws.options": "Options",
+"ws.done": "Terminé !",
+"ws.ready": "Votre fichier est prêt à être téléchargé.",
+"ws.preview": "Aperçu",
+"ws.download": "Télécharger le PDF",
+"ws.again": "Traiter un autre fichier",
+"ws.zip": "Tout télécharger en ZIP",
+"ws.addmore": "Ajouter",
+"ws.processing": "Traitement sur votre appareil…",
+"badge.local": "Traité sur votre appareil. Votre fichier n'est jamais envoyé.",
+"badge.localShort": "Sur votre appareil",
+"badge.server": "Converti sur notre serveur via HTTPS, puis supprimé sous 60 secondes.",
+"badge.serverShort": "Serveur sécurisé",
+"foot.guides": "Guides",
+"foot.privacy": "Confidentialité",
+"seo.title": "{tool} gratuit : privé, sans envoi de fichier",
+"seo.local": "Votre fichier est traité dans votre navigateur et n'est jamais envoyé sur nos serveurs.",
+"seo.server": "Votre fichier est envoyé en HTTPS à notre convertisseur puis supprimé sous 60 secondes.",
+"seo.howto": "Comment l'utiliser",
+"seo.step1": "Choisissez votre fichier.",
+"seo.step2": "Réglez les options si besoin.",
+"seo.step3": "Cliquez sur le bouton et téléchargez le résultat.",
+"seo.more": "Plus d'outils PDF gratuits et privés",
+"seo.privacy": "Confidentialité",
+"seo.free": "Gratuit, illimité, sans inscription.",
+"home.title": "LetsConvertPDF : des outils PDF privés qui n'envoient jamais vos fichiers",
+"home.desc": "Outils PDF gratuits qui tournent sur votre appareil : fusionner, diviser, compresser, signer, OCR et discuter avec un PDF grâce à l'IA. Vos fichiers ne quittent jamais votre navigateur. Sans inscription."
+},
+"tools": {
+"chat": [
+"Discuter avec un PDF",
+"Posez des questions et obtenez des réponses avec les numéros de page."
+],
+"translate": [
+"Traduire un PDF",
+"Traduisez en 22 langues en gardant la mise en page, sur votre appareil."
+],
+"review": [
+"Relire un contrat",
+"Repérez les clauses à risque, les blancs et les pages non signées avant de signer."
+],
+"extract": [
+"Factures vers Excel",
+"Extrayez tableaux et totaux de factures et reçus en lignes Excel propres."
+],
+"summarize": [
+"Résumer un PDF",
+"Points clés et actions en quelques secondes, sur votre appareil."
+],
+"ocr": [
+"OCR PDF",
+"Rendez les PDF scannés consultables et sélectionnables."
+],
+"merge": [
+"Fusionner PDF",
+"Combinez plusieurs PDF en un seul."
+],
+"split": [
+"Diviser PDF",
+"Séparez les pages d'un PDF en fichiers individuels."
+],
+"organize": [
+"Organiser les pages",
+"Réordonnez, supprimez et réarrangez les pages."
+],
+"crop": [
+"Rogner PDF",
+"Rognez les marges et ajustez la zone de contenu."
+],
+"rotate": [
+"Pivoter PDF",
+"Faites pivoter toutes les pages ou certaines."
+],
+"compress": [
+"Compresser PDF",
+"Réduisez les images de votre PDF sans l'envoyer."
+],
+"img2pdf": [
+"Image en PDF",
+"Convertissez des images JPG, PNG et WebP en PDF."
+],
+"pdf2jpg": [
+"PDF en JPG",
+"Enregistrez chaque page en image JPEG de haute qualité."
+],
+"word2pdf": [
+"Word en PDF",
+"Convertissez DOCX/DOC en PDF en gardant la mise en forme."
+],
+"excel2pdf": [
+"Excel en PDF",
+"Transformez des feuilles Excel en PDF."
+],
+"ppt2pdf": [
+"PPT en PDF",
+"Convertissez des présentations PowerPoint en PDF."
+],
+"pdf2word": [
+"PDF en Word",
+"Convertissez un PDF en document Word modifiable."
+],
+"pdf2excel": [
+"PDF en Excel",
+"Extrayez les tableaux du PDF dans des feuilles modifiables."
+],
+"pdf2ppt": [
+"PDF en PPT",
+"Convertissez des diapositives PDF en PowerPoint modifiable."
+],
+"watermark": [
+"Filigrane PDF",
+"Ajoutez un filigrane texte à vos pages."
+],
+"sign": [
+"Signer PDF",
+"Dessinez, tapez ou importez une signature et placez-la où vous voulez."
+],
+"protect": [
+"Protéger PDF",
+"Chiffrez le PDF avec un mot de passe pour le partager en sécurité."
+],
+"unlock": [
+"Déverrouiller PDF",
+"Retirez le mot de passe d'un PDF."
+],
+"repair": [
+"Réparer PDF",
+"Réparez des PDF corrompus ou endommagés."
+],
+"edit": [
+"Modifier PDF",
+"Ajoutez texte, correcteur, surlignages, cadres et images où vous voulez."
+],
+"fillform": [
+"Remplir un formulaire PDF",
+"Remplissez des formulaires en un clic depuis un profil gardé sur votre appareil."
+],
+"redact": [
+"Caviarder PDF",
+"Trouvez et supprimez définitivement e-mails, téléphones et numéros d'identité."
+],
+"compare": [
+"Comparer PDF",
+"Voyez chaque changement de texte et visuel entre deux versions."
+],
+"pagenumbers": [
+"Numéros de page",
+"Ajoutez des numéros de page ou une numérotation Bates."
+],
+"pdf2png": [
+"PDF en PNG",
+"Enregistrez chaque page en image PNG sans perte."
+],
+"pdfa": [
+"PDF en PDF/A",
+"Convertissez en PDF/A-2b pour l'archivage à long terme."
+],
+"html2pdf": [
+"HTML en PDF",
+"Convertissez des pages web enregistrées et des fichiers HTML en PDF."
+],
+"extractpages": [
+"Extraire des pages",
+"Gardez seulement les pages utiles dans un nouveau PDF."
+],
+"delete": [
+"Supprimer des pages",
+"Retirez les pages inutiles d'un PDF."
+],
+"removeblank": [
+"Supprimer les pages blanches",
+"Trouvez et supprimez automatiquement les pages vides."
+],
+"addblank": [
+"Ajouter une page blanche",
+"Insérez des pages vides n'importe où dans un PDF."
+],
+"reverse": [
+"Inverser les pages",
+"Inversez l'ordre : la dernière page en premier."
+],
+"nup": [
+"Plusieurs pages par feuille",
+"Imprimez 2, 4, 6 ou 9 pages sur une feuille."
+],
+"booklet": [
+"Créer un livret",
+"Disposez les pages pour imprimer, plier et agrafer un livret."
+],
+"alternate": [
+"Alterner et mélanger",
+"Intercalez les pages de deux PDF, idéal pour les scans recto verso."
+],
+"headerfooter": [
+"En-tête et pied de page",
+"Ajoutez texte, dates et numéros de page en haut ou en bas de chaque page."
+],
+"removeannots": [
+"Supprimer les annotations",
+"Retirez commentaires, surlignages et annotations."
+],
+"pdf2text": [
+"PDF en texte",
+"Enregistrez tout le texte d'un PDF dans un fichier .txt."
+],
+"pdf2md": [
+"PDF en Markdown",
+"Transformez un PDF en Markdown propre avec titres et listes."
+],
+"extractimages": [
+"Extraire les images",
+"Enregistrez chaque image d'un PDF en PNG."
+],
+"pdf2webp": [
+"PDF en WebP",
+"Enregistrez chaque page en image WebP légère et nette."
+],
+"png2pdf": [
+"PNG en PDF",
+"Combinez des images PNG en un seul PDF."
+],
+"webp2pdf": [
+"WebP en PDF",
+"Convertissez des images WebP en PDF."
+],
+"svg2pdf": [
+"SVG en PDF",
+"Convertissez dessins et logos SVG en PDF."
+],
+"txt2pdf": [
+"Texte en PDF",
+"Transformez un fichier .txt, journal ou code en PDF soigné."
+],
+"md2pdf": [
+"Markdown en PDF",
+"Convertissez du Markdown avec titres, listes et code en PDF."
+],
+"greyscale": [
+"PDF en niveaux de gris",
+"Passez les pages couleur en noir et blanc pour imprimer."
+],
+"resize": [
+"Redimensionner les pages",
+"Adaptez chaque page au format A4, Letter, Legal, A3 ou A5."
+],
+"linearize": [
+"Affichage web rapide",
+"Optimisez un PDF pour qu'il s'ouvre instantanément en ligne."
+],
+"metadata": [
+"Modifier les métadonnées",
+"Changez le titre, l'auteur, le sujet et les mots-clés."
+],
+"removemeta": [
+"Supprimer les métadonnées",
+"Retirez l'auteur, les dates et les infos cachées avant de partager."
+],
+"sanitize": [
+"Nettoyer un PDF",
+"Retirez JavaScript, fichiers cachés et actions d'un PDF."
+],
+"workflow": [
+"Flux de travail",
+"Enchaînez des outils comme compresser, numéroter et protéger, sur de nombreux fichiers."
+],
+"flatten": [
+"Aplatir PDF",
+"Figez les réponses du formulaire dans la page pour qu'elles ne puissent plus changer."
+]
+}
+}
