@@ -280,27 +280,42 @@
   /* ───────────── OCR (Tesseract.js, self-hosted) ─────────────
      Adds an invisible, selectable text layer over each page, keeping the
      original page exactly as it was. */
-  let ocrWorker = null;
-  async function getOcrWorker(onStatus) {
-    if (ocrWorker) return ocrWorker;
+  /* Latin-script languages, self-hosted. Up to two can be combined (e.g. a
+     Spanish contract with English clauses). The choice is remembered so OCR
+     started from Chat, Translate or Extract uses it too. */
+  const OCR_LANGUAGES = { eng: 'English', spa: 'Spanish', fra: 'French', deu: 'German', por: 'Portuguese', ita: 'Italian', nld: 'Dutch', ind: 'Indonesian / Malay', tur: 'Turkish', pol: 'Polish' };
+  const OCR_KEY = 'lcpdf-ocr-lang';
+  function ocrLang() {
+    try { const v = localStorage.getItem(OCR_KEY) || 'eng'; return v.split('+').every(l => OCR_LANGUAGES[l]) ? v : 'eng'; } catch { return 'eng'; }
+  }
+  function setOcrLang(v) { try { localStorage.setItem(OCR_KEY, v); } catch {} }
+  let ocrWorker = null, ocrWorkerLang = '';
+  async function getOcrWorker(onStatus, lang) {
+    if (ocrWorker && ocrWorkerLang === lang) return ocrWorker;
+    if (ocrWorker) { try { await ocrWorker.terminate(); } catch {} ocrWorker = null; }
     await loadScript('/vendor/tesseract/tesseract.min.js');
-    onStatus && onStatus('Loading the text-recognition engine (one-time, ~6 MB)…');
-    ocrWorker = await Tesseract.createWorker('eng', 1, {
+    onStatus && onStatus(`Loading ${lang.split('+').map(l => OCR_LANGUAGES[l]).join(' + ')} text recognition (one-time download)…`);
+    ocrWorker = await Tesseract.createWorker(lang.split('+'), 1, {
       workerPath: '/vendor/tesseract/worker.min.js',
       corePath: '/vendor/tesseract-core',
       langPath: '/vendor/tessdata',
     });
+    ocrWorkerLang = lang;
     return ocrWorker;
   }
+  /** The invisible text layer uses a standard PDF font, so letters outside
+   *  Latin-1 (ł, ş, ğ…) are folded to their base letter to stay searchable. */
+  const FOLD = { 'ł': 'l', 'Ł': 'L', 'ı': 'i', 'İ': 'I', 'đ': 'd', 'Đ': 'D', 'œ': 'oe', 'Œ': 'OE', '\u2019': "'", '\u2018': "'", '\u201c': '"', '\u201d': '"', '\u2013': '-', '\u2014': '-' };
+  const foldLatin1 = (t) => Array.from(t).map(ch => ch.charCodeAt(0) <= 0xff ? ch : (FOLD[ch] ?? ch.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))).join('');
 
-  async function ocrPdf(file, onProgress, onStatus) {
+  async function ocrPdf(file, onProgress, onStatus, lang) {
     const { PDFDocument, StandardFonts, pushGraphicsState, popGraphicsState, beginText, endText, setFontAndSize, setTextMatrix, showText, setTextRenderingMode, TextRenderingMode, setCharacterSqueeze } = PDFLib;
     const bytes = await toBytes(file);
     const pdf = await openPdf(bytes);
     const out = await PDFDocument.load(bytes, { ignoreEncryption: true });
     const font = await out.embedFont(StandardFonts.Helvetica);
     const fontKey = out.getPages()[0].node.newFontDictionary('LcpOcr', font.ref);
-    const worker = await getOcrWorker(onStatus);
+    const worker = await getOcrWorker(onStatus, lang || ocrLang());
     const pages = out.getPages();
     const texts = [];
     let words = 0;
@@ -317,7 +332,7 @@
       const fk = i === 1 ? fontKey : target.node.newFontDictionary('LcpOcr', font.ref);
       const ops = [pushGraphicsState(), beginText(), setTextRenderingMode(TextRenderingMode.Invisible)];
       for (const block of data.blocks || []) for (const para of block.paragraphs || []) for (const line of para.lines || []) for (const word of line.words || []) {
-        const t = (word.text || '').replace(/[^\x20-\x7E -ÿ]/g, '');
+        const t = foldLatin1(word.text || '').replace(/[^\x20-\x7E -ÿ]/g, '');
         if (!t.trim() || word.confidence < 30) continue;
         const { x0, y0, x1, y1 } = word.bbox;
         const [px0, py0] = vp.convertToPdfPoint(x0, y1);
@@ -564,4 +579,5 @@
     aiSupport, modelCached, loadModel, aiAnswer, aiSummary, pagesIn,
     complete: stream,
   };
+  Object.assign(window.LCP, { OCR_LANGUAGES, ocrLang, setOcrLang });
 })();

@@ -19,7 +19,9 @@ ENV PYTHON_BIN=/opt/pyenv/bin/python
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev \
+    # OCR uses the compact best_int language files; drop the larger duplicates (~70 MB).
+    && rm -rf node_modules/@tesseract.js-data/*/4.0.0
 
 COPY server.js seo.js guides.js indexnow.js ./
 COPY guides ./guides
