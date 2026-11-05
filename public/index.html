@@ -714,28 +714,20 @@ function OTPStep({ email, purpose, newPw, warning, onBack, onSuccess }) {
    USAGE / FREEMIUM HELPERS
 ══════════════════════════════════════ */
 async function fetchUsageStatus(toolId, token) {
+  const t = TOOLS.find(x => x.id === toolId);
+  if (!t || t.engine !== 'server') return null; // on-device: nothing to meter, no request
   const r = await fetch(`/api/usage/status?toolId=${encodeURIComponent(toolId)}`, { headers: authHeaders(token) });
   if (!r.ok) return null;
   return r.json();
 }
-async function consumeUsage(toolId, token) {
-  const r = await fetch('/api/usage/consume', {
-    method: 'POST',
-    headers: authHeaders(token, { 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ toolId }),
-  });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) { const err = new Error(d.error || 'Daily free limit reached.'); err.status = r.status; err.usage = d.usage; throw err; }
-  return d;
+/* On-device tools are unlimited and never tell our server they ran.
+   Server-side conversions enforce any limit inside their own route. */
+async function consumeUsage() {
+  return { unlimited: true };
 }
 function UsageBadge({ status, isAuthenticated, onUpgrade }) {
   if (!status) return null;
-  const unlimited = status.limit === null;
-  if (unlimited) return (
-    <div className="flex items-center gap-2 text-xs rounded-full px-3 py-1.5 mb-5 w-fit" style={{background:'rgba(16,185,129,0.1)',color:'#34D399',border:'1px solid rgba(16,185,129,0.3)'}}>
-      <Ic n="sparkle" sz={13}/> Unlimited on your plan
-    </div>
-  );
+  if (status.limit === null) return null; // unlimited: nothing to show
   const exhausted = status.remaining <= 0;
   return (
     <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -1032,7 +1024,7 @@ function DropZone({ tool, onFiles, disabled }) {
         </svg>
       </div>
       <p className="font-semibold text-lg mb-2" style={{color:'var(--text)'}}>{disabled ? 'Daily limit reached' : tool.id==='compare' ? 'Drop the old and new versions here' : `Drop ${tool.multi||tool.batch?'files':'file'} here`}</p>
-      <p className="text-sm mb-6" style={{color:'var(--muted)'}}>{disabled ? 'Come back tomorrow, or sign up for more free uses' : `or click to browse · ${tool.accept.toUpperCase().replace(/\./g,'').replace(/,/g,', ')}`}</p>
+      <p className="text-sm mb-6" style={{color:'var(--muted)'}}>{disabled ? 'Come back tomorrow' : `or click to browse · ${tool.accept.toUpperCase().replace(/\./g,'').replace(/,/g,', ')}`}</p>
       {!disabled && (
         <button className="px-8 py-2.5 rounded-xl font-semibold text-sm text-white flex items-center gap-2 mx-auto" style={{background:'#2563EB'}}>
           <Ic n="upload" sz={15}/> Select File{tool.multi||tool.batch?'s':''}
@@ -1118,25 +1110,6 @@ function ConfigPanel({ tool, config, set, file }) {
 }
 
 /* ══════════════════════════════════════
-   AUTH GATE (soft banner, no longer blocks access)
-══════════════════════════════════════ */
-function GuestBanner({ tool }) {
-  const { openAuth } = useAuth();
-  return (
-    <div className="card p-4 mb-6 flex flex-wrap items-center justify-between gap-3" style={{borderColor:'rgba(37,99,235,0.25)', background:'rgba(37,99,235,0.05)'}}>
-      <div className="flex items-center gap-3">
-        <Ic n="sparkle" sz={16} cls="text-blue-400 shrink-0"/>
-        <p className="text-sm" style={{color:'var(--text)'}}>Using {tool.label} as a guest gives you 1 free use today. <span style={{color:'var(--muted)'}}>Sign up free for 3 uses per tool, every day.</span></p>
-      </div>
-      <button onClick={() => openAuth('signup', `Sign up to get 3 free ${tool.label} uses every day — no credit card required.`)}
-        className="shrink-0 px-4 py-2 rounded-xl font-semibold text-xs text-white" style={{background:'#2563EB'}}>
-        Sign Up Free
-      </button>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════
    WORKSPACE
 ══════════════════════════════════════ */
 function Workspace({ tool, onBack, preset }) {
@@ -1198,12 +1171,10 @@ function Workspace({ tool, onBack, preset }) {
         if(filename.endsWith('.pdf')){const b=new Uint8Array(await blob.arrayBuffer());setPdfBytes(b);setDlName(filename);setDlItems([{url:'#pdf',name:filename,size:fmtSz(b.byteLength)}]);}
         else{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();setDlItems([{url,name:filename,size:fmtSz(blob.size)}]);}
       } else {
-        // Client-side tools still spend from the same daily quota — consume before processing locally.
+        // On-device: no quota and no server call.
         if (tool.id==='sign' && !config.sigData) throw new Error('Add your signature first.');
         if (tool.id==='protect' && config.password!==config.confirmPw) throw new Error('Passwords do not match.');
         if (tool.id==='merge' && files.length<2) throw new Error('Add at least two PDFs to merge.');
-        setStatus('Checking your free-use quota…'); tick(15);
-        await consumeUsage(tool.id, token);
         setStatus('Processing on your device…');tick(20);
         const batch = tool.batch && files.length > 1;
         let result;
@@ -1251,8 +1222,7 @@ function Workspace({ tool, onBack, preset }) {
         </div>
 
         <div className="mb-4"><PrivacyBadge tool={tool}/></div>
-        <UsageBadge status={usageStatus} isAuthenticated={isAuthenticated} onUpgrade={() => openAuth('signup', `Sign up to get 3 free ${tool.label} uses every day — no credit card required.`)}/>
-        {!isAuthenticated && !quotaExhausted && <GuestBanner tool={tool}/>}
+        <UsageBadge status={usageStatus} isAuthenticated={isAuthenticated} onUpgrade={() => openAuth('login')}/>
 
         {/* Drop */}
         {state==='drop' && error && <div className="rounded-xl p-3 mb-4 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
@@ -1416,7 +1386,7 @@ function Workspace({ tool, onBack, preset }) {
       {showUpgrade && (
         <UpgradeModal tool={tool} usageInfo={usageStatus} isAuthenticated={isAuthenticated}
           onClose={()=>setShowUpgrade(false)}
-          onSignup={()=>{setShowUpgrade(false);openAuth('signup', `Sign up to get 3 free ${tool.label} uses every day — no credit card required.`);}}
+          onSignup={()=>{setShowUpgrade(false);openAuth('login');}}
           onLogin={()=>{setShowUpgrade(false);openAuth('login');}}/>
       )}
     </div>
@@ -1474,21 +1444,15 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
             PDF tools that<br/><span className="gradient-text">never upload your files</span>
           </h1>
           <p className="text-lg max-w-2xl mx-auto mb-6 leading-relaxed" style={{color:'var(--muted)'}}>
-            Merge, compress, sign, OCR, and chat with your PDFs using AI that runs on your own device. Your documents stay with you. Free, no signup needed.
+            Merge, compress, sign, OCR, and chat with your PDFs using AI that runs on your own device. Your documents stay with you. No signup, no limits, no watermarks.
           </p>
-          <p className="text-sm max-w-xl mx-auto mb-10" style={{color:'var(--subtle)'}}>
-            Guests get 1 free use per tool per day. <button onClick={()=>openAuth('signup')} className="text-blue-400 hover:text-blue-300 font-medium">Create a free account</button> for 3 uses per tool, every day.
-          </p>
-          {!isAuthenticated && (
-            <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
-              <button onClick={() => openAuth('signup')} className="px-8 py-3 rounded-xl font-bold text-white" style={{background:'#2563EB'}}>
-                Get 3 Free Uses/Day
-              </button>
-              <button onClick={() => openAuth('login')} className="px-8 py-3 rounded-xl font-semibold text-sm" style={{background:'var(--bg-card)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
-                Log In
-              </button>
-            </div>
-          )}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
+            {['No signup','Unlimited, free forever','Works offline','On-device AI'].map(l=>(
+              <span key={l} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium" style={{background:'var(--bg-card)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
+                <span className="text-emerald-400">✓</span>{l}
+              </span>
+            ))}
+          </div>
           <div className="flex items-center justify-center gap-x-8 gap-y-4 mb-10 flex-wrap">
             {[[`${TOOLS.filter(t=>t.engine==='client').length}/${TOOLS.length}`,'Tools run on your device'],['0','Files uploaded by AI tools'],['100%','Free'],['Offline','Works as an app']].map(([v,l])=>(
               <div key={l} className="text-center">

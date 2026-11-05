@@ -446,7 +446,7 @@ function llmsTxt() {
   const local = Object.entries(PAGES).filter(([, p]) => p.local), server = Object.entries(PAGES).filter(([, p]) => !p.local);
   return `# LetsConvertPDF
 
-> Free PDF tools that run in your web browser. Most tools, including all AI features (chat with a PDF, summaries, translation, contract review), process files on the user's own device, so the files are never uploaded. No signup is needed. Guests get one free use per tool per day, and a free account gets three.
+> Free PDF tools that run in your web browser. Most tools, including all AI features (chat with a PDF, summaries, translation, contract review), process files on the user's own device, so the files are never uploaded. Every tool is free and unlimited, with no signup and no watermarks, and the on-device tools work offline.
 
 - Private by design: ${PRIVACY_PAGE.intro}
 - Works on phones, tablets and computers in any modern browser, and can be installed as an app that works offline.

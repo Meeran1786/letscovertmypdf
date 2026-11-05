@@ -1,3 +1,5 @@
+> **Superseded (November 2026):** every tool is now free and unlimited with no signup. On-device tools no longer call `/api/usage/consume`. The meter only applies to the server-side conversions, and only if `SERVER_TOOL_GUEST_DAILY_LIMIT` / `SERVER_TOOL_USER_DAILY_LIMIT` are set. The old `FREE_*_DAILY_LIMIT` variables are ignored.
+
 # Freemium & Usage Metering — Addendum to PRD v2.0.0
 
 **Added:** Server v2.1 / August 31, 2026

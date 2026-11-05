@@ -102,15 +102,17 @@ function getEmailFromToken(req) {
 }
 
 /* ═══════════════════════════════════════════
-   FREEMIUM USAGE METERING
-   - Anonymous visitors: identified by IP, 1 use / tool / day.
-   - Signed-up (free) users: identified by account email, 3 uses / tool / day.
-   - A user's `premium` flag (reserved for a future paid tier) bypasses the cap.
-   Both tiers reset on a rolling UTC-day boundary.
+   USAGE METERING (off by default)
+   Every tool is free and unlimited with no signup. On-device tools never
+   call the server at all. The meter below only applies to the server-side
+   conversions, and only if SERVER_TOOL_GUEST_DAILY_LIMIT / SERVER_TOOL_USER_DAILY_LIMIT
+   are set to a number. (The old FREE_*_DAILY_LIMIT variables are ignored, so
+   an existing .env doesn't silently bring the caps back.) (for example to protect a small server from abuse).
+   The global express-rate-limit on /api/* still applies either way.
 ═══════════════════════════════════════════ */
 const LIMITS = {
-  anonDaily: Number(process.env.FREE_ANON_DAILY_LIMIT) || 1,
-  userDaily: Number(process.env.FREE_USER_DAILY_LIMIT) || 3,
+  anonDaily: Number(process.env.SERVER_TOOL_GUEST_DAILY_LIMIT) || Infinity,
+  userDaily: Number(process.env.SERVER_TOOL_USER_DAILY_LIMIT) || Infinity,
 };
 
 let usage = {}; // { "user:email:toolId:2026-08-31": { count, day } }
@@ -156,6 +158,8 @@ function readUsage(req, toolId) {
  *  Returns { ok, limit, used, remaining, identity } — does NOT throw. */
 function tryConsume(req, toolId) {
   const info = readUsage(req, toolId);
+  // Unlimited: don't record anything about who used which tool.
+  if (info.limit === Infinity) return { ok: true, ...info };
   if (info.limit !== Infinity && info.used >= info.limit) {
     return { ok: false, ...info };
   }
@@ -418,7 +422,7 @@ function enforceUsageOrReject(req, res, toolId) {
     res.status(429).json({
       error: result.identity.type === 'user'
         ? `You've used all ${result.limit} free daily uses of this tool. Your quota resets at midnight UTC.`
-        : `You've used your ${result.limit} free daily use of this tool as a guest. Sign up free for ${LIMITS.userDaily} uses per tool per day.`,
+        : `You've used your ${result.limit} free daily use of this tool as a guest. Please try again tomorrow.`,
       usage: usageResponsePayload(result, toolId),
     });
     return null;
@@ -447,7 +451,7 @@ app.post('/api/usage/consume', (req, res) => {
     return res.status(429).json({
       error: result.identity.type === 'user'
         ? `You've used all ${result.limit} free daily uses of this tool. Your quota resets at midnight UTC.`
-        : `You've used your ${result.limit} free daily use of this tool as a guest. Sign up free for ${LIMITS.userDaily} uses per tool per day.`,
+        : `You've used your ${result.limit} free daily use of this tool as a guest. Please try again tomorrow.`,
       usage: usageResponsePayload(result, toolId),
     });
   }
@@ -921,7 +925,7 @@ app.listen(PORT, () => {
 ║  Email : ${transporter ? '✓ SMTP ready — ' + process.env.EMAIL_USER : '✗ NOT configured — OTPs will only print to this log, not send'}
 ║  Google: ${googleClient ? '✓ Sign-In ready' : '✗ Not configured — "Continue with Google" returns 501'}
 ║  Mode  : ${process.env.NODE_ENV || 'development'}                             ║
-║  Free tier: guest ${LIMITS.anonDaily}/tool/day · account ${LIMITS.userDaily}/tool/day
+║  Usage: unlimited on-device · server tools guest ${LIMITS.anonDaily}/day · account ${LIMITS.userDaily}/day
 ╚══════════════════════════════════════════════════════╝
   `);
 });
