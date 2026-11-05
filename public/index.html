@@ -132,6 +132,7 @@
 <script type="text/babel" src="/js/tools.jsx"></script>
 <script type="text/babel" src="/js/r2.jsx"></script>
 <script type="text/babel" src="/js/r3.jsx"></script>
+<script type="text/babel" src="/js/r4.jsx"></script>
 <script type="text/babel">
 const { useState, useCallback, useRef, useEffect, useContext, createContext, useMemo } = React;
 
@@ -330,6 +331,31 @@ const TOOLS = [
   { id:'pdf2png',  slug:'pdf-to-png',     label:'PDF to PNG',     desc:'Save every page as a lossless PNG image.',            icon:'pdf2jpg',  cat:'Convert',  color:'blue',    accept:'.pdf',       multi:false, engine:'client', isNew:true },
   { id:'pdfa',     slug:'pdf-to-pdfa',    label:'PDF to PDF/A',   desc:'Convert to PDF/A-2b for long-term archiving.',        icon:'file',     cat:'Convert',  color:'emerald', accept:'.pdf',       multi:false, engine:'server', isNew:true },
   { id:'html2pdf', slug:'html-to-pdf',    label:'HTML to PDF',    desc:'Convert saved web pages and HTML files to PDF.',      icon:'word',     cat:'Convert',  color:'cyan',    accept:'.html,.htm', multi:false, engine:'server', isNew:true },
+  { id:'extract', slug:'extract-pdf-pages', label:'Extract Pages', desc:'Pull out just the pages you need into a new PDF.', icon:'split', cat:'Organize', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'delete', slug:'delete-pdf-pages', label:'Delete Pages', desc:'Remove unwanted pages from a PDF.', icon:'trash', cat:'Organize', color:'red', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'removeblank', slug:'remove-blank-pages', label:'Remove Blank Pages', desc:'Find and delete empty pages automatically.', icon:'trash', cat:'Organize', color:'emerald', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'addblank', slug:'add-blank-page-to-pdf', label:'Add Blank Page', desc:'Insert empty pages anywhere in a PDF.', icon:'file', cat:'Organize', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'reverse', slug:'reverse-pdf', label:'Reverse Pages', desc:'Flip the page order, last page first.', icon:'rotate', cat:'Organize', color:'cyan', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'nup', slug:'n-up-pdf', label:'N-up PDF', desc:'Print 2, 4, 6 or 9 pages on one sheet.', icon:'organize', cat:'Organize', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'booklet', slug:'pdf-booklet', label:'Make Booklet', desc:'Arrange pages to print, fold and staple a booklet.', icon:'layers', cat:'Organize', color:'cyan', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'alternate', slug:'alternate-mix-pdf', label:'Alternate & Mix', desc:'Interleave pages from two PDFs, ideal for duplex scans.', icon:'merge', cat:'Organize', color:'emerald', accept:'.pdf', multi:true, engine:'client', isNew:true },
+  { id:'headerfooter', slug:'add-header-footer-to-pdf', label:'Header & Footer', desc:'Add text, dates and page counts to the top or bottom of every page.', icon:'numbers', cat:'Organize', color:'blue', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'removeannots', slug:'remove-pdf-annotations', label:'Remove Annotations', desc:'Strip comments, highlights and markups.', icon:'close', cat:'Organize', color:'red', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'pdf2text', slug:'pdf-to-text', label:'PDF to Text', desc:'Save all the text in a PDF as a .txt file.', icon:'word', cat:'Convert', color:'blue', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'pdf2md', slug:'pdf-to-markdown', label:'PDF to Markdown', desc:'Turn a PDF into clean Markdown with headings and lists.', icon:'word', cat:'Convert', color:'cyan', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'extractimages', slug:'extract-images-from-pdf', label:'Extract Images', desc:'Save every picture inside a PDF as PNG.', icon:'img2pdf', cat:'Convert', color:'emerald', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'pdf2webp', slug:'pdf-to-webp', label:'PDF to WebP', desc:'Save each page as a small, sharp WebP image.', icon:'pdf2jpg', cat:'Convert', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'png2pdf', slug:'png-to-pdf', label:'PNG to PDF', desc:'Combine PNG images into one PDF.', icon:'img2pdf', cat:'Convert', color:'blue', accept:'.png,image/png', multi:true, engine:'client', isNew:true },
+  { id:'webp2pdf', slug:'webp-to-pdf', label:'WebP to PDF', desc:'Convert WebP images to PDF.', icon:'img2pdf', cat:'Convert', color:'cyan', accept:'.webp,image/webp', multi:true, engine:'client', isNew:true },
+  { id:'svg2pdf', slug:'svg-to-pdf', label:'SVG to PDF', desc:'Convert SVG drawings and logos to PDF.', icon:'img2pdf', cat:'Convert', color:'emerald', accept:'.svg,image/svg+xml', multi:true, engine:'client', isNew:true },
+  { id:'txt2pdf', slug:'text-to-pdf', label:'Text to PDF', desc:'Turn a .txt, log or code file into a tidy PDF.', icon:'word', cat:'Convert', color:'blue', accept:'.txt,.text,.log,.csv,.json,.xml,.md', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'md2pdf', slug:'markdown-to-pdf', label:'Markdown to PDF', desc:'Convert Markdown with headings, lists and code to PDF.', icon:'word', cat:'Convert', color:'cyan', accept:'.md,.markdown,.txt', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'greyscale', slug:'pdf-to-grayscale', label:'PDF to Greyscale', desc:'Convert colour pages to black and white for printing.', icon:'layers', cat:'Optimize', color:'emerald', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'resize', slug:'resize-pdf', label:'Resize Pages', desc:'Fit every page to A4, Letter, Legal, A3 or A5.', icon:'crop', cat:'Optimize', color:'blue', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'linearize', slug:'linearize-pdf', label:'Fast Web View', desc:'Optimise a PDF so it opens instantly online.', icon:'compress', cat:'Optimize', color:'cyan', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'metadata', slug:'edit-pdf-metadata', label:'Edit Metadata', desc:'Change the title, author, subject and keywords.', icon:'edit', cat:'Security', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'removemeta', slug:'remove-pdf-metadata', label:'Remove Metadata', desc:'Strip the author, dates and hidden info before sharing.', icon:'eyeOff', cat:'Security', color:'red', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'sanitize', slug:'sanitize-pdf', label:'Sanitize PDF', desc:'Remove JavaScript, hidden files and actions from a PDF.', icon:'protect', cat:'Security', color:'red', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
   { id:'workflow', slug:'pdf-workflows',  label:'Workflows',      desc:'Chain tools like compress, number and protect, and run them on many files.', icon:'flow', cat:'Workflows', color:'blue', accept:'.pdf', multi:true, engine:'client', isNew:true },
 ];
 const C = {
@@ -1106,6 +1132,7 @@ function ConfigPanel({ tool, config, set, file }) {
   if (tool.id==='workflow') return <WorkflowBuilder config={config} set={set}/>;
   if (tool.id==='flatten') return <p className="text-sm" style={{color:'var(--muted)'}}>Form answers and fields become part of the page, so they print correctly and can't be edited.</p>;
   if (tool.id==='pdfa') return <p className="text-sm" style={{color:'var(--muted)'}}>Converts to PDF/A-2b: fonts are embedded and colours fixed so the file opens the same way decades from now. This needs our server; your file is deleted within 60 seconds.</p>;
+  if (R4_PANELS[tool.id]) return R4_PANELS[tool.id]({ config, set, file });
   return <p className="text-sm" style={{color:'var(--muted)'}}>Click the button below to process your file.</p>;
 }
 
@@ -1184,7 +1211,7 @@ function Workspace({ tool, onBack, preset }) {
           for (let i=0;i<files.length;i++) {
             setStatus(`File ${i+1} of ${files.length}: ${files[i].name}`); tick(20+Math.round(75*i/files.length));
             const r=await runTool(tool.id,[files[i]],cfg,{});
-            items.push({bytes:r.bytes,name:r.name});
+            if (r.items) items.push(...r.items); else items.push({bytes:r.bytes,name:r.name});
             if (tool.id==='pagenumbers'&&cfg.bates) cfg={...cfg,start:(parseInt(cfg.start)||1)+(await PDFLib.PDFDocument.load(r.bytes)).getPageCount()};
           }
           result={items,note:`Processed ${files.length} files on your device.`};
