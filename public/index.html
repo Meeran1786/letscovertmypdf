@@ -1067,6 +1067,24 @@ function SignaturePad({ onSign }) {
   );
 }
 
+function OcrPanel({ config, set }) {
+  const L = LCP.OCR_LANGUAGES;
+  const [a, b = ''] = (config.lang || LCP.ocrLang()).split('+');
+  const update = (x, y) => set(c => ({ ...c, lang: y && y !== x ? `${x}+${y}` : x }));
+  useEffect(() => { if (!config.lang) update(a, b); }, []);
+  const sel = (v, on, none) => <select className="inp" value={v} onChange={e => on(e.target.value)}>{none && <option value="">None</option>}{Object.entries(L).map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select>;
+  return (
+    <div className="space-y-3">
+      <p className="text-sm" style={{color:'var(--muted)'}}>We'll recognise the text on every page and add an invisible text layer, so you can search, select and copy it. Your pages look exactly the same.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div><label className="block text-xs font-medium mb-1" style={{color:'var(--muted)'}}>Document language</label>{sel(a, v => update(v, b))}</div>
+        <div><label className="block text-xs font-medium mb-1" style={{color:'var(--muted)'}}>Second language (optional)</label>{sel(b, v => update(a, v), true)}</div>
+      </div>
+      <p className="text-xs" style={{color:'var(--subtle)'}}>Each language downloads once (2 to 5 MB) and is then cached for offline use.</p>
+    </div>
+  );
+}
+
 function ConfigPanel({ tool, config, set, file }) {
   const inp=(k,label,type='text',ph='',extra={})=>(
     <div><label className="block text-xs font-medium mb-1" style={{color:'var(--muted)'}}>{label}</label>
@@ -1105,7 +1123,7 @@ function ConfigPanel({ tool, config, set, file }) {
   if (tool.id==='crop') return inp('margin','Margin to crop (pt)','number','20');
   if (tool.id==='organize') return <div className="space-y-3"><p className="text-xs" style={{color:'var(--muted)'}}>Enter comma-separated page numbers in desired order (1-based).</p>{inp('order','Page Order','text','e.g. 3,1,2,4')}</div>;
   if (tool.id==='sign') return file ? <SignStudio file={file} config={config} set={set}/> : null;
-  if (tool.id==='ocr') return <p className="text-sm" style={{color:'var(--muted)'}}>We'll recognise the text on every page and add an invisible text layer, so you can search, select and copy it. Your pages look exactly the same. English text is supported today.</p>;
+  if (tool.id==='ocr') return <OcrPanel config={config} set={set}/>;
   if (tool.id==='repair') return <p className="text-sm" style={{color:'var(--muted)'}}>We'll rebuild the file's structure on your device. If it is badly damaged, we recreate each page from what can still be read.</p>;
   if (tool.id==='edit') return file ? <EditorStudio file={file} config={config} set={set}/> : null;
   if (tool.id==='pagenumbers') return <PageNumbersPanel config={config} set={set}/>;

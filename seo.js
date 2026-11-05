@@ -45,7 +45,7 @@ const PAGES = {
     intro: 'Scanned contracts, receipts and old documents are just pictures of text. OCR PDF recognises the words and adds an invisible text layer, so you can search, select and copy them, while every page looks exactly the same.',
     steps: ['Choose a scanned PDF.', 'Wait a few seconds per page while your device reads the text.', 'Download the searchable PDF.'],
     faq: [
-      ['Which languages are supported?', 'English today. More languages are coming.'],
+      ['Which languages are supported?', 'English, Spanish, French, German, Portuguese, Italian, Dutch, Indonesian and Malay, Turkish and Polish. You can combine two languages for mixed documents.'],
       ['Will my PDF look different?', 'No. The text layer is invisible; the original page images are untouched.'],
     ],
     local: true,

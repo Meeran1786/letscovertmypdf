@@ -292,9 +292,16 @@ const VENDOR = {
   qpdf:             '@neslinesli93/qpdf-wasm/dist',
   tesseract:        'tesseract.js/dist',
   'tesseract-core': 'tesseract.js-core',
-  tessdata:         '@tesseract.js-data/eng/4.0.0_best_int',
   'web-llm':        '@mlc-ai/web-llm/lib',
 };
+// OCR language files: /vendor/tessdata/spa.traineddata.gz → @tesseract.js-data/spa/4.0.0_best_int/
+const OCR_LANGS = ['eng', 'spa', 'fra', 'deu', 'por', 'ita', 'nld', 'ind', 'tur', 'pol'];
+app.get('/vendor/tessdata/:file', (req, res, next) => {
+  const m = /^([a-z]{3})\.traineddata\.gz$/.exec(req.params.file);
+  if (!m || !OCR_LANGS.includes(m[1])) return next();
+  res.set('Cache-Control', 'public, max-age=2592000, immutable');
+  res.sendFile(path.join(__dirname, 'node_modules', '@tesseract.js-data', m[1], '4.0.0_best_int', req.params.file), err => err && next());
+});
 for (const [route, dir] of Object.entries(VENDOR)) {
   app.use(`/vendor/${route}`, express.static(path.join(__dirname, 'node_modules', dir), { maxAge: '30d', immutable: true, index: false }));
 }

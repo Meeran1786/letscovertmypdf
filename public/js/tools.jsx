@@ -48,7 +48,8 @@ async function runTool(id, files, config, ui = {}) {
         note: r.method === 'rebuilt' ? 'The file was badly damaged, so each page was rebuilt as an image. Run OCR PDF to make the text searchable again.' : 'The file structure was rebuilt. Check it in the preview.' };
     }
     case 'ocr': {
-      const r = await LCP.ocrPdf(f, span(20, 95), status);
+      if (config.lang) LCP.setOcrLang(config.lang);
+      const r = await LCP.ocrPdf(f, span(20, 95), status, config.lang);
       return { bytes: r.bytes, name: `searchable_${f.name}`, note: r.words ? `Recognised ${r.words.toLocaleString()} words. The text is now searchable and selectable.` : 'No text was found on these pages.' };
     }
     case 'rotate':    return { bytes: await processRotate(f, parseInt(config.degrees) || 90), name: `rotated_${f.name}` };
