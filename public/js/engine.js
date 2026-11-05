@@ -575,8 +575,9 @@
 
   window.LCP = {
     loadScript, protectPdf, unlockPdf, repairPdf, compressPdf,
-    extractText, ocrPdf, OCR_LANGUAGES, ocrLang, setOcrLang, buildIndex, search, quickAnswer, quickSummary,
+    extractText, ocrPdf, buildIndex, search, quickAnswer, quickSummary,
     aiSupport, modelCached, loadModel, aiAnswer, aiSummary, pagesIn,
     complete: stream,
   };
+  Object.assign(window.LCP, { OCR_LANGUAGES, ocrLang, setOcrLang });
 })();
