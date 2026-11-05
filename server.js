@@ -329,6 +329,15 @@ app.get('/guides/:slug', (req, res) => {
   if (!html) return res.status(404).type('html').send(guides.renderIndex(seo.PAGES));
   res.type('html').send(html);
 });
+// Translated interface: /es, /es/merge-pdf, … (English stays at the root).
+const LANG_RE = require('./i18n').LANGS.slice(1).join('|');
+app.get('/', (req, res) => res.type('html').send(seo.renderHome(readIndex())));
+app.get(`/:lang(${LANG_RE})`, (req, res) => res.type('html').send(seo.renderHome(readIndex(), req.params.lang)));
+app.get(`/:lang(${LANG_RE})/:slug`, (req, res, next) => {
+  const page = seo.renderPage(readIndex(), req.params.slug, req.params.lang);
+  if (!page) return next();
+  res.type('html').send(page);
+});
 app.get('/:slug', (req, res, next) => {
   const page = seo.renderPage(readIndex(), req.params.slug);
   if (!page) return next();

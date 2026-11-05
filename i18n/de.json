@@ -1,0 +1,309 @@
+{
+"ui": {
+"lang": "Sprache",
+"nav.privacy": "Datenschutz",
+"nav.login": "Anmelden",
+"nav.signup": "Registrieren",
+"nav.signout": "Abmelden",
+"nav.ask": "Fragen",
+"cat.All": "Alle",
+"cat.AI": "KI",
+"cat.Organize": "Organisieren",
+"cat.Convert": "Konvertieren",
+"cat.Optimize": "Optimieren",
+"cat.Security": "Sicherheit",
+"cat.Workflows": "Abläufe",
+"hero.badge": "Privat durch Design",
+"hero.t1": "PDF-Tools, die",
+"hero.t2": "deine Dateien nie hochladen",
+"hero.sub": "Zusammenfügen, komprimieren, unterschreiben, OCR und mit PDFs chatten, mit KI, die auf deinem eigenen Gerät läuft. Deine Dokumente bleiben bei dir. Ohne Anmeldung, ohne Limits, ohne Wasserzeichen.",
+"chip.nosignup": "Ohne Anmeldung",
+"chip.unlimited": "Unbegrenzt und für immer kostenlos",
+"chip.offline": "Funktioniert offline",
+"chip.ai": "KI auf dem Gerät",
+"stat.device": "Tools laufen auf deinem Gerät",
+"stat.ai": "Von der KI hochgeladene Dateien",
+"stat.free": "Kostenlos",
+"stat.offline": "Offline",
+"stat.app": "Als App nutzbar",
+"search": "Tools suchen…",
+"nomatch": "Kein Tool passt zu",
+"ws.all": "Alle Tools",
+"ws.drop1": "Datei hier ablegen",
+"ws.dropN": "Dateien hier ablegen",
+"ws.dropCompare": "Alte und neue Version hier ablegen",
+"ws.browse": "oder klicken zum Auswählen",
+"ws.select1": "Datei auswählen",
+"ws.selectN": "Dateien auswählen",
+"ws.tip": "Tipp: Wähle mehrere Dateien, um alle auf einmal zu bearbeiten.",
+"ws.options": "Optionen",
+"ws.done": "Fertig!",
+"ws.ready": "Deine Datei ist bereit zum Herunterladen.",
+"ws.preview": "Vorschau",
+"ws.download": "PDF herunterladen",
+"ws.again": "Weitere Datei bearbeiten",
+"ws.zip": "Alles als ZIP herunterladen",
+"ws.addmore": "Weitere hinzufügen",
+"ws.processing": "Wird auf deinem Gerät verarbeitet…",
+"badge.local": "Auf deinem Gerät verarbeitet. Deine Datei wird nie hochgeladen.",
+"badge.localShort": "Auf deinem Gerät",
+"badge.server": "Auf unserem Server per HTTPS konvertiert und nach 60 Sekunden gelöscht.",
+"badge.serverShort": "Sicherer Server",
+"foot.guides": "Anleitungen",
+"foot.privacy": "Datenschutz",
+"seo.title": "{tool} kostenlos: privat, ohne Hochladen",
+"seo.local": "Deine Datei wird in deinem Browser verarbeitet und nie auf unsere Server hochgeladen.",
+"seo.server": "Deine Datei wird per HTTPS an unseren Konverter gesendet und nach 60 Sekunden gelöscht.",
+"seo.howto": "So funktioniert es",
+"seo.step1": "Wähle deine Datei.",
+"seo.step2": "Passe bei Bedarf die Optionen an.",
+"seo.step3": "Klicke auf die Schaltfläche und lade das Ergebnis herunter.",
+"seo.more": "Weitere kostenlose, private PDF-Tools",
+"seo.privacy": "Datenschutz",
+"seo.free": "Kostenlos, unbegrenzt, ohne Anmeldung.",
+"home.title": "LetsConvertPDF: private PDF-Tools, die deine Dateien nie hochladen",
+"home.desc": "Kostenlose PDF-Tools, die auf deinem Gerät laufen: zusammenfügen, teilen, komprimieren, unterschreiben, OCR und mit PDFs per KI chatten. Deine Dateien verlassen nie den Browser. Ohne Anmeldung."
+},
+"tools": {
+"chat": [
+"Mit PDF chatten",
+"Stelle Fragen und erhalte Antworten mit Seitenangaben."
+],
+"translate": [
+"PDF übersetzen",
+"In 22 Sprachen übersetzen, Layout bleibt erhalten, auf deinem Gerät."
+],
+"review": [
+"Vertrag prüfen",
+"Riskante Klauseln, Lücken und fehlende Unterschriften vor dem Unterschreiben finden."
+],
+"extract": [
+"Rechnungen nach Excel",
+"Tabellen und Summen aus Rechnungen und Belegen in saubere Excel-Zeilen übernehmen."
+],
+"summarize": [
+"PDF zusammenfassen",
+"Kernpunkte und Aufgaben in Sekunden, auf deinem Gerät."
+],
+"ocr": [
+"OCR PDF",
+"Gescannte PDFs durchsuchbar und markierbar machen."
+],
+"merge": [
+"PDF zusammenfügen",
+"Mehrere PDFs zu einer Datei kombinieren."
+],
+"split": [
+"PDF teilen",
+"PDF-Seiten in einzelne Dateien aufteilen."
+],
+"organize": [
+"Seiten organisieren",
+"PDF-Seiten neu ordnen, löschen und anordnen."
+],
+"crop": [
+"PDF zuschneiden",
+"Seitenränder beschneiden und den Inhaltsbereich anpassen."
+],
+"rotate": [
+"PDF drehen",
+"Alle oder einzelne Seiten eines PDFs drehen."
+],
+"compress": [
+"PDF komprimieren",
+"Bilder im PDF verkleinern, ohne es hochzuladen."
+],
+"img2pdf": [
+"Bild in PDF",
+"JPG-, PNG- und WebP-Bilder in ein PDF umwandeln."
+],
+"pdf2jpg": [
+"PDF in JPG",
+"Jede Seite als hochwertiges JPEG-Bild speichern."
+],
+"word2pdf": [
+"Word in PDF",
+"DOCX/DOC in PDF umwandeln, Formatierung bleibt erhalten."
+],
+"excel2pdf": [
+"Excel in PDF",
+"Excel-Tabellen in PDF-Dateien umwandeln."
+],
+"ppt2pdf": [
+"PPT in PDF",
+"PowerPoint-Präsentationen in PDF umwandeln."
+],
+"pdf2word": [
+"PDF in Word",
+"PDF in ein bearbeitbares Word-Dokument umwandeln."
+],
+"pdf2excel": [
+"PDF in Excel",
+"Tabellen aus dem PDF in bearbeitbare Tabellen übernehmen."
+],
+"pdf2ppt": [
+"PDF in PPT",
+"PDF-Folien in bearbeitbares PowerPoint umwandeln."
+],
+"watermark": [
+"PDF-Wasserzeichen",
+"Text-Wasserzeichen zu deinen Seiten hinzufügen."
+],
+"sign": [
+"PDF unterschreiben",
+"Unterschrift zeichnen, tippen oder hochladen und frei platzieren."
+],
+"protect": [
+"PDF schützen",
+"PDF mit Passwort verschlüsseln und sicher teilen."
+],
+"unlock": [
+"PDF entsperren",
+"Passwortschutz von PDF-Dateien entfernen."
+],
+"repair": [
+"PDF reparieren",
+"Beschädigte PDF-Dokumente reparieren."
+],
+"edit": [
+"PDF bearbeiten",
+"Text, Korrektur, Markierungen, Rahmen und Bilder überall einfügen."
+],
+"fillform": [
+"PDF-Formular ausfüllen",
+"Formulare mit einem Klick aus einem Profil auf deinem Gerät ausfüllen."
+],
+"redact": [
+"PDF schwärzen",
+"E-Mails, Telefon- und Ausweisnummern finden und dauerhaft entfernen."
+],
+"compare": [
+"PDF vergleichen",
+"Jede Text- und Bildänderung zwischen zwei Versionen sehen."
+],
+"pagenumbers": [
+"Seitenzahlen",
+"Seitenzahlen oder Bates-Nummern auf jede Seite setzen."
+],
+"pdf2png": [
+"PDF in PNG",
+"Jede Seite als verlustfreies PNG-Bild speichern."
+],
+"pdfa": [
+"PDF in PDF/A",
+"In PDF/A-2b für die Langzeitarchivierung umwandeln."
+],
+"html2pdf": [
+"HTML in PDF",
+"Gespeicherte Webseiten und HTML-Dateien in PDF umwandeln."
+],
+"extractpages": [
+"Seiten extrahieren",
+"Nur die benötigten Seiten in ein neues PDF übernehmen."
+],
+"delete": [
+"Seiten löschen",
+"Unerwünschte Seiten aus einem PDF entfernen."
+],
+"removeblank": [
+"Leere Seiten entfernen",
+"Leere Seiten automatisch finden und löschen."
+],
+"addblank": [
+"Leere Seite einfügen",
+"Leere Seiten an beliebiger Stelle einfügen."
+],
+"reverse": [
+"Seiten umkehren",
+"Reihenfolge umdrehen, letzte Seite zuerst."
+],
+"nup": [
+"Mehrere Seiten pro Blatt",
+"2, 4, 6 oder 9 Seiten auf ein Blatt drucken."
+],
+"booklet": [
+"Broschüre erstellen",
+"Seiten zum Drucken, Falten und Heften einer Broschüre anordnen."
+],
+"alternate": [
+"Abwechselnd mischen",
+"Seiten aus zwei PDFs verschachteln, ideal für Duplex-Scans."
+],
+"headerfooter": [
+"Kopf- und Fußzeile",
+"Text, Datum und Seitenzahlen oben oder unten auf jede Seite setzen."
+],
+"removeannots": [
+"Anmerkungen entfernen",
+"Kommentare, Markierungen und Notizen entfernen."
+],
+"pdf2text": [
+"PDF in Text",
+"Den gesamten Text eines PDFs als .txt-Datei speichern."
+],
+"pdf2md": [
+"PDF in Markdown",
+"PDF in sauberes Markdown mit Überschriften und Listen umwandeln."
+],
+"extractimages": [
+"Bilder extrahieren",
+"Jedes Bild in einem PDF als PNG speichern."
+],
+"pdf2webp": [
+"PDF in WebP",
+"Jede Seite als kleines, scharfes WebP-Bild speichern."
+],
+"png2pdf": [
+"PNG in PDF",
+"PNG-Bilder zu einem PDF zusammenfügen."
+],
+"webp2pdf": [
+"WebP in PDF",
+"WebP-Bilder in PDF umwandeln."
+],
+"svg2pdf": [
+"SVG in PDF",
+"SVG-Zeichnungen und Logos in PDF umwandeln."
+],
+"txt2pdf": [
+"Text in PDF",
+"Eine .txt-, Log- oder Code-Datei in ein ordentliches PDF verwandeln."
+],
+"md2pdf": [
+"Markdown in PDF",
+"Markdown mit Überschriften, Listen und Code in PDF umwandeln."
+],
+"greyscale": [
+"PDF in Graustufen",
+"Farbseiten zum Drucken in Schwarzweiß umwandeln."
+],
+"resize": [
+"Seitengröße ändern",
+"Jede Seite an A4, Letter, Legal, A3 oder A5 anpassen."
+],
+"linearize": [
+"Schnelle Webansicht",
+"PDF optimieren, damit es online sofort öffnet."
+],
+"metadata": [
+"Metadaten bearbeiten",
+"Titel, Autor, Betreff und Stichwörter ändern."
+],
+"removemeta": [
+"Metadaten entfernen",
+"Autor, Daten und versteckte Infos vor dem Teilen entfernen."
+],
+"sanitize": [
+"PDF bereinigen",
+"JavaScript, versteckte Dateien und Aktionen aus einem PDF entfernen."
+],
+"workflow": [
+"Abläufe",
+"Tools wie Komprimieren, Nummerieren und Schützen verketten und auf viele Dateien anwenden."
+],
+"flatten": [
+"PDF reduzieren",
+"Formularantworten fest in die Seite einbetten, damit sie nicht mehr änderbar sind."
+]
+}
+}

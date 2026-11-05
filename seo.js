@@ -621,27 +621,101 @@ function toolSchema(page, url) {
   }).replace(/</g, '\\u003c')}</script>`;
 }
 
-/** Returns index.html personalised for `slug`, or null for unknown paths. */
-function renderPage(html, slug) {
+const i18n = require('./i18n');
+
+/** slug → tool id, read from the TOOLS list in index.html (the single source). */
+let slugIds = null;
+function toolIdFor(html, slug) {
+  if (!slugIds) { slugIds = {}; for (const m of html.matchAll(/\{ id:'([a-z0-9]+)',\s*slug:'([a-z0-9-]+)'/g)) slugIds[m[2]] = m[1]; }
+  return slugIds[slug];
+}
+
+/** <link rel="alternate" hreflang> for every language version of `slug` ('' = home). */
+function alternates(slug) {
+  const tail = slug ? `/${slug}` : '/';
+  return i18n.LANGS.map(l => `<link rel="alternate" hreflang="${l}" href="${SITE}${l === 'en' ? '' : '/' + l}${l === 'en' ? tail : (slug ? tail : '')}" />`).join('\n')
+    + `\n<link rel="alternate" hreflang="x-default" href="${SITE}${tail}" />`;
+}
+
+/** Sets <html lang/dir> and hands the page its language pack (only that one). */
+function injectLang(html, lang) {
+  if (!i18n.has(lang)) return html;
+  const dict = JSON.stringify(i18n.DICT[lang]).replace(/</g, '\\u003c');
+  return html
+    .replace(/<html lang="en"/, `<html lang="${lang}"${i18n.RTL.has(lang) ? ' dir="rtl"' : ''}`)
+    .replace('<head>', `<head>\n  <script>window.LCP_LANG=${JSON.stringify(lang)};window.LCP_I18N=${dict};</script>`);
+}
+
+/** A tool page in another language, built from the translated label and description. */
+function localPage(html, slug, lang) {
+  const base = PAGES[slug]; const id = toolIdFor(html, slug); const tr = id && i18n.tool(lang, id);
+  if (!base || !tr) return null;
+  const [label, desc] = tr; const u = (k, f) => i18n.ui(lang, k, f);
+  return {
+    title: u('seo.title', '{tool}').replace('{tool}', label), h1: label,
+    desc: `${desc} ${u('seo.free', '')}`.trim(), intro: desc,
+    steps: [u('seo.step1', ''), u('seo.step2', ''), u('seo.step3', '')], local: base.local, lang,
+  };
+}
+
+function localArticle(html, page, slug, lang) {
+  const u = (k, f) => i18n.ui(lang, k, f);
+  const links = Object.keys(PAGES).filter(s => s !== slug).map(s => { const id = toolIdFor(html, s); const tr = id && i18n.tool(lang, id); return tr ? `<li><a href="/${lang}/${s}">${esc(tr[0])}</a></li>` : ''; }).join('');
+  return `<main style="max-width:720px;margin:0 auto;padding:96px 16px;font-family:system-ui,sans-serif;color:#E2E8F0">
+<h1>${esc(page.h1)}</h1><p>${esc(page.intro)}</p><h2>${esc(u('seo.howto', 'How to use it'))}</h2><ol>${page.steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
+<p><strong>${esc(u('seo.privacy', 'Privacy'))}:</strong> ${esc(page.local ? u('seo.local', LOCAL) : u('seo.server', SERVER))}</p>
+<h2>${esc(u('seo.more', 'More free, private PDF tools'))}</h2><ul>${links}</ul></main>`;
+}
+
+function setHead(html, { title, desc, url }) {
+  return html
+    .replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`)
+    .replace(/(<meta name="description" content=")[^"]*(")/, `$1${esc(desc)}$2`)
+    .replace(/(<link rel="canonical" href=")[^"]*(")/, `$1${url}$2`)
+    .replace(/(<meta property="og:url" content=")[^"]*(")/, `$1${url}$2`)
+    .replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${esc(title)}$2`)
+    .replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${esc(desc)}$2`)
+    .replace(/(<meta name="twitter:title" content=")[^"]*(")/, `$1${esc(title)}$2`);
+}
+
+/** The home page in `lang` ('en' adds only the hreflang links). */
+function renderHome(html, lang = 'en') {
+  if (lang === 'en') return html.replace('</head>', `${alternates('')}\n</head>`);
+  if (!i18n.has(lang)) return null;
+  const out = setHead(html, { title: i18n.ui(lang, 'home.title', ''), desc: i18n.ui(lang, 'home.desc', ''), url: `${SITE}/${lang}` });
+  return injectLang(out.replace('</head>', `${alternates('')}\n</head>`), lang);
+}
+
+/** Returns index.html personalised for `slug` (in `lang`), or null for unknown paths. */
+function renderPage(html, slug, lang = 'en') {
+  if (lang !== 'en') {
+    if (!i18n.has(lang)) return null;
+    if (slug === 'privacy') return injectLang(renderPage(html, slug), lang);
+    const page = localPage(html, slug, lang);
+    if (!page) return null;
+    const url = `${SITE}/${lang}/${slug}`;
+    const out = setHead(html, { title: page.title, desc: page.desc, url })
+      .replace(/<script type="application\/ld\+json">\{"@context":"https:\/\/schema.org","@type":"WebApplication"[^<]*<\/script>/, toolSchema({ ...page, local: undefined }, url))
+      .replace('</head>', `${alternates(slug)}\n</head>`)
+      .replace('<div id="root"></div>', `<div id="root">${localArticle(html, page, slug, lang)}</div>`);
+    return injectLang(out, lang);
+  }
   const page = slug === 'privacy' ? PRIVACY_PAGE : PAGES[slug];
   if (!page) return null;
   const url = `${SITE}/${slug}`;
-  return html
-    .replace(/<title>[^<]*<\/title>/, `<title>${esc(page.title)}</title>`)
-    .replace(/(<meta name="description" content=")[^"]*(")/, `$1${esc(page.desc)}$2`)
-    .replace(/(<link rel="canonical" href=")[^"]*(")/, `$1${url}$2`)
-    .replace(/(<meta property="og:url" content=")[^"]*(")/, `$1${url}$2`)
-    .replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${esc(page.title)}$2`)
-    .replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${esc(page.desc)}$2`)
-    .replace(/(<meta name="twitter:title" content=")[^"]*(")/, `$1${esc(page.title)}$2`)
+  return setHead(html, { title: page.title, desc: page.desc, url })
     .replace(/<script type="application\/ld\+json">\{"@context":"https:\/\/schema.org","@type":"WebApplication"[^<]*<\/script>/, page.h1 && page.steps ? toolSchema(page, url) : '$&')
-    .replace('</head>', `${faqSchema(page)}\n</head>`)
+    .replace('</head>', `${faqSchema(page)}\n${slug === 'privacy' ? '' : alternates(slug)}\n</head>`)
     .replace('<div id="root"></div>', `<div id="root">${article(page, slug)}</div>`);
 }
 
 function sitemapUrls() {
   const today = new Date().toISOString().slice(0, 10);
   const urls = ['', 'privacy', ...Object.keys(PAGES)].map(u => ({ loc: `${SITE}/${u}`, lastmod: today, priority: u === '' ? '1.0' : '0.8' }));
+  for (const l of i18n.LANGS.slice(1)) {
+    urls.push({ loc: `${SITE}/${l}`, lastmod: today, priority: '0.9' });
+    for (const slug of Object.keys(PAGES)) urls.push({ loc: `${SITE}/${l}/${slug}`, lastmod: today, priority: '0.7' });
+  }
   urls.push(...require('./guides').sitemapEntries(PAGES).map(e => ({ ...e, lastmod: e.lastmod || today })));
   return urls;
 }
@@ -688,4 +762,4 @@ ${guides.map(g => `- [${g.title}](${SITE}/guides/${g.slug}): ${g.description}`).
 
 const robots = () => `User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${SITE}/sitemap.xml\n`;
 
-module.exports = { PAGES, SITE, renderPage, sitemap, sitemapUrls, robots, llmsTxt };
+module.exports = { PAGES, SITE, renderPage, renderHome, sitemap, sitemapUrls, robots, llmsTxt };

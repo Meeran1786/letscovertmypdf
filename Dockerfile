@@ -25,6 +25,7 @@ RUN npm ci --omit=dev \
 
 COPY server.js seo.js guides.js indexnow.js ./
 COPY guides ./guides
+COPY i18n ./i18n
 COPY converters ./converters
 COPY public ./public
 

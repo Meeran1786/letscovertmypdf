@@ -12,8 +12,8 @@ function PrivacyBadge({ tool, compact }) {
     ? { background:'rgba(16,185,129,0.1)', color:'#34D399', border:'1px solid rgba(16,185,129,0.3)' }
     : { background:'rgba(245,158,11,0.1)', color:'#FBBF24', border:'1px solid rgba(245,158,11,0.3)' };
   const text = local
-    ? (compact ? 'On your device' : 'Processed on your device. Your file is never uploaded.')
-    : (compact ? 'Secure server' : 'Converted on our server over HTTPS, then deleted within 60 seconds.');
+    ? (compact ? tr('badge.localShort','On your device') : tr('badge.local','Processed on your device. Your file is never uploaded.'))
+    : (compact ? tr('badge.serverShort','Secure server') : tr('badge.server','Converted on our server over HTTPS, then deleted within 60 seconds.'));
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full ${compact?'text-[10px] px-2 py-0.5':'text-xs px-3 py-1.5'}`} style={style}
       title={local ? 'This tool runs entirely in your browser.' : 'Office formats need a server converter. Files are deleted right after.'}>
