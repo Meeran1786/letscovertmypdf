@@ -56,4 +56,4 @@ No. Pages are copied across as they are, so text and images look exactly like th
 
 ### Is it free?
 
-Yes. There is no watermark and no signup needed. Guests get one free use per tool each day, and a free account gets three.
+Yes. There is no watermark and no signup needed. Every tool is unlimited, and it keeps working offline once the page has loaded.
