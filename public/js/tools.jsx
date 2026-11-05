@@ -9,7 +9,7 @@ const hexRgb = (h = '#000000') => PDFLib.rgb(parseInt(h.slice(1, 3), 16) / 255, 
 
 /** Tools that take one PDF in and give one PDF out: these can run in a batch
  *  and be chained in a workflow. */
-const CHAINABLE = ['compress','rotate','watermark','pagenumbers','flatten','ocr','protect','unlock','repair','crop','redact'];
+const CHAINABLE = ['compress','rotate','watermark','pagenumbers','flatten','ocr','protect','unlock','repair','crop','redact','removeblank','reverse','removeannots','removemeta','sanitize','greyscale','linearize','resize'];
 
 /** Runs one on-device tool. Returns { bytes, name, note } for a single PDF,
  *  or { items, note } for several output files. */
@@ -97,7 +97,11 @@ async function runTool(id, files, config, ui = {}) {
       return { bytes: r, name: `filled_${f.name}` };
     }
     case 'workflow': return runWorkflow(files, config, ui);
-    default: throw new Error('This tool is not available yet.');
+    default: {
+      const r = typeof runToolR4 === 'function' ? await runToolR4(id, files, config, ui) : null;
+      if (r) return r;
+      throw new Error('This tool is not available yet.');
+    }
   }
 }
 
@@ -613,7 +617,7 @@ function PageNumbersPanel({ config, set }) {
 }
 
 /* ══════════════ Workflows ══════════════ */
-const STEP_LABELS = { compress:'Compress', rotate:'Rotate', watermark:'Watermark', pagenumbers:'Page numbers', flatten:'Flatten forms', ocr:'OCR (make searchable)', protect:'Password-protect', repair:'Repair', crop:'Crop margins', redact:'Smart redact' };
+const STEP_LABELS = { compress:'Compress', rotate:'Rotate', watermark:'Watermark', pagenumbers:'Page numbers', flatten:'Flatten forms', ocr:'OCR (make searchable)', protect:'Password-protect', repair:'Repair', crop:'Crop margins', redact:'Smart redact', removeblank:'Remove blank pages', reverse:'Reverse pages', removeannots:'Remove annotations', removemeta:'Remove metadata', sanitize:'Sanitize', greyscale:'Greyscale', linearize:'Fast web view', resize:'Resize to A4' };
 const BUILTIN_FLOWS = [
   { name: 'Prepare for email', steps: [{ op:'compress', level:'recommended' }] },
   { name: 'Share confidentially', steps: [{ op:'watermark', text:'CONFIDENTIAL' }, { op:'redact' }, { op:'protect', password:'' }] },
