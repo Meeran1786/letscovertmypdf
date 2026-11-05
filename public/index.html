@@ -133,6 +133,7 @@
 <script type="text/babel" src="/js/r2.jsx"></script>
 <script type="text/babel" src="/js/r3.jsx"></script>
 <script type="text/babel" src="/js/r4.jsx"></script>
+<script type="text/babel" src="/js/ads.jsx"></script>
 <script type="text/babel">
 const { useState, useCallback, useRef, useEffect, useContext, createContext, useMemo } = React;
 
@@ -1717,6 +1718,7 @@ function App() {
                 : <HomePage onTool={openTool} cat={cat} setCat={setCat} onPrivacy={openPrivacy} onCommand={runCommand}/>
             }
           </main>
+          <AdCarousel/>
           <Footer onTool={openTool} onPrivacy={openPrivacy}/>
           {palette && <CommandPalette onRun={runCommand} onClose={() => setPalette(false)}/>}
           <ChatWidget/>
