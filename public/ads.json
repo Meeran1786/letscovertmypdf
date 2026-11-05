@@ -1,0 +1,30 @@
+{
+  "enabled": true,
+  "interval": 6000,
+  "slides": [
+    {
+      "id": "house-chat",
+      "title": "Ask questions about any PDF, privately",
+      "text": "Chat with PDF runs the AI right in your browser. Your document never leaves your device.",
+      "cta": "Try Chat with PDF",
+      "href": "/chat-with-pdf",
+      "bg": "linear-gradient(90deg,#1D4ED8,#6D28D9)"
+    },
+    {
+      "id": "house-workflows",
+      "title": "Do five steps in one click",
+      "text": "Chain merge, compress, watermark and more into a reusable workflow.",
+      "cta": "Build a workflow",
+      "href": "/pdf-workflows",
+      "bg": "linear-gradient(90deg,#0F766E,#2563EB)"
+    },
+    {
+      "id": "house-offline",
+      "title": "Works offline, free forever",
+      "text": "No sign-up, no limits. Install LetsConvertPDF and keep using the on-device tools without internet.",
+      "cta": "Compress a PDF",
+      "href": "/compress-pdf",
+      "bg": "linear-gradient(90deg,#9333EA,#DB2777)"
+    }
+  ]
+}
