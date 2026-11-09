@@ -56,8 +56,6 @@ clearly. The checker (`npm run check:guides`) prints hints for these.
 
 ## Topic backlog
 Pick from here first, and remove a line once its guide is merged.
-- How to sign a PDF without printing it
-- How to make a scanned PDF searchable (OCR)
 - How to fill out a PDF form that isn't fillable
 - How to remove a password from a PDF you own
 - How to translate a PDF and keep the formatting
@@ -70,3 +68,5 @@ Pick from here first, and remove a line once its guide is merged.
 - How to rotate one page in a PDF
 - How to combine photos of documents into one PDF on your phone
 - How to reduce a PDF's size for an online application form
+- How to add a signature and date to a PDF on iPhone
+- How to copy text from a scanned PDF
