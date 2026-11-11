@@ -86,7 +86,7 @@
   const TABS = [
     ['ads', 'Ad banners', renderAds],
     ['users', 'Users', renderUsers],
-    ['soon', 'Credits & licences', renderSoon],
+    ['credits', 'Credits & usage', renderCredits],
   ];
   let current = (location.hash || '#ads').slice(1);
 
@@ -213,16 +213,27 @@
     catch (e) { clear(root); root.append(h('div', { class: 'msg err' }, e.message)); return; }
     clear(root);
     const stat = (n, l) => h('div', { class: 'stat' }, h('b', {}, n), h('span', { class: 'muted small' }, l));
-    root.append(h('div', { class: 'stats' }, stat(d.total, 'accounts'), stat(d.newThisWeek, 'new in 7 days'), stat(d.activeThisWeek, 'signed in in 7 days')));
+    const bt = d.byType || {};
+    root.append(h('div', { class: 'stats' }, stat(d.total, 'accounts'), stat(d.newThisWeek, 'new in 7 days'), stat(d.activeThisWeek, 'signed in in 7 days'),
+      stat(bt.student || 0, 'students'), stat(bt.individual || 0, 'individuals'), stat(bt.business || 0, 'business')));
     const q = h('input', { type: 'text', placeholder: 'Search by name, email or company domain' });
     const tbody = h('tbody');
     const draw = () => {
       clear(tbody);
       const term = q.value.trim().toLowerCase();
-      d.users.filter(u => !term || [u.email, u.name, u.googleDomain].some(x => (x || '').toLowerCase().includes(term))).slice(0, 500).forEach(u => {
+      d.users.filter(u => !term || [u.email, u.name, u.googleDomain, u.company, u.userType].some(x => (x || '').toLowerCase().includes(term))).slice(0, 500).forEach(u => {
         tbody.append(h('tr', {},
           h('td', {}, u.name, u.isAdmin ? ' (admin)' : ''),
           h('td', {}, u.email),
+          h('td', {}, u.userType || '—', u.company ? h('div', { class: 'muted small' }, u.company) : null),
+          h('td', {}, u.credits == null ? '—' : u.credits.toLocaleString(), ' ',
+            h('button', { class: 'btn', style: { padding: '2px 8px' }, onclick: async () => {
+              const v = prompt(`Credits to add for ${u.email} (use a minus sign to take away):`, '500');
+              if (v == null || !v.trim()) return;
+              const note = prompt('Note (optional, kept in the log):', '') || '';
+              try { const r = await api('POST', `/api/admin/users/${encodeURIComponent(u.email)}/credits`, { delta: Number(v), note }); u.credits = r.credits; draw(); }
+              catch (e) { alert(e.message); }
+            } }, '±')),
           h('td', {}, u.googleDomain || '—'),
           h('td', {}, fmtDate(u.createdAt)),
           h('td', {}, fmtDate(u.lastLoginAt)),
@@ -234,13 +245,57 @@
     };
     q.addEventListener('input', draw);
     root.append(h('div', { class: 'card' }, q, h('div', { style: { overflowX: 'auto', marginTop: '12px' } },
-      h('table', {}, h('thead', {}, h('tr', {}, ['Name', 'Email', 'Company domain', 'Joined', 'Last sign-in', ''].map(t => h('th', {}, t)))), tbody))));
+      h('table', {}, h('thead', {}, h('tr', {}, ['Name', 'Email', 'Type', 'Credits', 'Google domain', 'Joined', 'Last sign-in', ''].map(t => h('th', {}, t)))), tbody))));
     draw();
   }
 
-  function renderSoon(root) {
-    root.append(h('div', { class: 'card' }, h('h2', {}, 'Coming next'),
-      h('p', { class: 'muted' }, 'Credit balances and grants, student / individual / business types, business licences (seats, domain, expiry, security policies), usage per tool and licence requests will appear here.')));
+  /* ── Credits settings + usage ── */
+  async function renderCredits(root) {
+    root.append(h('p', { class: 'muted' }, 'Loading…'));
+    let cfg, st;
+    try { [cfg, st] = await Promise.all([api('GET', '/api/admin/settings'), api('GET', '/api/admin/stats?days=30')]); }
+    catch (e) { clear(root); root.append(h('div', { class: 'msg err' }, e.message)); return; }
+    clear(root);
+    const status = h('div');
+    const num = (label, get, set) => h('div', {}, h('label', {}, label),
+      h('input', { type: 'number', min: 0, step: 1, value: get(), oninput: e => set(e.target.value === '' ? '' : Number(e.target.value)) }));
+    const overrides = h('div', { class: 'grid' });
+    const drawOverrides = () => {
+      clear(overrides);
+      const ids = [...new Set([...Object.keys(cfg.toolCosts || {}), ...st.perTool.map(t => t.toolId)])].sort();
+      if (!ids.length) overrides.append(h('p', { class: 'muted small' }, 'Tools appear here once people use them. You can also add one by id below.'));
+      ids.forEach(id => overrides.append(num(id, () => cfg.toolCosts?.[id] ?? '', v => { cfg.toolCosts = { ...cfg.toolCosts, [id]: v }; })));
+    };
+    const newId = h('input', { type: 'text', placeholder: 'tool id, e.g. chat' });
+    root.append(
+      h('div', { class: 'card' }, h('h2', {}, 'Credit rules'),
+        h('div', { class: 'grid' },
+          num('Credits for a new account', () => cfg.startingCredits, v => { cfg.startingCredits = v; }),
+          num('Credits per use (default)', () => cfg.costPerUse, v => { cfg.costPerUse = v; }),
+          num('Monthly top-up: students', () => cfg.monthlyFloor.student, v => { cfg.monthlyFloor.student = v; }),
+          num('Monthly top-up: individuals', () => cfg.monthlyFloor.individual, v => { cfg.monthlyFloor.individual = v; }),
+          num('Monthly top-up: business', () => cfg.monthlyFloor.business, v => { cfg.monthlyFloor.business = v; })),
+        h('p', { class: 'muted small' }, 'The monthly top-up raises a balance back up to that number on the first use each month; it never lowers it.')),
+      h('div', { class: 'card' }, h('h2', {}, 'Cost per tool (leave empty to use the default)'), overrides,
+        h('div', { class: 'row', style: { marginTop: '12px' } }, newId,
+          h('button', { class: 'btn', onclick: () => { const id = newId.value.trim(); if (!id) return; cfg.toolCosts = { ...cfg.toolCosts, [id]: cfg.costPerUse }; newId.value = ''; drawOverrides(); } }, 'Add tool'))),
+      h('div', { class: 'sticky' }, status, h('button', { class: 'btn primary', onclick: async () => {
+        clear(status);
+        try { cfg = await api('PUT', '/api/admin/settings', cfg); status.append(h('div', { class: 'msg ok' }, 'Saved.')); drawOverrides(); }
+        catch (e) { status.append(h('div', { class: 'msg err' }, e.message)); }
+      } }, 'Save credit rules')));
+    drawOverrides();
+
+    const totalUses = st.perTool.reduce((a, t) => a + t.uses, 0);
+    const totalCredits = st.perTool.reduce((a, t) => a + t.credits, 0);
+    const stat = (n, l) => h('div', { class: 'stat' }, h('b', {}, n.toLocaleString()), h('span', { class: 'muted small' }, l));
+    root.append(h('div', { class: 'card' }, h('h2', {}, 'Usage, last 30 days'),
+      h('div', { class: 'stats' }, stat(totalUses, 'tool uses'), stat(totalCredits, 'credits spent')),
+      st.perTool.length
+        ? h('table', {}, h('thead', {}, h('tr', {}, ['Tool', 'Uses', 'Credits'].map(t => h('th', {}, t)))),
+            h('tbody', {}, st.perTool.map(t => h('tr', {}, h('td', {}, t.toolId), h('td', {}, t.uses.toLocaleString()), h('td', {}, t.credits.toLocaleString())))))
+        : h('p', { class: 'muted' }, 'No uses yet.'),
+      h('p', { class: 'muted small' }, 'Business licences (seats, company domain, expiry and security policies) come in the next update.')));
   }
 
   /* ── start ── */

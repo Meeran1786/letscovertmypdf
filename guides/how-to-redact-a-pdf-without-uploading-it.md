@@ -64,4 +64,4 @@ Usually because that part of the page is an image, not text. Run OCR PDF first, 
 
 ### Is it free?
 
-Yes. There is no watermark and no signup needed. Every tool is unlimited, and it keeps working offline once the page has loaded.
+It's free to start. Sign in with Google and you get 1,000 free credits; each use costs 5. There is no watermark, and your file is still processed on your own device.
