@@ -17,14 +17,6 @@
       "cta": "Build a workflow",
       "href": "/pdf-workflows",
       "bg": "linear-gradient(90deg,#0F766E,#2563EB)"
-    },
-    {
-      "id": "house-offline",
-      "title": "Works offline, free forever",
-      "text": "No sign-up, no limits. Install LetsConvertPDF and keep using the on-device tools without internet.",
-      "cta": "Compress a PDF",
-      "href": "/compress-pdf",
-      "bg": "linear-gradient(90deg,#9333EA,#DB2777)"
     }
   ]
 }

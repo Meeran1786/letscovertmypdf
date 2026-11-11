@@ -106,103 +106,156 @@
   }
 
   /* ── Ad banners ── */
-  const FIELDS = [
-    ['title', 'Headline (required)', 'text'],
-    ['text', 'One line under the headline', 'text'],
-    ['cta', 'Button label', 'text', 'Learn more'],
-    ['href', 'Link: /our-page or https://…', 'text'],
-    ['bg', 'Background colour or gradient', 'text', 'linear-gradient(90deg,#1D4ED8,#6D28D9)'],
-    ['label', 'Badge text (when sponsored)', 'text', 'Sponsored'],
-    ['start', 'Show from', 'date'],
-    ['end', 'Show until', 'date'],
-  ];
+  const PLACEMENTS = [['home', 'Home page carousel'], ['tools', 'Tool pages'], ['all', 'Home page and tool pages']];
+  const STATUSES = [['draft', 'Draft'], ['active', 'Active'], ['paused', 'Paused']];
+  const today = () => new Date().toISOString().slice(0, 10);
+  const inYear = () => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d.toISOString().slice(0, 10); };
+  const statusOf = s => s.status || (s.hidden ? 'paused' : 'active');
+
+  /** Crops any picture from the centre to 4:1 and scales it to at most 2000 × 500, as WebP (or JPEG). */
+  async function toBanner(blob) {
+    const bmp = await createImageBitmap(blob);
+    const want = 4;
+    let sw = bmp.width, sh = bmp.height, sx = 0, sy = 0;
+    if (sw / sh > want) { sw = Math.round(sh * want); sx = Math.round((bmp.width - sw) / 2); }
+    else { sh = Math.round(sw / want); sy = Math.round((bmp.height - sh) / 2); }
+    const w = Math.min(2000, sw), hgt = Math.round(w / want);
+    const c = document.createElement('canvas'); c.width = w; c.height = hgt;
+    const ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bmp, sx, sy, sw, sh, 0, 0, w, hgt);
+    const enc = (type, q) => new Promise(r => c.toBlob(r, type, q));
+    let out = await enc('image/webp', 0.86);
+    if (!out || out.type !== 'image/webp') out = await enc('image/jpeg', 0.86);
+    for (let q = 0.75; out.size > 4.5 * 1024 * 1024 && q > 0.4; q -= 0.1) out = await enc(out.type, q);
+    return { blob: out, width: w, height: hgt, sourceWidth: bmp.width, cropped: sx > 0 || sy > 0 };
+  }
 
   async function renderAds(root) {
     root.append(h('p', { class: 'muted' }, 'Loading banners…'));
-    let cfg, images;
-    try { [cfg, { images }] = await Promise.all([api('GET', '/api/admin/ads'), api('GET', '/api/admin/ads/images')]); }
+    let cfg;
+    try { cfg = await api('GET', '/api/admin/ads'); }
     catch (e) { clear(root); root.append(h('div', { class: 'msg err' }, e.message)); return; }
-    let dirty = false;
     const status = h('div');
-    const list = h('div');
     const say = (text, ok) => { clear(status); status.append(h('div', { class: `msg ${ok ? 'ok' : 'err'}` }, text)); };
-    const touch = () => { dirty = true; saveBtn.disabled = false; clear(status); };
+    const save = async next => {
+      const body = { enabled: cfg.enabled, interval: cfg.interval, slides: next };
+      const r = await api('PUT', '/api/admin/ads', body);
+      cfg = r; return r;
+    };
 
-    const settings = h('div', { class: 'card' },
-      h('h2', {}, 'Carousel'),
-      h('div', { class: 'row' },
-        h('label', { style: { display: 'flex', gap: '6px', alignItems: 'center', margin: 0, color: 'var(--text)', fontSize: '14px' } },
-          h('input', { type: 'checkbox', checked: cfg.enabled !== false, onchange: e => { cfg.enabled = e.target.checked; touch(); } }), 'Show banners on the site'),
-        h('span', { style: { marginLeft: '16px' }, class: 'muted' }, 'Seconds per slide'),
+    const listBox = h('div');
+    const formBox = h('div');
+
+    function drawList() {
+      clear(listBox);
+      const stats = cfg.stats || {};
+      const rows = [...cfg.slides].sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
+      const settings = h('div', { class: 'row', style: { marginBottom: '14px' } },
+        h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: cfg.enabled !== false, onchange: async e => {
+          try { cfg.enabled = e.target.checked; await save(cfg.slides); say(cfg.enabled ? 'Banners are on.' : 'Banners are off across the site.', true); } catch (err) { say(err.message); }
+        } }), 'Show banners on the site'),
+        h('span', { class: 'muted', style: { marginLeft: '16px' } }, 'Seconds per banner'),
         h('input', { type: 'number', min: 3, max: 60, value: Math.round((cfg.interval || 6000) / 1000), style: { width: '80px' },
-          oninput: e => { cfg.interval = Number(e.target.value) * 1000; touch(); } })));
-
-    function slideCard(s, i) {
-      const pv = h('div');
-      const drawPreview = () => {
-        clear(pv);
-        const external = /^https?:\/\//i.test(s.href || '');
-        pv.append(h('div', { class: 'preview', style: { background: s.bg || 'linear-gradient(90deg,#1D4ED8,#6D28D9)' } },
-          s.image ? h('img', { src: s.image, alt: s.imageAlt || '' }) : null,
-          h('div', {},
-            (s.sponsored || s.label) ? h('span', { class: 'badge' }, s.label || 'Sponsored') : null,
-            h('div', { style: { fontWeight: 700, fontSize: '16px' } }, s.title || 'Headline'),
-            s.text ? h('div', { style: { opacity: .8, fontSize: '13px' } }, s.text) : null),
-          s.href ? h('span', { class: 'cta' }, (s.cta || 'Learn more') + (external ? ' ↗' : '')) : null));
-      };
-      const field = ([k, label, type, ph]) => h('div', {},
-        h('label', {}, label),
-        h('input', { type, value: s[k] || '', placeholder: ph || '', oninput: e => { s[k] = e.target.value; touch(); drawPreview(); } }));
-
-      const imgSelect = h('select', { onchange: e => { s.image = e.target.value || undefined; touch(); drawPreview(); } },
-        h('option', { value: '' }, 'No picture'),
-        images.map(src => h('option', { value: src, selected: s.image === src }, src.replace('/ads/', ''))));
-      const fileIn = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', class: 'hidden',
-        onchange: async e => {
-          const f = e.target.files[0]; if (!f) return;
-          const fd = new FormData(); fd.append('image', f);
-          try {
-            const d = await api('POST', '/api/admin/ads/images', fd, true);
-            images.push(d.image); s.image = d.image; touch(); redraw();
-          } catch (err) { say(err.message); }
-        } });
-
-      const move = d => { const j = i + d; if (j < 0 || j >= cfg.slides.length) return; [cfg.slides[i], cfg.slides[j]] = [cfg.slides[j], cfg.slides[i]]; touch(); redraw(); };
-      const card = h('div', { class: 'card', style: s.hidden ? { opacity: .6 } : null },
-        h('div', { class: 'slide-head' },
-          h('strong', {}, `${i + 1}. ${s.title || 'New slide'}`, s.hidden ? ' (hidden)' : ''),
-          h('button', { class: 'btn', onclick: () => move(-1), disabled: i === 0, 'aria-label': 'Move up' }, '↑'),
-          h('button', { class: 'btn', onclick: () => move(1), disabled: i === cfg.slides.length - 1, 'aria-label': 'Move down' }, '↓'),
-          h('button', { class: 'btn', onclick: () => { s.hidden = !s.hidden; touch(); redraw(); } }, s.hidden ? 'Show' : 'Hide'),
-          h('button', { class: 'btn danger', onclick: () => { if (confirm(`Delete "${s.title || 'this slide'}"?`)) { cfg.slides.splice(i, 1); touch(); redraw(); } } }, 'Delete')),
-        h('div', { class: 'grid' }, FIELDS.slice(0, 6).map(field)),
-        h('div', { class: 'grid', style: { marginTop: '12px' } },
-          h('div', {}, h('label', {}, 'Picture (PNG, JPG, WebP or GIF, up to 2 MB)'),
-            h('div', { class: 'row' }, imgSelect, h('button', { class: 'btn', onclick: () => fileIn.click() }, 'Upload…'), fileIn)),
-          h('div', {}, h('label', {}, 'Describe the picture (for screen readers)'),
-            h('input', { type: 'text', value: s.imageAlt || '', oninput: e => { s.imageAlt = e.target.value; touch(); } })),
-          field(FIELDS[6]), field(FIELDS[7])),
-        h('label', { style: { display: 'flex', gap: '6px', alignItems: 'center', marginTop: '12px', color: 'var(--text)', fontSize: '14px' } },
-          h('input', { type: 'checkbox', checked: !!s.sponsored, onchange: e => { s.sponsored = e.target.checked; touch(); drawPreview(); } }),
-          'Sponsored (shows a badge; links to other sites open in a new tab)'),
-        pv);
-      drawPreview();
-      return card;
+          onchange: async e => { try { cfg.interval = Number(e.target.value) * 1000; await save(cfg.slides); say('Saved.', true); } catch (err) { say(err.message); } } }),
+        h('button', { class: 'btn primary', style: { marginLeft: 'auto' }, onclick: () => drawForm(null) }, '+ New banner'));
+      const table = h('table', {},
+        h('thead', {}, h('tr', {}, ['', 'Title', 'Placement', 'Status', 'Dates', 'Pos.', 'Impressions', 'Clicks', ''].map(t => h('th', {}, t)))),
+        h('tbody', {}, rows.length ? rows.map(s => {
+          const st = stats[s.id] || { views: 0, clicks: 0 };
+          const ctr = st.views ? ` (${((st.clicks / st.views) * 100).toFixed(1)}%)` : '';
+          const done = s.targetImpressions && st.views >= s.targetImpressions;
+          return h('tr', {},
+            h('td', {}, s.image ? h('img', { src: s.image, alt: '', class: 'thumb' }) : h('div', { class: 'thumb', style: { background: s.bg || 'linear-gradient(90deg,#1D4ED8,#6D28D9)' } })),
+            h('td', {}, h('strong', {}, s.title), s.advertiser ? h('div', { class: 'muted small' }, s.advertiser) : null, !s.image ? h('div', { class: 'small warn' }, 'Old text banner: add an image') : null),
+            h('td', {}, (PLACEMENTS.find(p => p[0] === (s.placement || 'home')) || PLACEMENTS[0])[1]),
+            h('td', {}, h('span', { class: `pill ${statusOf(s)}` }, done ? 'Target reached' : (STATUSES.find(x => x[0] === statusOf(s)) || [0, 'Active'])[1])),
+            h('td', { class: 'small' }, `${s.start || '…'} → ${s.end || '…'}`),
+            h('td', {}, s.position ?? '—'),
+            h('td', {}, st.views.toLocaleString(), s.targetImpressions ? ` / ${s.targetImpressions.toLocaleString()}` : ''),
+            h('td', {}, st.clicks.toLocaleString(), h('span', { class: 'muted small' }, ctr)),
+            h('td', { style: { whiteSpace: 'nowrap' } },
+              h('button', { class: 'btn', onclick: () => drawForm(s) }, 'Edit'), ' ',
+              h('button', { class: 'btn danger', onclick: async () => {
+                if (!confirm(`Delete "${s.title}"?`)) return;
+                try { await save(cfg.slides.filter(x => x.id !== s.id)); say('Deleted.', true); drawList(); } catch (err) { say(err.message); }
+              } }, 'Delete')));
+        }) : h('tr', {}, h('td', { colspan: 9, class: 'muted' }, 'No banners yet. Click "New banner".'))));
+      listBox.append(h('div', { class: 'card' }, h('h2', {}, 'Banners'), settings, h('div', { style: { overflowX: 'auto' } }, table),
+        h('p', { class: 'muted small' }, 'Impressions are counted once per page view, clicks when someone opens the link. No visitor data is kept, only the totals.')));
     }
 
-    const redraw = () => { clear(list); cfg.slides.forEach((s, i) => list.append(slideCard(s, i))); if (!cfg.slides.length) list.append(h('p', { class: 'muted' }, 'No slides yet.')); };
+    function drawForm(existing) {
+      clear(formBox);
+      const s = existing ? { ...existing } : { placement: 'home', status: 'draft', start: today(), end: inYear(), position: (cfg.slides.length || 0) + 1, targetImpressions: 10000 };
+      const field = (label, input, hint) => h('div', { class: 'field' }, h('label', {}, label), input, hint ? h('p', { class: 'hint' }, hint) : null);
+      const inp = (k, attrs = {}) => h('input', { type: 'text', value: s[k] ?? '', oninput: e => { s[k] = e.target.value; if (k === 'title') drawPreview(); }, ...attrs });
+      const sel = (k, opts) => h('select', { onchange: e => { s[k] = e.target.value; } }, opts.map(([v, l]) => h('option', { value: v, selected: (s[k] || opts[0][0]) === v }, l)));
+      const preview = h('div', { class: 'banner-preview' });
+      const imgNote = h('p', { class: 'hint' });
+      const drawPreview = () => {
+        clear(preview);
+        preview.append(s.image ? h('img', { src: s.image, alt: s.title || '' }) : h('div', { class: 'muted center', style: { padding: '28px' } }, 'Banner preview appears here'));
+      };
+      const imgText = h('input', { type: 'text', value: s.image || '', placeholder: 'Upload, or paste https://…' });
+      const busy = t => { imgNote.textContent = t; };
+      const useBlob = async blob => {
+        busy('Resizing and compressing…');
+        const out = await toBanner(blob);
+        const fd = new FormData(); fd.append('image', out.blob, out.blob.type === 'image/webp' ? 'banner.webp' : 'banner.jpg');
+        const d = await api('POST', '/api/admin/ads/images', fd, true);
+        s.image = d.image; imgText.value = d.image; drawPreview();
+        busy(`Saved as ${out.width} × ${out.height}, ${(out.blob.size / 1024).toFixed(0)} KB${out.cropped ? ', cropped from the centre to 4:1' : ''}.` +
+          (out.sourceWidth < 1200 ? ' The original is small, so it may look soft on large screens.' : ''));
+      };
+      const fileIn = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', class: 'hidden', onchange: async e => {
+        const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+        if (f.size > 25 * 1024 * 1024) { busy('That file is over 25 MB.'); return; }
+        try { await useBlob(f); } catch (err) { busy(err.message || 'Could not read that picture.'); }
+      } });
+      imgText.addEventListener('change', async () => {
+        const v = imgText.value.trim();
+        if (/^\/ads\/[\w.-]+$/.test(v)) { s.image = v; drawPreview(); return; }
+        if (!/^https:\/\//i.test(v)) { busy('Paste a link that starts with https://, or use Upload.'); return; }
+        try {
+          busy('Downloading…');
+          const r = await fetch('/api/admin/ads/fetch-image', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ url: v }) });
+          if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Could not download that picture.');
+          await useBlob(await r.blob());
+        } catch (err) { busy(err.message); }
+      });
+      const msg = h('div');
+      const submit = h('button', { class: 'btn primary big', onclick: async () => {
+        clear(msg);
+        if (!s.title?.trim()) { msg.append(h('div', { class: 'msg err' }, 'Add a title.')); return; }
+        if (!s.image) { msg.append(h('div', { class: 'msg err' }, 'Add a banner image.')); return; }
+        const next = existing ? cfg.slides.map(x => (x.id === existing.id ? s : x)) : [...cfg.slides, s];
+        submit.disabled = true;
+        try { await save(next); say(existing ? 'Banner saved.' : 'Banner created.', true); clear(formBox); drawList(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        catch (err) { msg.append(h('div', { class: 'msg err' }, err.message)); submit.disabled = false; }
+      } }, existing ? 'Save banner' : 'Create banner');
 
-    const saveBtn = h('button', { class: 'btn primary', disabled: true, onclick: async () => {
-      saveBtn.disabled = true;
-      try { cfg = await api('PUT', '/api/admin/ads', cfg); dirty = false; say('Saved. The site shows the new banners on the next page load.', true); redraw(); }
-      catch (e) { saveBtn.disabled = false; say(e.message); }
-    } }, 'Save changes');
-    const addBtn = h('button', { class: 'btn', onclick: () => { cfg.slides.push({ title: '', cta: 'Learn more' }); touch(); redraw(); } }, '+ Add slide');
+      formBox.append(h('div', { class: 'card form' },
+        h('div', { class: 'row' }, h('h2', { style: { margin: 0 } }, existing ? 'Edit banner' : 'New banner'),
+          h('button', { class: 'btn', style: { marginLeft: 'auto' }, onclick: () => clear(formBox) }, 'Cancel')),
+        field('Title', inp('title'), 'Also read out by screen readers, so describe the ad, e.g. "Acme Interiors: 20% off modular kitchens".'),
+        field('Banner image', h('div', {},
+          h('div', { class: 'row nowrap' }, imgText, h('button', { class: 'btn', onclick: () => fileIn.click() }, '⬆ Upload'), fileIn),
+          h('p', { class: 'hint' }, 'Wide 4:1 image, ideally 1600 × 400 px or larger (any size up to 25 MB, JPG, PNG or WebP). It is resized and compressed for you; a different shape is cropped from the centre to 4:1. It shows about 90 px tall on a phone, so use large text and few words. Or paste an https image URL.'),
+          imgNote, preview)),
+        field('Click-through URL', inp('href', { placeholder: 'https://…' })),
+        h('div', { class: 'two' }, field('Placement', sel('placement', PLACEMENTS)), field('Status', sel('status', STATUSES))),
+        h('div', { class: 'two' }, field('Start date', inp('start', { type: 'date' })), field('End date', inp('end', { type: 'date' }))),
+        field('Carousel position', inp('position', { type: 'number', min: 0 }), 'Lower numbers show first. Each placement shows up to 6 active banners.'),
+        field('Target impressions', inp('targetImpressions', { type: 'number', min: 0, placeholder: 'No limit' }), 'The banner stops showing once it has been seen this many times. Leave empty for no limit.'),
+        h('div', { class: 'two' }, field('Advertiser name', inp('advertiser')), field('Advertiser contact (optional)', inp('advertiserContact'))),
+        msg, submit));
+      drawPreview();
+      formBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
-    window.onbeforeunload = () => (dirty ? 'You have unsaved changes.' : undefined);
     clear(root);
-    root.append(settings, list, h('div', { class: 'sticky' }, status, h('div', { class: 'row' }, addBtn, saveBtn)));
-    redraw();
+    root.append(status, formBox, listBox);
+    drawList();
   }
 
   /* ── Users ── */
