@@ -6,7 +6,8 @@
  *  - Static SPA serving
  *  - File uploads (multer)
  *  - Server-side conversions via LibreOffice
- *  - Auth: register, login, OTP verification, reset-password
+ *  - Auth: Google Sign-In only (no passwords stored)
+ *  - Admin page (/admin): ad banners, users
  *  - Freemium usage metering: anonymous (by IP) + signed-up (by account), daily reset
  *  - Rate limiting (abuse / brute-force protection)
  *  - Chat: offline message via email (nodemailer / Gmail)
@@ -58,6 +59,18 @@ fs.ensureDirSync(UPLOADS_DIR);
 fs.ensureDirSync(OUTPUTS_DIR);
 fs.ensureDirSync(DATA_DIR);
 
+const ADS_FILE    = path.join(DATA_DIR, 'ads.json');
+const ADS_IMG_DIR = path.join(DATA_DIR, 'ads-images');
+fs.ensureDirSync(ADS_IMG_DIR);
+// First start after this change: carry over the slides that were in the repo.
+if (!fs.existsSync(ADS_FILE)) {
+  try { fs.copyFileSync(path.join(__dirname, 'public', 'ads.json'), ADS_FILE); }
+  catch { try { fs.writeFileSync(ADS_FILE, JSON.stringify({ enabled: true, interval: 6000, slides: [] }, null, 2)); } catch {} }
+}
+const readAds = () => { try { return JSON.parse(fs.readFileSync(ADS_FILE, 'utf8')); } catch { return { enabled: false, interval: 6000, slides: [] }; } };
+const writeAds = cfg => { const tmp = `${ADS_FILE}.tmp`; fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2)); fs.renameSync(tmp, ADS_FILE); };
+
+
 /* Trust the first hop of a reverse proxy (Nginx/Caddy) so req.ip reflects the
    real client address rather than the proxy's. Configurable via TRUST_PROXY
    for deployments behind more than one proxy hop (e.g. a CDN + LB). */
@@ -65,11 +78,23 @@ app.set('trust proxy', Number(process.env.TRUST_PROXY) || 1);
 
 /* ─── Auth state (in-memory + file persistence) ─── */
 let users  = {};  // { email: { name, passwordHash, salt, verified, premium, createdAt } }
-let otps   = {};  // { email: { code, expires, purpose } }
 let tokens = {};  // { token: { email, expires } }
 
 try { users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch {}
 try { tokens = JSON.parse(fs.readFileSync(TOKENS_FILE, 'utf8')); } catch {}
+/* Google is the only way to sign in, so no password is kept. Old email +
+   password accounts keep their record (and anything tied to it): signing in
+   with Google using the same email opens the same account. */
+{
+  let stripped = 0;
+  for (const u of Object.values(users)) {
+    if (u && (u.passwordHash || u.salt)) { delete u.passwordHash; delete u.salt; stripped++; }
+  }
+  if (stripped) {
+    try { fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2)); } catch {}
+    console.log(`[Auth] Removed stored passwords from ${stripped} old account(s); they sign in with Google now.`);
+  }
+}
 
 const saveUsers = () => {
   try { fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2)); } catch (e) { console.error('[Data] Could not save users:', e.message); }
@@ -79,12 +104,6 @@ const saveTokens = () => {
   try { fs.writeFileSync(TOKENS_FILE, JSON.stringify(tokens)); } catch (e) { console.error('[Data] Could not save sessions:', e.message); }
 };
 
-function hashPassword(password, salt) {
-  return crypto.scryptSync(password, salt, 64).toString('hex');
-}
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
 function createToken(email) {
   const token = crypto.randomBytes(32).toString('hex');
   const expires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -98,6 +117,7 @@ function getEmailFromToken(req) {
   if (!token) return null;
   const entry = tokens[token];
   if (!entry || Date.now() > entry.expires) return null;
+  if (users[entry.email]?.blocked) return null;
   return entry.email;
 }
 
@@ -228,11 +248,6 @@ if (process.env.GOOGLE_CLIENT_ID && !OAuth2Client) {
   console.log('[Google Sign-In] Ready (Client ID configured)');
 }
 
-function otpEmailHTML(code, purpose) {
-  const label = { register: 'Verify your account', login: 'Login code', reset: 'Reset your password' }[purpose] || 'Verification code';
-  return `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#0A1628;padding:40px"><div style="max-width:480px;margin:0 auto;background:#162C56;border-radius:16px;padding:32px;color:#E2E8F0"><h2 style="color:#60A5FA;margin-top:0">LetsConvertPDF</h2><h3 style="color:#fff">${label}</h3><p style="color:#94A3B8">Your one-time code is:</p><div style="background:#0A1628;border-radius:12px;padding:24px;text-align:center;margin:24px 0"><span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#3B82F6">${code}</span></div><p style="color:#94A3B8;font-size:14px">Valid for <strong>10 minutes</strong>. Do not share this code.</p><hr style="border-color:rgba(255,255,255,0.1)"/><p style="color:#475569;font-size:12px">Maqsusi Digital Industries Software</p></div></body></html>`;
-}
-
 /* ─── Middleware ─── */
 app.use(compression());
 app.use(cors());
@@ -342,6 +357,15 @@ app.get('/:slug', (req, res, next) => {
   const page = seo.renderPage(readIndex(), req.params.slug);
   if (!page) return next();
   res.type('html').send(page);
+});
+
+// Ad banners are edited on /admin and kept in DATA_DIR, not in the code.
+app.get('/ads.json', (req, res) => { res.set('Cache-Control', 'no-cache'); res.json(readAds()); });
+app.use('/ads', express.static(ADS_IMG_DIR, { maxAge: '7d', index: false }));
+app.get('/admin', (req, res) => {
+  res.set('X-Robots-Tag', 'noindex, nofollow');
+  res.set('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 // The service worker must never be cached long, or app updates get stuck.
@@ -478,103 +502,10 @@ app.post('/api/usage/consume', (req, res) => {
    AUTH ROUTES
 ═══════════════════════════════════════════ */
 
-/* Register */
-app.post('/api/auth/register', async (req, res) => {
-  const { name, email, password } = req.body;
-  if (!name || !email || !password) return res.status(400).json({ error: 'Name, email and password are required.' });
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email address.' });
-  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
-  const key = email.toLowerCase();
-  if (users[key]) return res.status(409).json({ error: 'An account with this email already exists.' });
-
-  const salt = crypto.randomBytes(16).toString('hex');
-  users[key] = { name, passwordHash: hashPassword(password, salt), salt, verified: false, premium: false, createdAt: new Date().toISOString() };
-  saveUsers();
-
-  const code = generateOTP();
-  otps[key] = { code, expires: Date.now() + 10 * 60 * 1000, purpose: 'register' };
-
-  let emailSent = false;
-  try { emailSent = await sendEmail(email, 'Verify your LetsConvertPDF account', `Your verification code is: ${code}`, otpEmailHTML(code, 'register')); }
-  catch (e) { console.error('[Email error] register:', e.message); }
-
-  res.json({
-    message: emailSent
-      ? 'Account created. Check your email for the verification code.'
-      : "Account created, but we couldn't deliver the verification email just now. Tap \"Resend code\" in a moment, or contact support if this keeps happening.",
-    email: key,
-    emailSent,
-  });
-});
-
-/* Login */
-app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
-  const key = email?.toLowerCase();
-  const user = users[key];
-  if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
-  if (!user.passwordHash) return res.status(401).json({ error: 'This account was created with Google Sign-In. Use "Continue with Google" to log in.' });
-  if (hashPassword(password, user.salt) !== user.passwordHash)
-    return res.status(401).json({ error: 'Invalid email or password.' });
-
-  const code = generateOTP();
-  otps[key] = { code, expires: Date.now() + 10 * 60 * 1000, purpose: 'login' };
-
-  let emailSent = false;
-  try { emailSent = await sendEmail(email, 'Your LetsConvertPDF login code', `Your login code is: ${code}`, otpEmailHTML(code, 'login')); }
-  catch (e) { console.error('[Email error] login:', e.message); }
-
-  res.json({
-    message: emailSent
-      ? 'Login code sent to your email.'
-      : "We couldn't deliver your login code just now. Tap \"Resend code\" in a moment, or contact support if this keeps happening.",
-    email: key,
-    name: user.name,
-    emailSent,
-  });
-});
-
-/* Verify OTP */
-app.post('/api/auth/verify-otp', (req, res) => {
-  const { email, code } = req.body;
-  const key = email?.toLowerCase();
-  const otp = otps[key];
-  if (!otp) return res.status(400).json({ error: 'No pending verification. Please start again.' });
-  if (Date.now() > otp.expires) { delete otps[key]; return res.status(400).json({ error: 'Code expired. Please request a new one.' }); }
-  if (otp.code !== String(code).trim()) return res.status(400).json({ error: 'Incorrect code. Please try again.' });
-
-  // A reset code is only checked here; it's consumed by /reset-password, which
-  // needs it again. Consuming it here made every password reset fail.
-  if (otp.purpose === 'reset') return res.json({ verified: true });
-
-  delete otps[key];
-  if (users[key]) { users[key].verified = true; saveUsers(); }
-
-  const token = createToken(key);
-  res.json({ token, user: { email: key, name: users[key]?.name || '' } });
-});
-
-/* Resend OTP */
-app.post('/api/auth/resend-otp', async (req, res) => {
-  const { email, purpose } = req.body;
-  const key = email?.toLowerCase();
-  if (!users[key]) return res.status(404).json({ error: 'No account found.' });
-  const code = generateOTP();
-  otps[key] = { code, expires: Date.now() + 10 * 60 * 1000, purpose: purpose || 'login' };
-  let emailSent = false;
-  try { emailSent = await sendEmail(email, 'Your new LetsConvertPDF code', `Your new code is: ${code}`, otpEmailHTML(code, purpose || 'login')); }
-  catch (e) { console.error('[Email error] resend-otp:', e.message); }
-  res.json({
-    message: emailSent ? 'New code sent.' : "We couldn't deliver that email just now. Please try again shortly.",
-    emailSent,
-  });
-});
-
-/* Session check */
 app.get('/api/auth/me', (req, res) => {
   const email = getEmailFromToken(req);
   if (!email || !users[email]) return res.status(401).json({ error: 'Unauthorized' });
-  res.json({ user: { email, name: users[email].name, premium: !!users[email].premium } });
+  res.json({ user: publicUser(email) });
 });
 
 /* Logout */
@@ -627,57 +558,169 @@ app.post('/api/auth/google', async (req, res) => {
   if (!payload.email_verified) return res.status(400).json({ error: 'Your Google email address is not verified.' });
 
   const key = payload.email.toLowerCase();
+  const now = new Date().toISOString();
   if (!users[key]) {
     users[key] = {
       name: payload.name || key.split('@')[0],
-      passwordHash: null, // Google-only account — no local password
-      salt: null,
       verified: true,     // Google already verified this email
       premium: false,
       authProvider: 'google',
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     };
-  } else if (!users[key].verified) {
-    users[key].verified = true;
   }
+  const u = users[key];
+  u.verified = true;
+  u.authProvider = 'google';  // old email + password accounts move over here
+  if (!u.name && payload.name) u.name = payload.name;
+  if (payload.hd) u.googleDomain = payload.hd; // Google Workspace domain, for business licences later
+  u.lastLoginAt = now;
+  if (u.blocked) return res.status(403).json({ error: 'This account has been suspended. Contact support@letsconvertpdf.com.' });
   saveUsers();
 
   const token = createToken(key);
-  res.json({ token, user: { email: key, name: users[key].name } });
+  res.json({ token, user: publicUser(key) });
 });
 
-/* Forgot password */
-app.post('/api/auth/forgot-password', async (req, res) => {
-  const key = req.body.email?.toLowerCase();
-  if (users[key]) {
-    const code = generateOTP();
-    otps[key] = { code, expires: Date.now() + 10 * 60 * 1000, purpose: 'reset' };
-    try { await sendEmail(key, 'Reset your LetsConvertPDF password', `Your reset code is: ${code}`, otpEmailHTML(code, 'reset')); }
-    catch (e) { console.error('[Email error] forgot-password:', e.message); }
-    // Note: the response below stays identical whether the account exists or the
-    // send failed, by design — revealing either would let an attacker enumerate
-    // registered emails. Check server logs / GET /api/health to confirm SMTP health.
+/* ═══════════════════════════════════════════
+   ADMIN (/admin)
+   Only the Google accounts listed in ADMIN_EMAILS (comma separated) can use
+   these routes. Ad banners live in DATA_DIR so they can be changed without a
+   code push or redeploy.
+═══════════════════════════════════════════ */
+const ADMIN_EMAILS = String(process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+if (!ADMIN_EMAILS.length) console.warn('[Admin] ADMIN_EMAILS is not set, so nobody can open /admin.');
+const isAdmin = email => !!email && ADMIN_EMAILS.includes(email);
+
+function publicUser(email) {
+  const u = users[email] || {};
+  return { email, name: u.name || '', premium: !!u.premium, isAdmin: isAdmin(email) };
+}
+
+function requireAdmin(req, res, next) {
+  const email = getEmailFromToken(req);
+  if (!email || !users[email]) return res.status(401).json({ error: 'Please sign in with Google.' });
+  if (!isAdmin(email)) return res.status(403).json({ error: 'This Google account is not an admin.' });
+  req.adminEmail = email;
+  next();
+}
+
+const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Checks and cleans an ads config from the admin page. Throws a readable error. */
+function cleanAds(body) {
+  if (!body || typeof body !== 'object' || !Array.isArray(body.slides)) throw new Error('Expected { enabled, interval, slides: [] }.');
+  if (body.slides.length > 30) throw new Error('At most 30 slides.');
+  const seen = new Set();
+  const slides = body.slides.map((s, i) => {
+    const n = `Slide ${i + 1}`;
+    const slide = {
+      id: str(s.id, 40).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || `slide-${crypto.randomBytes(3).toString('hex')}`,
+      title: str(s.title, 120),
+    };
+    if (!slide.title) throw new Error(`${n}: a headline is required.`);
+    if (seen.has(slide.id)) throw new Error(`${n}: the id "${slide.id}" is used twice.`);
+    seen.add(slide.id);
+    const text = str(s.text, 240); if (text) slide.text = text;
+    const cta = str(s.cta, 40); if (cta) slide.cta = cta;
+    const href = str(s.href, 500);
+    if (href) {
+      if (!(/^\/(?!\/)/.test(href) || /^https?:\/\/[^\s]+$/i.test(href))) throw new Error(`${n}: the link must start with / (our pages) or https://.`);
+      slide.href = href;
+    }
+    const image = str(s.image, 200);
+    if (image) {
+      if (!/^\/ads\/[\w.-]+$/.test(image)) throw new Error(`${n}: upload the picture here; outside image links are blocked.`);
+      slide.image = image;
+      slide.imageAlt = str(s.imageAlt, 160);
+      if (!slide.imageAlt) throw new Error(`${n}: describe the picture for screen readers.`);
+    }
+    const bg = str(s.bg, 200);
+    if (bg) {
+      if (!/^[#(),.%\w\s-]+$/.test(bg) || /url\s*\(/i.test(bg)) throw new Error(`${n}: the background must be a colour or gradient.`);
+      slide.bg = bg;
+    }
+    if (s.sponsored) slide.sponsored = true;
+    const label = str(s.label, 40); if (label) slide.label = label;
+    for (const k of ['start', 'end']) {
+      const d = str(s[k], 10);
+      if (d) { if (!DAY_RE.test(d)) throw new Error(`${n}: ${k} date must be YYYY-MM-DD.`); slide[k] = d; }
+    }
+    if (slide.start && slide.end && slide.end < slide.start) throw new Error(`${n}: the end date is before the start date.`);
+    if (s.hidden) slide.hidden = true;
+    return slide;
+  });
+  const interval = Math.min(60000, Math.max(3000, Number(body.interval) || 6000));
+  return { enabled: body.enabled !== false, interval, slides };
+}
+
+app.get('/api/admin/me', requireAdmin, (req, res) => res.json({ user: publicUser(req.adminEmail) }));
+app.get('/api/admin/ads', requireAdmin, (req, res) => res.json(readAds()));
+app.put('/api/admin/ads', requireAdmin, (req, res) => {
+  let cfg;
+  try { cfg = cleanAds(req.body); } catch (e) { return res.status(400).json({ error: e.message }); }
+  try { writeAds(cfg); } catch (e) { console.error('[Admin] Could not save ads:', e.message); return res.status(500).json({ error: 'Could not save. Check the server has space on disk.' }); }
+  console.log(`[Admin] ${req.adminEmail} saved ${cfg.slides.length} ad slide(s)`);
+  res.json(cfg);
+});
+
+/* Pictures for slides: PNG, JPEG, WebP or GIF up to 2 MB, checked by their
+   first bytes (not just the name), saved under a random name. No SVG, which
+   can carry scripts. */
+const IMG_TYPES = { png: [0x89, 0x50, 0x4e, 0x47], jpg: [0xff, 0xd8, 0xff], gif: [0x47, 0x49, 0x46, 0x38], webp: [0x52, 0x49, 0x46, 0x46] };
+const sniffImage = buf => {
+  for (const [ext, sig] of Object.entries(IMG_TYPES)) {
+    if (sig.every((b, i) => buf[i] === b) && (ext !== 'webp' || buf.slice(8, 12).toString('ascii') === 'WEBP')) return ext;
   }
-  res.json({ message: 'If an account exists with that email, a reset code has been sent.', email: key });
+  return null;
+};
+const adImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024, files: 1 } });
+app.post('/api/admin/ads/images', requireAdmin, (req, res) => {
+  adImageUpload.single('image')(req, res, err => {
+    if (err) return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'Pictures can be at most 2 MB.' : err.message });
+    if (!req.file) return res.status(400).json({ error: 'Choose a picture to upload.' });
+    const ext = sniffImage(req.file.buffer);
+    if (!ext) return res.status(415).json({ error: 'Use a PNG, JPG, WebP or GIF picture.' });
+    const name = `${Date.now().toString(36)}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
+    try { fs.writeFileSync(path.join(ADS_IMG_DIR, name), req.file.buffer); }
+    catch (e) { return res.status(500).json({ error: 'Could not save the picture.' }); }
+    res.json({ image: `/ads/${name}` });
+  });
+});
+app.get('/api/admin/ads/images', requireAdmin, (req, res) => {
+  const list = d => { try { return fs.readdirSync(d).filter(f => /\.(png|jpe?g|gif|webp|svg)$/i.test(f)); } catch { return []; } };
+  const names = [...new Set([...list(ADS_IMG_DIR), ...list(path.join(__dirname, 'public', 'ads'))])].sort();
+  res.json({ images: names.map(n => `/ads/${n}`) });
+});
+app.delete('/api/admin/ads/images/:name', requireAdmin, (req, res) => {
+  const name = path.basename(req.params.name);
+  const file = path.join(ADS_IMG_DIR, name);
+  if (!fs.existsSync(file)) return res.status(404).json({ error: 'Only pictures uploaded here can be deleted.' });
+  if (readAds().slides.some(s => s.image === `/ads/${name}`)) return res.status(409).json({ error: 'A slide still uses this picture.' });
+  fs.removeSync(file);
+  res.json({ ok: true });
 });
 
-/* Reset password */
-app.post('/api/auth/reset-password', (req, res) => {
-  const { email, code, newPassword } = req.body;
-  const key = email?.toLowerCase();
-  const otp = otps[key];
-  if (!otp || otp.purpose !== 'reset') return res.status(400).json({ error: 'No pending reset for this email.' });
-  if (Date.now() > otp.expires) { delete otps[key]; return res.status(400).json({ error: 'Reset code expired.' }); }
-  if (otp.code !== String(code).trim()) return res.status(400).json({ error: 'Incorrect code.' });
-  if (!newPassword || newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
-
-  if (!users[key]) return res.status(404).json({ error: 'No account found.' });
-  delete otps[key];
-  const salt = crypto.randomBytes(16).toString('hex');
-  users[key].passwordHash = hashPassword(newPassword, salt);
-  users[key].salt = salt;
-  saveUsers();
-  res.json({ message: 'Password reset successfully. You can now log in.' });
+app.get('/api/admin/users', requireAdmin, (req, res) => {
+  const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString();
+  const list = Object.entries(users).map(([email, u]) => ({
+    email, name: u.name || '', createdAt: u.createdAt || null, lastLoginAt: u.lastLoginAt || null,
+    googleDomain: u.googleDomain || null, blocked: !!u.blocked, isAdmin: isAdmin(email),
+  })).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  res.json({
+    total: list.length,
+    activeThisWeek: list.filter(u => u.lastLoginAt && u.lastLoginAt >= weekAgo).length,
+    newThisWeek: list.filter(u => u.createdAt && u.createdAt >= weekAgo).length,
+    users: list,
+  });
+});
+app.post('/api/admin/users/:email/block', requireAdmin, (req, res) => {
+  const key = String(req.params.email || '').toLowerCase();
+  if (!users[key]) return res.status(404).json({ error: 'No such user.' });
+  if (isAdmin(key)) return res.status(400).json({ error: 'Admins cannot be blocked here.' });
+  users[key].blocked = req.body?.blocked !== false;
+  if (users[key].blocked) for (const [t, v] of Object.entries(tokens)) if (v.email === key) delete tokens[t];
+  saveUsers(); saveTokens();
+  res.json({ ok: true, blocked: users[key].blocked });
 });
 
 /* ═══════════════════════════════════════════
@@ -911,7 +954,6 @@ cron.schedule('*/30 * * * *', async () => {
   const tokenCount = Object.keys(tokens).length;
   Object.keys(tokens).forEach(t => { if (tokens[t].expires < now) delete tokens[t]; });
   if (Object.keys(tokens).length !== tokenCount) saveTokens();
-  Object.keys(otps).forEach(e => { if (otps[e].expires < now) delete otps[e]; });
 
   // Usage rows older than 2 days are no longer needed for any reset window.
   const today = todayStr();
