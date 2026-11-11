@@ -1,6 +1,6 @@
 ---
 title: How to Merge PDF Files on iPhone Without an App
-description: Combine two or more PDFs into one on your iPhone or iPad, right in Safari. No app to install, no signup, and your files are never uploaded.
+description: Combine two or more PDFs into one on your iPhone or iPad, right in Safari. No app to install, and your files are never uploaded.
 tool: merge-pdf
 date: 2026-11-02
 ---
@@ -38,7 +38,7 @@ Upload forms also tend to have a size limit. If the merged file is too large, ru
 
 ## Keep it on your Home Screen
 
-If you merge files often, add the site to your Home Screen. In Safari, tap the share button and choose **Add to Home Screen**. It then opens like an app, without an app store download, and the on-device tools keep working even when you're offline.
+If you merge files often, add the site to your Home Screen. In Safari, tap the share button and choose **Add to Home Screen**. It then opens like an app, without an app store download.
 
 ## Questions
 
@@ -56,4 +56,4 @@ No. Pages are copied across as they are, so text and images look exactly like th
 
 ### Is it free?
 
-Yes. There is no watermark and no signup needed. Every tool is unlimited, and it keeps working offline once the page has loaded.
+It's free to start. Sign in with Google and you get 1,000 free credits; each use costs 5. There is no watermark, and your file is still processed on your own device.

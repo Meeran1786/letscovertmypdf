@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="msvalidate.01" content="5CB2CF82B0007B5F78B0239AB2708D13" />
   <title>LetsConvertPDF — Private PDF Tools That Never Upload Your Files</title>
-  <meta name="description" content="Free PDF tools that run on your device: merge, split, compress, sign, OCR, chat with PDF and AI summaries. Your files never leave your browser. No signup required." />
+  <meta name="description" content="Free PDF tools that run on your device: merge, split, compress, sign, OCR, chat with PDF and AI summaries. Your files never leave your browser. Start free with 1,000 credits." />
   <meta name="keywords" content="PDF tools, merge PDF, split PDF, compress PDF, convert PDF, Word to PDF, Excel to PDF, PDF to Word, online PDF editor" />
   <meta name="author" content="Maqsusi Digital Industries Software" />
   <meta name="robots" content="index, follow" />
@@ -558,7 +558,7 @@ function SignInGate({ tool, onSignIn }) {
       <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center" style={{background:'rgba(37,99,235,0.1)',border:'1px solid rgba(37,99,235,0.3)'}}>
         <Ic n="lock" sz={24} cls="text-blue-400"/>
       </div>
-      <h2 className="text-lg font-bold" style={{color:'var(--text)'}}>{tr('gate.title','Sign in to use')} {tool.label}</h2>
+      <h2 className="text-lg font-bold" style={{color:'var(--text)'}}>{tr('gate.title','Sign in to use this tool')}</h2>
       <p className="text-sm max-w-md mx-auto" style={{color:'var(--muted)'}}>
         {tr('gate.sub','New accounts get 1,000 free credits. Each use costs 5. Your files are still processed on your own device.')}
       </p>
@@ -1321,17 +1321,17 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
             {tr('hero.t1','PDF tools that')}<br/><span className="gradient-text">{tr('hero.t2','never upload your files')}</span>
           </h1>
           <p className="text-lg max-w-2xl mx-auto mb-6 leading-relaxed" style={{color:'var(--muted)'}}>
-            {tr('hero.sub','Merge, compress, sign, OCR, and chat with your PDFs using AI that runs on your own device. Your documents stay with you. No signup, no limits, no watermarks.')}
+            {tr('hero.sub','Merge, compress, sign, OCR, and chat with your PDFs using AI that runs on your own device. Your documents stay with you. Start free with 1,000 credits, no watermarks.')}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
-            {[tr('chip.nosignup','No signup'),tr('chip.unlimited','Unlimited, free forever'),tr('chip.offline','Works offline'),tr('chip.ai','On-device AI')].map(l=>(
+            {[tr('chip.credits','1,000 free credits'),tr('chip.google','Secure Google sign-in'),tr('chip.device','Files stay on your device'),tr('chip.ai','On-device AI')].map(l=>(
               <span key={l} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium" style={{background:'var(--bg-card)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
                 <span className="text-emerald-400">✓</span>{l}
               </span>
             ))}
           </div>
           <div className="flex items-center justify-center gap-x-8 gap-y-4 mb-10 flex-wrap">
-            {[[`${TOOLS.filter(t=>t.engine==='client').length}/${TOOLS.length}`,tr('stat.device','Tools run on your device')],['0',tr('stat.ai','Files uploaded by AI tools')],['100%',tr('stat.free','Free')],[tr('stat.offline','Offline'),tr('stat.app','Works as an app')]].map(([v,l])=>(
+            {[[`${TOOLS.filter(t=>t.engine==='client').length}/${TOOLS.length}`,tr('stat.device','Tools run on your device')],['0',tr('stat.ai','Files uploaded by AI tools')],['1,000',tr('stat.credits','Free credits to start')],['Google',tr('stat.signin','Verified sign-in for every user')]].map(([v,l])=>(
               <div key={l} className="text-center">
                 <p className="text-blue-400 font-bold text-xl">{v}</p><p className="text-xs" style={{color:'var(--subtle)'}}>{l}</p>
               </div>
@@ -1379,7 +1379,7 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
           {[
             {icon:'lock',t:'Your files stay yours',d:'Green-lock tools run inside your browser. Nothing is uploaded, so nothing can leak.'},
             {icon:'sparkle',t:'Private AI',d:'Chat with PDFs and get summaries from an AI model that runs on your device, not in someone\'s cloud.'},
-            {icon:'download',t:'Works offline',d:'Install LetsConvertPDF as an app and keep using the on-device tools without a connection.'},
+            {icon:'user',t:'Every user verified',d:'Sign-in is through Google only, so every account is a real, verified person. Built for banks, CAs, accountants and auditors.'},
           ].map(f=>(
             <div key={f.t} className="card p-6 text-center">
               <div className="w-11 h-11 rounded-xl flex items-center justify-center mx-auto mb-4" style={{background:'rgba(37,99,235,0.1)',border:'1px solid rgba(37,99,235,0.3)'}}>

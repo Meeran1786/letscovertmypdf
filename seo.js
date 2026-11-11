@@ -16,7 +16,7 @@ const PAGES = {
   'chat-with-pdf': {
     title: 'Chat with PDF Free — Private AI That Runs on Your Device',
     h1: 'Chat with your PDF, privately',
-    desc: 'Ask questions about any PDF and get answers with page references. The AI runs in your browser, so your document is never uploaded. Free, no signup.',
+    desc: 'Ask questions about any PDF and get answers with page references. The AI runs in your browser, so your document is never uploaded. Free to start.',
     intro: 'Upload a contract, report, paper or manual and ask it anything. Every answer links to the page it came from, so you can check it in one click. Unlike other "chat with PDF" tools, the AI model runs on your own device: your document and your questions never reach anyone\'s server.',
     steps: ['Choose a PDF from your device.', 'Pick Instant mode (works everywhere) or Smart AI (an on-device language model).', 'Ask a question and click any page reference to see the source.'],
     faq: [
@@ -53,7 +53,7 @@ const PAGES = {
   'merge-pdf': {
     title: 'Merge PDF Free — Combine PDFs Without Uploading',
     h1: 'Merge PDF files',
-    desc: 'Combine multiple PDFs into one file in the order you choose. Runs in your browser: files are never uploaded. Free, no signup.',
+    desc: 'Combine multiple PDFs into one file in the order you choose. Runs in your browser: files are never uploaded. Free to start.',
     intro: 'Put several PDFs together into a single document. Reorder the files before merging; pages keep their original quality.',
     steps: ['Choose two or more PDFs.', 'Use the arrows to put them in the order you want.', 'Merge and download one PDF.'],
     faq: [['Is there a file limit?', 'No fixed limit; it depends on your device\'s memory. Files of several hundred pages merge in seconds.']],
@@ -366,7 +366,7 @@ const PAGES = {
   "extract-pdf-pages": {
     title: "Extract PDF Pages Free — Save Selected Pages, No Upload",
     h1: "Extract pages from a PDF",
-    desc: "Pick the pages you need and save them as a new PDF. Runs in your browser, so your file is never uploaded. Free, unlimited, no signup.",
+    desc: "Pick the pages you need and save them as a new PDF. Runs in your browser, so your file is never uploaded. Free to start.",
     intro: "Need only a few pages from a long report, contract or textbook? Type the pages or ranges you want and get a new PDF with just those pages, in the order you choose.",
     steps: ["Choose a PDF.", "Type the pages to keep, for example 1-3, 5, 8-.", "Download your new PDF."],
     faq: [["Can I change the page order?", "Yes. Pages come out in the order you type them, so 5, 1-3 puts page 5 first."], ["Is the quality reduced?", "No. Pages are copied exactly as they are, including text, links and images."]],
@@ -375,7 +375,7 @@ const PAGES = {
   "delete-pdf-pages": {
     title: "Delete PDF Pages Free — Remove Pages Without Uploading",
     h1: "Delete pages from a PDF",
-    desc: "Remove unwanted pages from a PDF in seconds. Works in your browser with no upload, no signup and no limits.",
+    desc: "Remove unwanted pages from a PDF in seconds. Works in your browser with no upload.",
     intro: "Remove cover sheets, blank pages, ads or anything else you don't need. Everything else stays exactly as it was.",
     steps: ["Choose a PDF.", "Type the pages to delete, for example 2, 4-6.", "Download the shorter PDF."],
     faq: [["Can I undo it?", "Your original file is never changed. You download a new copy without those pages."]],
@@ -384,7 +384,7 @@ const PAGES = {
   "remove-blank-pages": {
     title: "Remove Blank Pages from PDF Free — Automatic, Private",
     h1: "Remove blank pages from a PDF",
-    desc: "Automatically find and delete empty pages from scanned PDFs. Runs on your device; nothing is uploaded. Free and unlimited.",
+    desc: "Automatically find and delete empty pages from scanned PDFs. Runs on your device; nothing is uploaded. Free to start.",
     intro: "Scanners often add empty backs of single-sided pages. This tool looks at every page on your device and removes the ones with no visible content.",
     steps: ["Choose a PDF.", "We check each page for content.", "Download the PDF without blank pages."],
     faq: [["What counts as blank?", "A page where almost nothing is printed. Pages with a faint mark, a page number or a few words are kept."], ["Can I run it on many files?", "Yes. Add several PDFs and each is cleaned the same way."]],
@@ -402,7 +402,7 @@ const PAGES = {
   "reverse-pdf": {
     title: "Reverse PDF Page Order Free — Online, No Upload",
     h1: "Reverse the page order of a PDF",
-    desc: "Flip a PDF so the last page comes first. Ideal for back-to-front scans. Free, private and unlimited.",
+    desc: "Flip a PDF so the last page comes first. Ideal for back-to-front scans. Free to start and private.",
     intro: "Scanned a stack upside down or back to front? Reverse it in one click without re-scanning.",
     steps: ["Choose a PDF.", "Click Reverse Pages.", "Download the reversed PDF."],
     local: true,
@@ -453,7 +453,7 @@ const PAGES = {
   "pdf-to-text": {
     title: "PDF to Text Free — Convert PDF to TXT Without Uploading",
     h1: "Convert PDF to text",
-    desc: "Extract all the text from a PDF into a plain .txt file. Runs on your device, free and unlimited.",
+    desc: "Extract all the text from a PDF into a plain .txt file. Runs on your device. Free to start.",
     intro: "Get the words out of any PDF for editing, searching, or pasting somewhere else. Each page is labelled so you can find your place.",
     steps: ["Choose a PDF.", "Click PDF to Text.", "Download the .txt file."],
     faq: [["Does it work on scans?", "Scans are images of text. Run OCR PDF first, then convert to text."]],
@@ -488,7 +488,7 @@ const PAGES = {
   "png-to-pdf": {
     title: "PNG to PDF Free — Convert PNG Images to PDF, No Upload",
     h1: "Convert PNG to PDF",
-    desc: "Combine one or more PNG images into a single PDF. Runs in your browser, so your images are never uploaded. Free, unlimited.",
+    desc: "Combine one or more PNG images into a single PDF. Runs in your browser, so your images are never uploaded. Free to start.",
     intro: "Turn screenshots, scans and graphics into one PDF that is easy to share and print. Reorder the images before converting.",
     steps: ["Choose your PNG images.", "Put them in order.", "Download your PDF."],
     local: true,
@@ -496,7 +496,7 @@ const PAGES = {
   "webp-to-pdf": {
     title: "WebP to PDF Free — Convert WebP Images to PDF",
     h1: "Convert WebP to PDF",
-    desc: "Convert WebP images to PDF in your browser. Combine several into one file. Free, private, no signup.",
+    desc: "Convert WebP images to PDF in your browser. Combine several into one file. Free to start and private.",
     intro: "Saved images from the web as WebP? Turn them into a PDF anyone can open.",
     steps: ["Choose your WebP images.", "Put them in order.", "Download your PDF."],
     local: true,
@@ -512,7 +512,7 @@ const PAGES = {
   "text-to-pdf": {
     title: "Text to PDF Free — Convert TXT Files to PDF",
     h1: "Convert text to PDF",
-    desc: "Turn .txt, log, CSV and code files into tidy, paginated PDFs. Runs in your browser. Free and unlimited.",
+    desc: "Turn .txt, log, CSV and code files into tidy, paginated PDFs. Runs in your browser. Free to start.",
     intro: "Long text files are hard to share and print. Get clean A4 pages with word wrap; code and logs use a fixed-width font.",
     steps: ["Choose a text file.", "Click Text to PDF.", "Download your PDF."],
     faq: [["Which languages work?", "Latin-alphabet text today. Other scripts are shown as \"?\" for now."]],
@@ -555,7 +555,7 @@ const PAGES = {
   "edit-pdf-metadata": {
     title: "Edit PDF Metadata Free — Change Title, Author and Keywords",
     h1: "Edit PDF metadata",
-    desc: "Change a PDF's title, author, subject and keywords in your browser. Free, private and unlimited.",
+    desc: "Change a PDF's title, author, subject and keywords in your browser. Free to start and private.",
     intro: "The title shows in browser tabs and search results, and the author shows in file properties. Set them properly before you publish.",
     steps: ["Choose a PDF.", "Edit the fields.", "Download your PDF."],
     local: true,
@@ -734,10 +734,10 @@ function llmsTxt() {
   const local = Object.entries(PAGES).filter(([, p]) => p.local), server = Object.entries(PAGES).filter(([, p]) => !p.local);
   return `# LetsConvertPDF
 
-> Free PDF tools that run in your web browser. Most tools, including all AI features (chat with a PDF, summaries, translation, contract review), process files on the user's own device, so the files are never uploaded. Every tool is free and unlimited, with no signup and no watermarks, and the on-device tools work offline.
+> Private PDF tools that run in your web browser. Most tools, including all AI features (chat with a PDF, summaries, translation, contract review), process files on the user's own device, so the files are never uploaded. Sign-in is with Google only, so every user is verified; new accounts get 1,000 free credits and each use costs 5. There are no watermarks.
 
 - Private by design: ${PRIVACY_PAGE.intro}
-- Works on phones, tablets and computers in any modern browser, and can be installed as an app that works offline.
+- Works on phones, tablets and computers in any modern browser, and can be installed as an app.
 - Made by Maqsusi Digital Industries Software.
 
 ## Tools that run on your device (files are never uploaded)
