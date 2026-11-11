@@ -68,6 +68,30 @@ if (!fs.existsSync(ADS_FILE)) {
 }
 const readAds = () => { try { return JSON.parse(fs.readFileSync(ADS_FILE, 'utf8')); } catch { return { enabled: false, interval: 6000, slides: [] }; } };
 const writeAds = cfg => { const tmp = `${ADS_FILE}.tmp`; fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2)); fs.renameSync(tmp, ADS_FILE); };
+/* Impressions and clicks per banner id. Only counts: no user, IP or cookie. */
+const AD_STATS_FILE = path.join(DATA_DIR, 'ad-stats.json');
+let adStats = {};
+try { adStats = JSON.parse(fs.readFileSync(AD_STATS_FILE, 'utf8')); } catch {}
+let adStatsDirty = false;
+setInterval(() => { if (adStatsDirty) { adStatsDirty = false; try { fs.writeFileSync(AD_STATS_FILE, JSON.stringify(adStats)); } catch {} } }, 10_000).unref();
+const AD_PLACEMENTS = ['home', 'tools', 'all'];
+const AD_STATUSES = ['draft', 'active', 'paused'];
+/** The banners the public site may show right now, in position order (max 6 per placement). */
+function liveAds() {
+  const cfg = readAds();
+  const day = new Date().toISOString().slice(0, 10);
+  const perPlacement = {};
+  const slides = (cfg.slides || [])
+    .filter(s => (s.status || 'active') === 'active' && !s.hidden)
+    .filter(s => !(s.start && day < s.start) && !(s.end && day > s.end))
+    .filter(s => !(s.targetImpressions > 0 && (adStats[s.id]?.views || 0) >= s.targetImpressions))
+    // position first; on a tie, picture banners before old text-only ones
+    .sort((a, b) => ((a.position ?? 999) - (b.position ?? 999)) || ((a.image ? 0 : 1) - (b.image ? 0 : 1)))
+    .filter(s => { const p = s.placement || 'home'; perPlacement[p] = (perPlacement[p] || 0) + 1; return perPlacement[p] <= 6; })
+    .map(({ id, title, text, cta, href, image, bg, label, placement, advertiser }) =>
+      ({ id, title, text, cta, href, image, bg, label, placement: placement || 'home', advertiser: advertiser ? true : undefined }));
+  return { enabled: cfg.enabled !== false, interval: cfg.interval || 6000, slides };
+}
 
 
 /* Trust the first hop of a reverse proxy (Nginx/Caddy) so req.ip reflects the
@@ -362,7 +386,14 @@ app.get('/:slug', (req, res, next) => {
 });
 
 // Ad banners are edited on /admin and kept in DATA_DIR, not in the code.
-app.get('/ads.json', (req, res) => { res.set('Cache-Control', 'no-cache'); res.json(readAds()); });
+app.get('/ads.json', (req, res) => { res.set('Cache-Control', 'no-cache'); res.json(liveAds()); });
+app.post('/api/ads/:id/:kind(view|click)', (req, res) => {
+  const id = String(req.params.id).slice(0, 40);
+  if (!readAds().slides?.some(s => s.id === id)) return res.status(204).end();
+  const row = (adStats[id] ||= { views: 0, clicks: 0 });
+  row[req.params.kind === 'view' ? 'views' : 'clicks'] += 1; adStatsDirty = true;
+  res.status(204).end();
+});
 app.use('/ads', express.static(ADS_IMG_DIR, { maxAge: '7d', index: false }));
 app.get('/admin', (req, res) => {
   res.set('X-Robots-Tag', 'noindex, nofollow');
@@ -602,44 +633,48 @@ const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 /** Checks and cleans an ads config from the admin page. Throws a readable error. */
 function cleanAds(body) {
   if (!body || typeof body !== 'object' || !Array.isArray(body.slides)) throw new Error('Expected { enabled, interval, slides: [] }.');
-  if (body.slides.length > 30) throw new Error('At most 30 slides.');
+  if (body.slides.length > 50) throw new Error('At most 50 banners.');
   const seen = new Set();
   const slides = body.slides.map((s, i) => {
-    const n = `Slide ${i + 1}`;
+    const n = `Banner ${i + 1}`;
     const slide = {
-      id: str(s.id, 40).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || `slide-${crypto.randomBytes(3).toString('hex')}`,
-      title: str(s.title, 120),
+      id: str(s.id, 40).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || `ad-${crypto.randomBytes(4).toString('hex')}`,
+      title: str(s.title, 160),
     };
-    if (!slide.title) throw new Error(`${n}: a headline is required.`);
+    if (!slide.title) throw new Error(`${n}: a title is required (screen readers read it out).`);
     if (seen.has(slide.id)) throw new Error(`${n}: the id "${slide.id}" is used twice.`);
     seen.add(slide.id);
-    const text = str(s.text, 240); if (text) slide.text = text;
-    const cta = str(s.cta, 40); if (cta) slide.cta = cta;
     const href = str(s.href, 500);
     if (href) {
-      if (!(/^\/(?!\/)/.test(href) || /^https?:\/\/[^\s]+$/i.test(href))) throw new Error(`${n}: the link must start with / (our pages) or https://.`);
+      if (!(/^\/(?!\/)/.test(href) || /^https?:\/\/[^\s]+$/i.test(href))) throw new Error(`${n}: the click-through URL must start with https:// (or / for our own pages).`);
       slide.href = href;
     }
     const image = str(s.image, 200);
     if (image) {
-      if (!/^\/ads\/[\w.-]+$/.test(image)) throw new Error(`${n}: upload the picture here; outside image links are blocked.`);
+      if (!/^\/ads\/[\w.-]+$/.test(image)) throw new Error(`${n}: upload the banner image here; outside image links are blocked.`);
       slide.image = image;
-      slide.imageAlt = str(s.imageAlt, 160);
-      if (!slide.imageAlt) throw new Error(`${n}: describe the picture for screen readers.`);
+    }
+    for (const [k, max] of [['text', 240], ['cta', 40], ['label', 40], ['advertiser', 120], ['advertiserContact', 200]]) {
+      const v = str(s[k], max); if (v) slide[k] = v;
     }
     const bg = str(s.bg, 200);
     if (bg) {
       if (!/^[#(),.%\w\s-]+$/.test(bg) || /url\s*\(/i.test(bg)) throw new Error(`${n}: the background must be a colour or gradient.`);
       slide.bg = bg;
     }
-    if (s.sponsored) slide.sponsored = true;
-    const label = str(s.label, 40); if (label) slide.label = label;
+    slide.placement = AD_PLACEMENTS.includes(s.placement) ? s.placement : 'home';
+    slide.status = AD_STATUSES.includes(s.status) ? s.status : (s.hidden ? 'paused' : 'active');
+    const pos = parseInt(s.position, 10); slide.position = Number.isFinite(pos) ? Math.max(0, Math.min(999, pos)) : i + 1;
+    const target = parseInt(s.targetImpressions, 10); if (Number.isFinite(target) && target > 0) slide.targetImpressions = Math.min(1e9, target);
     for (const k of ['start', 'end']) {
       const d = str(s[k], 10);
       if (d) { if (!DAY_RE.test(d)) throw new Error(`${n}: ${k} date must be YYYY-MM-DD.`); slide[k] = d; }
     }
     if (slide.start && slide.end && slide.end < slide.start) throw new Error(`${n}: the end date is before the start date.`);
-    if (s.hidden) slide.hidden = true;
+    if (!slide.image && slide.status === 'active' && !slide.text && !slide.bg && !slide.href) {
+      // a bare title with nothing else is almost certainly unfinished
+      throw new Error(`${n}: add a banner image before making it active.`);
+    }
     return slide;
   });
   const interval = Math.min(60000, Math.max(3000, Number(body.interval) || 6000));
@@ -647,13 +682,13 @@ function cleanAds(body) {
 }
 
 app.get('/api/admin/me', requireAdmin, (req, res) => res.json({ user: publicUser(req.adminEmail) }));
-app.get('/api/admin/ads', requireAdmin, (req, res) => res.json(readAds()));
+app.get('/api/admin/ads', requireAdmin, (req, res) => res.json({ ...readAds(), stats: adStats }));
 app.put('/api/admin/ads', requireAdmin, (req, res) => {
   let cfg;
   try { cfg = cleanAds(req.body); } catch (e) { return res.status(400).json({ error: e.message }); }
   try { writeAds(cfg); } catch (e) { console.error('[Admin] Could not save ads:', e.message); return res.status(500).json({ error: 'Could not save. Check the server has space on disk.' }); }
   console.log(`[Admin] ${req.adminEmail} saved ${cfg.slides.length} ad slide(s)`);
-  res.json(cfg);
+  res.json({ ...cfg, stats: adStats });
 });
 
 /* Pictures for slides: PNG, JPEG, WebP or GIF up to 2 MB, checked by their
@@ -666,10 +701,10 @@ const sniffImage = buf => {
   }
   return null;
 };
-const adImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024, files: 1 } });
+const adImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
 app.post('/api/admin/ads/images', requireAdmin, (req, res) => {
   adImageUpload.single('image')(req, res, err => {
-    if (err) return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'Pictures can be at most 2 MB.' : err.message });
+    if (err) return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'Pictures can be at most 5 MB after resizing.' : err.message });
     if (!req.file) return res.status(400).json({ error: 'Choose a picture to upload.' });
     const ext = sniffImage(req.file.buffer);
     if (!ext) return res.status(415).json({ error: 'Use a PNG, JPG, WebP or GIF picture.' });
@@ -678,6 +713,27 @@ app.post('/api/admin/ads/images', requireAdmin, (req, res) => {
     catch (e) { return res.status(500).json({ error: 'Could not save the picture.' }); }
     res.json({ image: `/ads/${name}` });
   });
+});
+/* "Paste an https link" in the banner form: the server downloads the picture
+   once so the admin page can crop it and upload our own copy. Visitors never
+   load pictures from the advertiser's site (no tracking through images). */
+const dnsLookup = require('dns').promises.lookup;
+const privateIp = ip => /^(10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|f[cd]|fe80)/i.test(ip);
+app.post('/api/admin/ads/fetch-image', requireAdmin, async (req, res) => {
+  let url;
+  try { url = new URL(String(req.body?.url || '')); } catch { return res.status(400).json({ error: 'Paste a full https:// link to the picture.' }); }
+  if (url.protocol !== 'https:') return res.status(400).json({ error: 'Only https:// links are allowed.' });
+  try {
+    const { address } = await dnsLookup(url.hostname);
+    if (privateIp(address)) return res.status(400).json({ error: 'That address is not allowed.' });
+    const r = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(15000) });
+    if (!r.ok) return res.status(400).json({ error: `That link answered ${r.status}.` });
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length > 25 * 1024 * 1024) return res.status(400).json({ error: 'That picture is bigger than 25 MB.' });
+    const ext = sniffImage(buf);
+    if (!ext) return res.status(415).json({ error: 'That link is not a PNG, JPG, WebP or GIF picture.' });
+    res.type(ext === 'jpg' ? 'image/jpeg' : `image/${ext}`).send(buf);
+  } catch (e) { res.status(400).json({ error: 'Could not download that picture. Try uploading the file instead.' }); }
 });
 app.get('/api/admin/ads/images', requireAdmin, (req, res) => {
   const list = d => { try { return fs.readdirSync(d).filter(f => /\.(png|jpe?g|gif|webp|svg)$/i.test(f)); } catch { return []; } };

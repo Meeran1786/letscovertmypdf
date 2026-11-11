@@ -8,17 +8,18 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232563EB'/><text x='4' y='24' font-family='Arial' font-size='20' font-weight='bold' fill='white'>L</text></svg>" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
-    :root { --bg:#0A1628; --card:#101E36; --input:#0F2040; --border:rgba(255,255,255,.12); --text:#E2E8F0; --muted:#94A3B8; --blue:#2563EB; --red:#F87171; --green:#34D399; }
+    :root { --bg:#F5F7FB; --card:#FFFFFF; --input:#FFFFFF; --border:#D7DCE5; --text:#111827; --muted:#5B6474; --blue:#2563EB; --red:#DC2626; --green:#059669; }
     * { box-sizing: border-box; }
     body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); font-size:14px; }
     a { color:#60A5FA; }
-    header { display:flex; align-items:center; gap:12px; padding:14px 24px; border-bottom:1px solid var(--border); }
+    header { background:#fff; display:flex; align-items:center; gap:12px; padding:14px 24px; border-bottom:1px solid var(--border); }
     header .logo { width:30px; height:30px; border-radius:8px; background:var(--blue); color:#fff; font-weight:700; display:flex; align-items:center; justify-content:center; }
     header .who { margin-left:auto; color:var(--muted); font-size:13px; }
     main { max-width:1100px; margin:0 auto; padding:24px; }
     nav.tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
     nav.tabs button { background:transparent; border:1px solid var(--border); color:var(--muted); padding:8px 14px; border-radius:10px; cursor:pointer; font:inherit; }
     nav.tabs button[aria-selected="true"] { background:var(--blue); border-color:var(--blue); color:#fff; }
+    nav.tabs button { background:#fff; }
     .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:16px; }
     h1 { font-size:18px; margin:0; } h2 { font-size:16px; margin:0 0 12px; }
     label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
@@ -49,6 +50,28 @@
     .center { text-align:center; padding:60px 20px; }
     .hidden { display:none !important; }
     .sticky { position:sticky; bottom:0; background:var(--bg); padding:12px 0; border-top:1px solid var(--border); }
+    .msg.err { background:#FEF2F2; border-color:#FECACA; }
+    .msg.ok { background:#ECFDF5; border-color:#A7F3D0; }
+    .stat, .card { box-shadow: 0 1px 2px rgba(16,24,40,.05); }
+    input[type=text], input[type=url], input[type=date], input[type=number], select { padding:12px 14px; border-radius:10px; font-size:15px; }
+    input:focus, select:focus { outline:2px solid #93C5FD; border-color:#60A5FA; }
+    .form { max-width:760px; padding:28px; }
+    .form h2 { font-size:24px; }
+    .field { margin-top:18px; }
+    .field > label { font-size:14px; font-weight:600; color:var(--text); margin-bottom:6px; }
+    .hint { font-size:13px; color:var(--muted); margin:6px 0 0; line-height:1.5; }
+    .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width:640px) { .two { grid-template-columns:1fr; } }
+    .nowrap { flex-wrap:nowrap; } .nowrap input { flex:1; }
+    button.big { width:100%; margin-top:24px; padding:14px; font-size:16px; border:0; border-radius:12px; background:linear-gradient(90deg,#C2453F,#962C84); }
+    .check { display:flex; gap:6px; align-items:center; margin:0; color:var(--text); font-size:14px; }
+    .banner-preview { margin-top:12px; border:1px dashed var(--border); border-radius:12px; overflow:hidden; background:#F9FAFB; }
+    .banner-preview img { display:block; width:100%; aspect-ratio:4/1; object-fit:cover; }
+    .thumb { width:120px; height:30px; object-fit:cover; border-radius:6px; display:block; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; background:#EEF2F7; }
+    .pill.active { background:#DCFCE7; color:#166534; } .pill.paused { background:#FEF3C7; color:#92400E; } .pill.draft { background:#E0E7FF; color:#3730A3; }
+    .warn { color:#B45309; }
+    a { color:#2563EB; }
   </style>
 </head>
 <body>

@@ -1083,8 +1083,9 @@ function Workspace({ tool, onBack, preset }) {
   const quotaExhausted = !!usageStatus && usageStatus.balance < usageStatus.cost;
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen pt-20 pb-16 px-4">
+      <div className="-mx-4 mb-6"><AdCarousel placement="tools"/></div>
+      <div className="max-w-2xl mx-auto pt-2">
         <button onClick={onBack} className="flex items-center gap-2 text-sm mb-8 group transition-colors" style={{color:'var(--muted)'}}>
           <Ic n="left" sz={13} cls="group-hover:-translate-x-0.5 transition-transform"/>{tr('ws.all','All Tools')}
         </button>
@@ -1310,34 +1311,51 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
 
   return (
     <div>
+      {/* Banners, right under the menu */}
+      <div className="pt-20 sm:pt-[5.25rem]"><AdCarousel placement="home"/></div>
+
       {/* Hero */}
-      <section className="hero-glow pt-28 sm:pt-32 pb-16 sm:pb-20 px-4 text-center">
-        <div className="max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-blue-300 text-sm font-medium mb-6"
-            style={{background:'rgba(37,99,235,0.1)',border:'1px solid rgba(37,99,235,0.3)'}}>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"/> {tr('hero.badge','Private by design')}
+      <section className="hero-glow pt-10 sm:pt-14 pb-12 sm:pb-16 px-4">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-[1.25fr_1fr] gap-10 lg:gap-14 items-center">
+          <div className="text-center lg:text-left">
+            <p className="text-xs sm:text-sm font-semibold uppercase tracking-[0.18em] text-blue-400 mb-4">{tr('hero.eyebrow','Private PDF platform for professionals')}</p>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-5 leading-[1.1] tracking-tight" style={{color:'var(--text)'}}>
+              {tr('hero.t1','PDF tools that')} <span className="gradient-text">{tr('hero.t2','never upload your files')}</span>
+            </h1>
+            <p className="text-base sm:text-lg max-w-xl mx-auto lg:mx-0 mb-7 leading-relaxed" style={{color:'var(--muted)'}}>
+              {tr('hero.sub','Merge, compress, sign, OCR, and chat with your PDFs using AI that runs on your own device. Your documents stay with you. Start free with 1,000 credits, no watermarks.')}
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center lg:justify-start mb-7">
+              {isAuthenticated
+                ? <a href="#tools" className="px-5 py-3 rounded-xl font-semibold text-white text-sm shadow-lg" style={{background:'#2563EB'}}>{tr('hero.browse','Browse all tools')}</a>
+                : <button onClick={() => openAuth('login')} className="px-5 py-3 rounded-xl font-semibold text-white text-sm shadow-lg" style={{background:'#2563EB'}}>{tr('hero.start','Start free with Google')}</button>}
+              <button onClick={onPrivacy} className="px-5 py-3 rounded-xl font-semibold text-sm" style={{background:'var(--bg-card)',border:'1px solid var(--border-s)',color:'var(--text)'}}>{tr('hero.how','How we keep files private')}</button>
+            </div>
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-sm" style={{color:'var(--muted)'}}>
+              {[tr('chip.google','Secure Google sign-in'),tr('chip.device','Files stay on your device'),tr('chip.ai','On-device AI')].map(l=>(
+                <span key={l} className="inline-flex items-center gap-1.5"><span className="text-emerald-400">✓</span>{l}</span>
+              ))}
+            </div>
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 leading-tight" style={{color:'var(--text)'}}>
-            {tr('hero.t1','PDF tools that')}<br/><span className="gradient-text">{tr('hero.t2','never upload your files')}</span>
-          </h1>
-          <p className="text-lg max-w-2xl mx-auto mb-6 leading-relaxed" style={{color:'var(--muted)'}}>
-            {tr('hero.sub','Merge, compress, sign, OCR, and chat with your PDFs using AI that runs on your own device. Your documents stay with you. Start free with 1,000 credits, no watermarks.')}
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
-            {[tr('chip.credits','1,000 free credits'),tr('chip.google','Secure Google sign-in'),tr('chip.device','Files stay on your device'),tr('chip.ai','On-device AI')].map(l=>(
-              <span key={l} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium" style={{background:'var(--bg-card)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
-                <span className="text-emerald-400">✓</span>{l}
-              </span>
-            ))}
+
+          <div className="card p-6 sm:p-7" style={{background:'var(--bg-elev)'}}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{color:'var(--subtle)'}}>{tr('hero.trust','Built for confidential work')}</p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-6">
+              {[[`${TOOLS.filter(t=>t.engine==='client').length}/${TOOLS.length}`,tr('stat.device','Tools run on your device')],['0',tr('stat.ai','Files uploaded by AI tools')],['1,000',tr('stat.credits','Free credits to start')],['Google',tr('stat.signin','Verified sign-in for every user')]].map(([v,l])=>(
+                <div key={l}>
+                  <p className="font-bold text-2xl sm:text-3xl text-blue-400 leading-none mb-1.5">{v}</p>
+                  <p className="text-xs sm:text-sm leading-snug" style={{color:'var(--muted)'}}>{l}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 pt-5 text-xs sm:text-sm leading-relaxed" style={{borderTop:'1px solid var(--border)',color:'var(--muted)'}}>
+              {tr('hero.who','Designed for confidential documents at banks, CA firms, accounting practices and audit teams.')}
+            </div>
           </div>
-          <div className="flex items-center justify-center gap-x-8 gap-y-4 mb-10 flex-wrap">
-            {[[`${TOOLS.filter(t=>t.engine==='client').length}/${TOOLS.length}`,tr('stat.device','Tools run on your device')],['0',tr('stat.ai','Files uploaded by AI tools')],['1,000',tr('stat.credits','Free credits to start')],['Google',tr('stat.signin','Verified sign-in for every user')]].map(([v,l])=>(
-              <div key={l} className="text-center">
-                <p className="text-blue-400 font-bold text-xl">{v}</p><p className="text-xs" style={{color:'var(--subtle)'}}>{l}</p>
-              </div>
-            ))}
-          </div>
-          <div className="max-w-2xl mx-auto mb-6"><CommandBar onRun={onCommand}/></div>
+        </div>
+
+        <div className="max-w-3xl mx-auto mt-10 sm:mt-12 space-y-3">
+          <CommandBar onRun={onCommand}/>
           <div className="relative max-w-md mx-auto">
             <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder={tr('search','Search tools…')}
               className="inp w-full pr-10" style={{borderRadius:'1rem',padding:'0.875rem 1.25rem'}}/>
@@ -1571,7 +1589,6 @@ function App() {
                 : <HomePage onTool={openTool} cat={cat} setCat={setCat} onPrivacy={openPrivacy} onCommand={runCommand}/>
             }
           </main>
-          <AdCarousel/>
           <Footer onTool={openTool} onPrivacy={openPrivacy}/>
           {palette && <CommandPalette onRun={runCommand} onClose={() => setPalette(false)}/>}
           <ChatWidget/>
