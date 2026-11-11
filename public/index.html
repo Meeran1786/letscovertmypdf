@@ -171,7 +171,6 @@ function AuthProvider({ children }) {
   });
   const [token, setToken] = useState(() => localStorage.getItem('lcpdf-token') || null);
   const [authOpen, setAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // login | signup | reset
   const [authIntro, setAuthIntro] = useState('');
 
   const login = (tok, usr) => {
@@ -189,7 +188,8 @@ function AuthProvider({ children }) {
     localStorage.removeItem('lcpdf-user');
   };
 
-  const openAuth = (mode = 'login', intro = '') => { setAuthMode(mode); setAuthIntro(intro); setAuthOpen(true); };
+  // The first argument is kept for older callers ('login' / 'signup'); there is only one way in now.
+  const openAuth = (_mode, intro = '') => { setAuthIntro(intro); setAuthOpen(true); };
 
   useEffect(() => {
     if (!authOpen) return;
@@ -200,16 +200,20 @@ function AuthProvider({ children }) {
 
   // Validate saved token on load
   useEffect(() => {
-    if (token && !user) {
+    // Refresh the saved profile (admin flag, suspension) on every visit.
+    if (token) {
       fetch('/api/auth/me', { headers:{ Authorization:`Bearer ${token}` } })
-        .then(r => r.json()).then(d => { if (d.user) setUser(d.user); else { setToken(null); localStorage.removeItem('lcpdf-token'); } }).catch(() => {});
+        .then(r => r.json()).then(d => {
+          if (d.user) { setUser(d.user); localStorage.setItem('lcpdf-user', JSON.stringify(d.user)); }
+          else { setToken(null); setUser(null); localStorage.removeItem('lcpdf-token'); localStorage.removeItem('lcpdf-user'); }
+        }).catch(() => {});
     }
   }, []);
 
   return (
     <AuthCtx.Provider value={{ user, token, login, logout, openAuth, isAuthenticated: !!user }}>
       {children}
-      {authOpen && <AuthModal mode={authMode} intro={authIntro} onMode={setAuthMode} onClose={() => setAuthOpen(false)}/>}
+      {authOpen && <AuthModal intro={authIntro} onClose={() => setAuthOpen(false)}/>}
     </AuthCtx.Provider>
   );
 }
@@ -394,67 +398,17 @@ function waitForGis(timeoutMs = 8000) {
 }
 
 /* ══════════════════════════════════════
-   AUTH MODAL
+   AUTH MODAL: Google Sign-In only. Google verifies the email, so there are
+   no passwords or emailed codes to manage.
 ══════════════════════════════════════ */
-function AuthModal({ mode, intro, onMode, onClose }) {
+function AuthModal({ intro, onClose }) {
   const { login } = useAuth();
-  const [step, setStep] = useState('form'); // form | otp
-  const [pendingEmail, setPendingEmail] = useState('');
-  const [pendingName, setPendingName] = useState('');
-  const [otpPurpose, setOtpPurpose] = useState('login');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPw, setShowPw] = useState(false);
-  const [deliveryWarning, setDeliveryWarning] = useState('');
   const [googleConfig, setGoogleConfig] = useState(null); // null = loading, else { googleSignInEnabled, googleClientId }
   const [googleBlocked, setGoogleBlocked] = useState(false);
-  const [notice, setNotice] = useState('');
   const googleBtnRef = useRef(null);
 
-  // form state
-  const [f, setF] = useState({ name:'', email:'', password:'', confirmPw:'', resetEmail:'', newPw:'', confirmNewPw:'' });
-  const set = k => e => setF(p => ({ ...p, [k]: e.target.value }));
-
-  const post = async (url, body) => {
-    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Request failed');
-    return d;
-  };
-
-  const handleLogin = async e => {
-    e.preventDefault(); setError(''); setLoading(true);
-    try {
-      const d = await post('/api/auth/login', { email: f.email, password: f.password });
-      setDeliveryWarning(d.emailSent === false ? d.message : '');
-      setPendingEmail(d.email); setOtpPurpose('login'); setStep('otp');
-    } catch(e) { setError(e.message); }
-    setLoading(false);
-  };
-
-  const handleSignup = async e => {
-    e.preventDefault(); setError('');
-    if (f.password !== f.confirmPw) return setError('Passwords do not match.');
-    setLoading(true);
-    try {
-      const d = await post('/api/auth/register', { name: f.name, email: f.email, password: f.password });
-      setDeliveryWarning(d.emailSent === false ? d.message : '');
-      setPendingEmail(d.email); setPendingName(f.name); setOtpPurpose('register'); setStep('otp');
-    } catch(e) { setError(e.message); }
-    setLoading(false);
-  };
-
-  const handleForgot = async e => {
-    e.preventDefault(); setError(''); setLoading(true);
-    try {
-      const d = await post('/api/auth/forgot-password', { email: f.resetEmail });
-      setPendingEmail(d.email); setOtpPurpose('reset'); setStep('otp');
-    } catch(e) { setError(e.message); }
-    setLoading(false);
-  };
-
-  // Fetch whether Google Sign-In is configured server-side (Client ID is public,
-  // safe to hand to the browser — no secret involved in this flow).
   useEffect(() => {
     fetch('/api/config').then(r => r.json()).then(setGoogleConfig).catch(() => setGoogleConfig({ googleSignInEnabled: false }));
   }, []);
@@ -462,18 +416,17 @@ function AuthModal({ mode, intro, onMode, onClose }) {
   gisCallback.current = async (response) => {
     setError(''); setLoading(true);
     try {
-      const d = await post('/api/auth/google', { idToken: response.credential });
-      login(d.token, d.user); // Google already verified the email — skip OTP entirely.
+      const r = await fetch('/api/auth/google', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ idToken: response.credential }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Sign-in failed. Please try again.');
+      login(d.token, d.user);
     } catch (e) { setError(e.message); }
     setLoading(false);
   };
 
-  // Once we know Google Sign-In is enabled and the GIS script has loaded, render
-  // Google's real button into our container (a custom-styled button isn't allowed
-  // by Google's branding terms for this flow). Re-runs when the form re-mounts
-  // (tab switch, coming back from the code step) so the button never vanishes.
+  // Google's own button (a custom-styled one isn't allowed by its branding terms).
   useEffect(() => {
-    if (!googleConfig?.googleSignInEnabled || mode === 'reset' || step !== 'form') return;
+    if (!googleConfig?.googleSignInEnabled) return;
     let cancelled = false;
     waitForGis().then(gis => {
       if (cancelled || !googleBtnRef.current) return;
@@ -487,15 +440,10 @@ function AuthModal({ mode, intro, onMode, onClose }) {
       gis.renderButton(googleBtnRef.current, { theme: 'outline', size: 'large', shape: 'pill', width, text: 'continue_with', logo_alignment: 'center' });
     });
     return () => { cancelled = true; };
-  }, [googleConfig, mode, step]);
-
-  const handleResetDone = () => {
-    setStep('form'); onMode('login'); setError('');
-    setNotice('Your password has been reset. Log in with your new password.');
-  };
+  }, [googleConfig]);
 
   return (
-    <div className="anim-fade overlay" role="dialog" aria-modal="true">
+    <div className="anim-fade overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <div className="card-solid anim-up w-full max-w-md relative p-6 sm:p-8">
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors" aria-label="Close">
           <Ic n="close" sz={16}/>
@@ -506,241 +454,39 @@ function AuthModal({ mode, intro, onMode, onClose }) {
           <span className="font-bold" style={{color:'var(--text)'}}>LetsConvertPDF</span>
         </div>
 
-        {intro && step === 'form' && (
+        <h2 id="auth-title" className="text-xl font-bold mb-1" style={{color:'var(--text)'}}>{tr('auth.title','Sign in to continue')}</h2>
+        <p className="text-sm mb-5" style={{color:'var(--muted)'}}>{tr('auth.sub','We use your Google account so every user is verified. We never see your Google password, and your files still stay on your device.')}</p>
+
+        {intro && (
           <div className="mb-5 text-sm rounded-xl p-3 flex items-start gap-2" style={{background:'rgba(37,99,235,0.08)',border:'1px solid rgba(37,99,235,0.25)',color:'var(--text)'}}>
             <Ic n="sparkle" sz={15} cls="text-blue-400 shrink-0 mt-0.5"/>
             <span>{intro}</span>
           </div>
         )}
 
-        {step === 'otp' ? (
-          <OTPStep email={pendingEmail} purpose={otpPurpose} newPw={otpPurpose==='reset' ? f.newPw : null}
-            warning={deliveryWarning} onBack={() => setStep('form')}
-            onSuccess={otpPurpose === 'reset' ? handleResetDone : login}/>
-        ) : (
-          <>
-            {/* Tabs */}
-            {mode !== 'reset' && (
-              <div className="flex mb-6" style={{background:'var(--bg-input)', borderRadius:'0.75rem', padding:'4px'}}>
-                {['login','signup'].map(m => (
-                  <button key={m} onClick={() => { onMode(m); setError(''); }}
-                    className="flex-1 py-2 text-sm font-semibold rounded-[0.5rem] transition-all"
-                    style={{ background: mode===m ? '#2563EB' : 'transparent', color: mode===m ? '#fff' : 'var(--muted)' }}>
-                    {m === 'login' ? 'Log In' : 'Sign Up'}
-                  </button>
-                ))}
-              </div>
-            )}
+        {error && <div className="mb-4 text-sm rounded-xl p-3" role="alert" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
 
-            {mode === 'reset' && (
-              <div className="mb-6">
-                <h2 className="text-xl font-bold" style={{color:'var(--text)'}}>Reset Password</h2>
-                <p className="text-sm mt-1" style={{color:'var(--muted)'}}>Enter your email to receive a reset code.</p>
-              </div>
-            )}
-
-            {error && <div className="mb-4 text-sm rounded-xl p-3" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
-            {notice && !error && <div className="mb-4 text-sm rounded-xl p-3" style={{background:'rgba(16,185,129,0.1)',color:'#34D399',border:'1px solid rgba(16,185,129,0.3)'}}>{notice}</div>}
-
-            {/* Google button — real Google Identity Services button when configured,
-                a disabled explainer button otherwise. */}
-            {mode !== 'reset' && googleConfig?.googleSignInEnabled && !googleBlocked && (
-              <div className="mb-4 flex justify-center" style={{minHeight:44}}>
-                <div ref={googleBtnRef} className="w-full flex justify-center"/>
-              </div>
-            )}
-            {mode !== 'reset' && googleBlocked && (
-              <p className="mb-4 text-xs text-center rounded-xl p-3" style={{background:'var(--bg-input)',color:'var(--muted)'}}>
-                Google sign-in couldn't load. An ad or tracker blocker may be blocking accounts.google.com — allow it for this site, or use email below.
-              </p>
-            )}
-            {mode !== 'reset' && googleConfig && !googleConfig.googleSignInEnabled && (
-              <button type="button" disabled title="Google Sign-In isn't set up on this server yet"
-                className="w-full flex items-center justify-center gap-2.5 py-2.5 mb-4 rounded-xl font-medium text-sm opacity-50 cursor-not-allowed"
-                style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
-                <Ic n="google" sz={18}/> Continue with Google (not set up yet)
-              </button>
-            )}
-            {mode !== 'reset' && (
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 h-px" style={{background:'var(--border)'}}/>
-                <span className="text-xs" style={{color:'var(--subtle)'}}>or</span>
-                <div className="flex-1 h-px" style={{background:'var(--border)'}}/>
-              </div>
-            )}
-
-            {/* Login form */}
-            {mode === 'login' && (
-              <form onSubmit={handleLogin} className="space-y-3">
-                <input className="inp" type="email" placeholder="Email address" value={f.email} onChange={set('email')} required/>
-                <div className="relative">
-                  <input className="inp pr-10" type={showPw?'text':'password'} placeholder="Password" value={f.password} onChange={set('password')} required/>
-                  <button type="button" onClick={() => setShowPw(s=>!s)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{color:'var(--muted)'}} aria-label={showPw ? 'Hide password' : 'Show password'}>
-                    <Ic n={showPw?'eyeOff':'eye'} sz={16}/>
-                  </button>
-                </div>
-                <button type="button" onClick={() => { onMode('reset'); setError(''); }}
-                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors">Forgot password?</button>
-                <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-xl font-bold text-white text-sm transition-colors mt-2"
-                  style={{background: loading ? '#1D4ED8' : '#2563EB'}}>
-                  {loading ? 'Sending code…' : 'Continue'}
-                </button>
-              </form>
-            )}
-
-            {/* Signup form */}
-            {mode === 'signup' && (
-              <form onSubmit={handleSignup} className="space-y-3">
-                <input className="inp" type="text" placeholder="Full name" value={f.name} onChange={set('name')} required/>
-                <input className="inp" type="email" placeholder="Email address" value={f.email} onChange={set('email')} required/>
-                <div className="relative">
-                  <input className="inp pr-10" type={showPw?'text':'password'} placeholder="Password (min. 8 chars)" value={f.password} onChange={set('password')} required/>
-                  <button type="button" onClick={() => setShowPw(s=>!s)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{color:'var(--muted)'}} aria-label={showPw ? 'Hide password' : 'Show password'}>
-                    <Ic n={showPw?'eyeOff':'eye'} sz={16}/>
-                  </button>
-                </div>
-                <input className="inp" type="password" placeholder="Confirm password" value={f.confirmPw} onChange={set('confirmPw')} required/>
-                <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-xl font-bold text-white text-sm transition-colors mt-2"
-                  style={{background: loading ? '#1D4ED8' : '#2563EB'}}>
-                  {loading ? 'Creating account…' : 'Create Account'}
-                </button>
-              </form>
-            )}
-
-            {/* Reset form */}
-            {mode === 'reset' && (
-              <form onSubmit={handleForgot} className="space-y-3">
-                <input className="inp" type="email" placeholder="Your email address" value={f.resetEmail} onChange={set('resetEmail')} required/>
-                <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-xl font-bold text-white text-sm transition-colors"
-                  style={{background:'#2563EB'}}>
-                  {loading ? 'Sending…' : 'Send Reset Code'}
-                </button>
-                <button type="button" onClick={() => onMode('login')}
-                  className="w-full text-sm transition-colors" style={{color:'var(--muted)'}}>← Back to Login</button>
-              </form>
-            )}
-
-            {mode === 'login' && (
-              <p className="text-center text-xs mt-4" style={{color:'var(--muted)'}}>
-                No account? <button onClick={() => { onMode('signup'); setError(''); }} className="text-blue-400 hover:text-blue-300">Sign up free</button>
-              </p>
-            )}
-          </>
+        {googleConfig?.googleSignInEnabled && !googleBlocked && (
+          <div className="mb-2 flex justify-center" style={{minHeight:44}} aria-busy={loading}>
+            <div ref={googleBtnRef} className="w-full flex justify-center"/>
+          </div>
         )}
+        {loading && <p className="text-xs text-center mb-2" style={{color:'var(--muted)'}}>Signing you in…</p>}
+        {googleBlocked && (
+          <p className="mb-2 text-xs text-center rounded-xl p-3" style={{background:'var(--bg-input)',color:'var(--muted)'}}>
+            Google sign-in couldn't load. An ad or tracker blocker may be blocking accounts.google.com. Allow it for this site and try again.
+          </p>
+        )}
+        {googleConfig && !googleConfig.googleSignInEnabled && (
+          <p className="mb-2 text-xs text-center rounded-xl p-3" style={{background:'var(--bg-input)',color:'var(--muted)'}}>
+            Sign-in isn't set up on this server yet.
+          </p>
+        )}
+
+        <p className="text-center text-xs mt-4" style={{color:'var(--subtle)'}}>
+          Had an email and password account? Sign in with Google using the same email and you'll get the same account back.
+        </p>
       </div>
-    </div>
-  );
-}
-
-/* ─── OTP Step ─── */
-function OTPStep({ email, purpose, newPw, warning, onBack, onSuccess }) {
-  const [digits, setDigits] = useState(['','','','','','']);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [resent, setResent] = useState(false);
-  const [deliveryWarning, setDeliveryWarning] = useState(warning || '');
-  const [step2, setStep2] = useState(purpose === 'reset' ? 'otp' : 'otp'); // otp | newpw
-  const [newPwState, setNewPwState] = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
-  const refs = Array.from({length:6}, () => useRef());
-
-  const code = digits.join('');
-
-  const handleDigit = (i, val) => {
-    const v = val.replace(/\D/g,'').slice(-1);
-    const next = [...digits]; next[i] = v; setDigits(next);
-    if (v && i < 5) refs[i+1].current?.focus();
-  };
-  const handleKey = (i, e) => {
-    if (e.key === 'Backspace' && !digits[i] && i > 0) refs[i-1].current?.focus();
-  };
-  const handlePaste = e => {
-    const pasted = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6).split('');
-    setDigits([...pasted, ...Array(6).fill('')].slice(0,6));
-    refs[Math.min(pasted.length, 5)].current?.focus();
-    e.preventDefault();
-  };
-
-  const verify = async () => {
-    setError(''); setLoading(true);
-    try {
-      if (purpose === 'reset' && step2 === 'newpw') {
-        if (newPwState !== confirmPw) { setError('Passwords do not match.'); setLoading(false); return; }
-        const r = await fetch('/api/auth/reset-password', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, code, newPassword: newPwState }) });
-        const d = await r.json(); if (!r.ok) throw new Error(d.error);
-        // After reset, just close and prompt login
-        onSuccess(null, null); // signal done without token
-        return;
-      }
-      const r = await fetch('/api/auth/verify-otp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, code }) });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
-      if (purpose === 'reset') { setStep2('newpw'); } else { onSuccess(d.token, d.user); }
-    } catch(e) { setError(e.message); }
-    setLoading(false);
-  };
-
-  const resend = async () => {
-    try {
-      const r = await fetch('/api/auth/resend-otp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, purpose }) });
-      const d = await r.json().catch(() => ({}));
-      setDeliveryWarning(d.emailSent === false ? (d.message || "We couldn't deliver that email just now.") : '');
-    } catch { setDeliveryWarning("We couldn't reach the server to resend that code. Check your connection and try again."); }
-    setResent(true); setTimeout(() => setResent(false), 30000);
-  };
-
-  if (step2 === 'newpw') return (
-    <div className="anim-up">
-      <h2 className="text-xl font-bold mb-1" style={{color:'var(--text)'}}>Set New Password</h2>
-      <p className="text-sm mb-4" style={{color:'var(--muted)'}}>OTP verified. Enter your new password.</p>
-      {error && <div className="mb-3 text-sm rounded-xl p-3" style={{background:'rgba(239,68,68,0.1)',color:'#F87171'}}>{error}</div>}
-      <div className="space-y-3">
-        <input className="inp" type="password" placeholder="New password (min. 8 chars)" value={newPwState} onChange={e=>setNewPwState(e.target.value)}/>
-        <input className="inp" type="password" placeholder="Confirm new password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)}/>
-        <button onClick={verify} disabled={loading}
-          className="w-full py-3 rounded-xl font-bold text-white text-sm" style={{background:'#2563EB'}}>
-          {loading ? 'Resetting…' : 'Reset Password'}
-        </button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="anim-up">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4 transition-colors" style={{color:'var(--muted)'}}>
-        <Ic n="left" sz={14}/> Back
-      </button>
-      <h2 className="text-xl font-bold mb-1" style={{color:'var(--text)'}}>Enter verification code</h2>
-      <p className="text-sm mb-6" style={{color:'var(--muted)'}}>We sent a 6-digit code to <strong>{email}</strong></p>
-
-      {deliveryWarning && <div className="mb-4 text-sm rounded-xl p-3" style={{background:'rgba(245,158,11,0.1)',color:'#FBBF24',border:'1px solid rgba(245,158,11,0.3)'}}>{deliveryWarning}</div>}
-      {error && <div className="mb-4 text-sm rounded-xl p-3" style={{background:'rgba(239,68,68,0.1)',color:'#F87171'}}>{error}</div>}
-
-      <div className="flex gap-2 justify-center mb-6" onPaste={handlePaste}>
-        {digits.map((d,i) => (
-          <input key={i} ref={refs[i]} type="text" inputMode="numeric" maxLength={1} value={d}
-            onChange={e => handleDigit(i, e.target.value)}
-            onKeyDown={e => handleKey(i, e)}
-            className="otp-input inp text-center"
-            style={{borderColor: d ? '#2563EB' : 'var(--border-s)', color:'var(--text)', fontSize:'1.5rem', fontWeight:700}}/>
-        ))}
-      </div>
-
-      <button onClick={verify} disabled={loading || code.length < 6}
-        className="w-full py-3 rounded-xl font-bold text-white text-sm mb-3 transition-colors disabled:opacity-50"
-        style={{background:'#2563EB'}}>
-        {loading ? 'Verifying…' : 'Verify Code'}
-      </button>
-
-      <p className="text-center text-xs" style={{color:'var(--muted)'}}>
-        Didn't receive it?{' '}
-        <button onClick={resend} disabled={resent} className="text-blue-400 hover:text-blue-300 disabled:opacity-50">
-          {resent ? 'Sent!' : 'Resend code'}
-        </button>
-      </p>
     </div>
   );
 }
@@ -779,7 +525,7 @@ function UsageBadge({ status, isAuthenticated, onUpgrade }) {
       </div>
       {!isAuthenticated && (
         <button onClick={onUpgrade} className="text-xs text-blue-400 hover:text-blue-300 font-medium">
-          Sign up free for more →
+          Sign in for more →
         </button>
       )}
     </div>
@@ -811,7 +557,7 @@ function UpgradeModal({ tool, usageInfo, isAuthenticated, onClose, onSignup, onL
           <div className="flex gap-3">
             <button onClick={onLogin} className="flex-1 py-3 rounded-xl font-semibold text-sm transition-colors"
               style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>Log In</button>
-            <button onClick={onSignup} className="flex-1 py-3 rounded-xl font-bold text-white text-sm" style={{background:'#2563EB'}}>Sign Up Free</button>
+            <button onClick={onSignup} className="flex-1 py-3 rounded-xl font-bold text-white text-sm" style={{background:"#2563EB"}}>Sign in with Google</button>
           </div>
         ) : (
           <button onClick={onClose} className="w-full py-3 rounded-xl font-semibold text-sm transition-colors"
@@ -1646,6 +1392,11 @@ function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
                     <p className="text-xs font-semibold truncate" style={{color:'var(--text)'}}>{user?.name}</p>
                     <p className="text-xs truncate" style={{color:'var(--muted)'}}>{user?.email}</p>
                   </div>
+                  {user?.isAdmin && (
+                    <a href="/admin" className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-blue-500/10 transition-colors" style={{color:'var(--text)'}}>
+                      <Ic n="lock" sz={14}/> Admin
+                    </a>
+                  )}
                   <button onClick={()=>{logout();setMenuOpen(false);}}
                     className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-red-500/10 text-red-400 transition-colors">
                     <Ic n="logOut" sz={14}/> {tr('nav.signout','Sign Out')}
@@ -1655,8 +1406,7 @@ function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <button onClick={() => openAuth('login')} className="px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap" style={{color:'var(--muted)'}}>{tr('nav.login','Log In')}</button>
-              <button onClick={() => openAuth('signup')} className="px-3 sm:px-4 py-2 rounded-lg text-xs font-bold text-white whitespace-nowrap" style={{background:'#2563EB'}}>{tr('nav.signup','Sign Up')}</button>
+              <button onClick={() => openAuth()} className="px-3 sm:px-4 py-2 rounded-lg text-xs font-bold text-white whitespace-nowrap" style={{background:'#2563EB'}}>{tr('nav.signin','Sign in with Google')}</button>
             </div>
           )}
         </div>

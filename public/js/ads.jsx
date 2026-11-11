@@ -1,10 +1,12 @@
 /* Ad carousel: a rotating banner for our own promos and sponsor ads.
 
    Private by design: slides come from /ads.json on our own origin, images
-   should live in /public/ads/ (the CSP only allows our own images), and
+   are served from /ads/ (the CSP only allows our own images), and
    nothing here sets cookies, loads third-party scripts or reports views.
 
-   Edit /public/ads.json to change what runs. Each slide:
+   Slides are edited on the admin page (/admin) and stored in DATA_DIR on the
+   server; public/ads.json is only the starting set copied there on first run.
+   Each slide:
      id        unique string (required)
      title     headline (required)
      text      one short line under the headline
@@ -16,6 +18,7 @@
      sponsored true for ads (our own products count too): shows a small badge and marks the link rel="sponsored"
      label     badge text, default "Sponsored"; e.g. "From our family of products"
      start/end optional dates (YYYY-MM-DD); the slide only shows between them
+     hidden    true keeps the slide saved but off the site
    Top-level options: "interval" (ms between slides, default 6000) and "enabled".
 
    Loaded as text/babel after r4.jsx; the main app renders <AdCarousel/>. */
@@ -23,7 +26,7 @@
 const ADS_DISMISS_KEY = 'lcpdf-ads-dismissed';
 
 function adsActive(slide, now = new Date()) {
-  if (!slide || !slide.id || !slide.title) return false;
+  if (!slide || !slide.id || !slide.title || slide.hidden) return false;
   const day = now.toISOString().slice(0, 10);
   if (slide.start && day < slide.start) return false;
   if (slide.end && day > slide.end) return false;

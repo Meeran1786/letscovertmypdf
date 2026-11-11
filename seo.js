@@ -760,6 +760,6 @@ ${guides.map(g => `- [${g.title}](${SITE}/guides/${g.slug}): ${g.description}`).
 `;
 }
 
-const robots = () => `User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${SITE}/sitemap.xml\n`;
+const robots = () => `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin\n\nSitemap: ${SITE}/sitemap.xml\n`;
 
 module.exports = { PAGES, SITE, renderPage, renderHome, sitemap, sitemapUrls, robots, llmsTxt };
