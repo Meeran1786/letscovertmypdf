@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="msvalidate.01" content="5CB2CF82B0007B5F78B0239AB2708D13" />
   <title>LetsConvertPDF — Private PDF Tools That Never Upload Your Files</title>
-  <meta name="description" content="Free PDF tools that run on your device: merge, split, compress, sign, OCR, chat with PDF and AI summaries. Your files never leave your browser. No signup required." />
+  <meta name="description" content="Free PDF tools that run on your device: merge, split, compress, sign, OCR, chat with PDF and AI summaries. Your files never leave your browser. Start free with 1,000 credits." />
   <meta name="keywords" content="PDF tools, merge PDF, split PDF, compress PDF, convert PDF, Word to PDF, Excel to PDF, PDF to Word, online PDF editor" />
   <meta name="author" content="Maqsusi Digital Industries Software" />
   <meta name="robots" content="index, follow" />
@@ -189,6 +189,19 @@ function AuthProvider({ children }) {
   };
 
   // The first argument is kept for older callers ('login' / 'signup'); there is only one way in now.
+  // Keep the balance in the header in step with every spend.
+  useEffect(() => {
+    const on = e => setUser(u => {
+      if (!u) return u;
+      const next = { ...u, credits: e.detail };
+      localStorage.setItem('lcpdf-user', JSON.stringify(next));
+      return next;
+    });
+    window.addEventListener('lcpdf-credits', on);
+    return () => window.removeEventListener('lcpdf-credits', on);
+  }, []);
+  const updateUser = usr => { setUser(usr); localStorage.setItem('lcpdf-user', JSON.stringify(usr)); };
+
   const openAuth = (_mode, intro = '') => { setAuthIntro(intro); setAuthOpen(true); };
 
   useEffect(() => {
@@ -213,6 +226,7 @@ function AuthProvider({ children }) {
   return (
     <AuthCtx.Provider value={{ user, token, login, logout, openAuth, isAuthenticated: !!user }}>
       {children}
+      {user && token && !user.userType && <ProfilePicker onDone={updateUser}/>}
       {authOpen && <AuthModal intro={authIntro} onClose={() => setAuthOpen(false)}/>}
     </AuthCtx.Provider>
   );
@@ -492,77 +506,139 @@ function AuthModal({ intro, onClose }) {
 }
 
 /* ══════════════════════════════════════
-   USAGE / FREEMIUM HELPERS
+   CREDITS
+   Every tool needs a Google sign-in and each use costs credits. For tools
+   that run on the device only the tool id and the number of files are sent
+   to pay for the use; the files themselves never leave the browser. Server
+   tools are charged by the server after a successful conversion.
 ══════════════════════════════════════ */
+const announceCredits = balance => {
+  if (Number.isFinite(balance)) window.dispatchEvent(new CustomEvent('lcpdf-credits', { detail: balance }));
+};
 async function fetchUsageStatus(toolId, token) {
-  const t = TOOLS.find(x => x.id === toolId);
-  if (!t || t.engine !== 'server') return null; // on-device: nothing to meter, no request
-  const r = await fetch(`/api/usage/status?toolId=${encodeURIComponent(toolId)}`, { headers: authHeaders(token) });
+  if (!token) return null;
+  const r = await fetch(`/api/credits/quote?toolId=${encodeURIComponent(toolId)}`, { headers: authHeaders(token) });
   if (!r.ok) return null;
-  return r.json();
+  const d = await r.json(); announceCredits(d.balance); return d;
 }
-/* On-device tools are unlimited and never tell our server they ran.
-   Server-side conversions enforce any limit inside their own route. */
-async function consumeUsage() {
-  return { unlimited: true };
+async function consumeUsage(toolId, token, units = 1) {
+  const r = await fetch('/api/credits/spend', { method:'POST', headers: authHeaders(token, {'Content-Type':'application/json'}), body: JSON.stringify({ toolId, units }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    if (Number.isFinite(d.balance)) announceCredits(d.balance);
+    throw Object.assign(new Error(d.error || 'Could not use credits.'), { status: r.status, credits: d });
+  }
+  announceCredits(d.balance);
+  return d;
 }
-function UsageBadge({ status, isAuthenticated, onUpgrade }) {
+function UsageBadge({ status }) {
   if (!status) return null;
-  if (status.limit === null) return null; // unlimited: nothing to show
-  const exhausted = status.remaining <= 0;
+  const short = status.balance < status.cost;
   return (
     <div className="flex flex-wrap items-center gap-2 mb-5">
       <div className="flex items-center gap-2 text-xs rounded-full px-3 py-1.5 w-fit"
         style={{
-          background: exhausted ? 'rgba(239,68,68,0.1)' : 'rgba(37,99,235,0.1)',
-          color: exhausted ? '#F87171' : '#60A5FA',
-          border: `1px solid ${exhausted ? 'rgba(239,68,68,0.3)' : 'rgba(37,99,235,0.3)'}`,
+          background: short ? 'rgba(239,68,68,0.1)' : 'rgba(37,99,235,0.1)',
+          color: short ? '#F87171' : '#60A5FA',
+          border: `1px solid ${short ? 'rgba(239,68,68,0.3)' : 'rgba(37,99,235,0.3)'}`,
         }}>
-        <Ic n="clock" sz={13}/>
-        {exhausted
-          ? `Daily free limit reached (${status.limit}/day) — resets at midnight UTC`
-          : `${status.remaining} of ${status.limit} free use${status.limit===1?'':'s'} left today`}
+        <Ic n="sparkle" sz={13}/>
+        {short
+          ? `Not enough credits: this costs ${status.cost}, you have ${status.balance}`
+          : `${status.cost} credits per use · you have ${status.balance.toLocaleString()}`}
       </div>
-      {!isAuthenticated && (
-        <button onClick={onUpgrade} className="text-xs text-blue-400 hover:text-blue-300 font-medium">
-          Sign in for more →
-        </button>
-      )}
+    </div>
+  );
+}
+
+/* Shown in place of the file picker until the visitor signs in. */
+function SignInGate({ tool, onSignIn }) {
+  return (
+    <div className="card p-8 text-center space-y-4 anim-up">
+      <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center" style={{background:'rgba(37,99,235,0.1)',border:'1px solid rgba(37,99,235,0.3)'}}>
+        <Ic n="lock" sz={24} cls="text-blue-400"/>
+      </div>
+      <h2 className="text-lg font-bold" style={{color:'var(--text)'}}>{tr('gate.title','Sign in to use this tool')}</h2>
+      <p className="text-sm max-w-md mx-auto" style={{color:'var(--muted)'}}>
+        {tr('gate.sub','New accounts get 1,000 free credits. Each use costs 5. Your files are still processed on your own device.')}
+      </p>
+      <button onClick={onSignIn} className="px-6 py-3 rounded-xl font-bold text-white text-sm" style={{background:'#2563EB'}}>{tr('nav.signin','Sign in with Google')}</button>
     </div>
   );
 }
 
 /* ══════════════════════════════════════
-   UPGRADE / PAYWALL MODAL
-   Shown when a free-tier quota (anon or signed-up) is exhausted.
+   OUT OF CREDITS MODAL
 ══════════════════════════════════════ */
-function UpgradeModal({ tool, usageInfo, isAuthenticated, onClose, onSignup, onLogin }) {
+function UpgradeModal({ tool, usageInfo, onClose }) {
   const col = C[tool.color] || C.blue;
   return (
-    <div className="anim-fade overlay" role="dialog" aria-modal="true">
+    <div className="anim-fade overlay" role="dialog" aria-modal="true" aria-labelledby="credits-title">
       <div className="card-solid anim-up w-full max-w-md relative p-6 sm:p-8 text-center">
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors" aria-label="Close">
           <Ic n="close" sz={16}/>
         </button>
         <div className="w-16 h-16 mx-auto rounded-2xl mb-6 flex items-center justify-center" style={{background:col.bg, border:`1px solid ${col.bd}`}}>
-          <Ic n="lock" sz={28} cls="text-blue-400"/>
+          <Ic n="sparkle" sz={28} cls="text-blue-400"/>
         </div>
-        <h2 className="text-xl font-bold mb-2" style={{color:'var(--text)'}}>Daily free limit reached</h2>
+        <h2 id="credits-title" className="text-xl font-bold mb-2" style={{color:'var(--text)'}}>Not enough credits</h2>
         <p className="text-sm mb-6" style={{color:'var(--muted)'}}>
-          {isAuthenticated
-            ? `You've used all your free ${tool.label} conversions for today. Your quota resets at midnight UTC — or check back tomorrow.`
-            : `You've used your free guest use of ${tool.label} for today. Create a free account to get more uses on every tool, every day.`}
+          {usageInfo
+            ? `${tool.label} needs ${usageInfo.cost} credits and you have ${usageInfo.balance}. `
+            : `You don't have enough credits for ${tool.label}. `}
+          Your credits top up at the start of each month. For your team or company, ask us about a business licence using the chat button.
         </p>
-        {!isAuthenticated ? (
-          <div className="flex gap-3">
-            <button onClick={onLogin} className="flex-1 py-3 rounded-xl font-semibold text-sm transition-colors"
-              style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>Log In</button>
-            <button onClick={onSignup} className="flex-1 py-3 rounded-xl font-bold text-white text-sm" style={{background:"#2563EB"}}>Sign in with Google</button>
-          </div>
-        ) : (
-          <button onClick={onClose} className="w-full py-3 rounded-xl font-semibold text-sm transition-colors"
-            style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>Got it</button>
+        <button onClick={onClose} className="w-full py-3 rounded-xl font-semibold text-sm transition-colors"
+          style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>Got it</button>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   FIRST SIGN-IN: WHO ARE YOU?
+══════════════════════════════════════ */
+function ProfilePicker({ onDone }) {
+  const { token } = useAuth();
+  const [type, setType] = useState('');
+  const [company, setCompany] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const opts = [
+    ['student', 'Student', 'School, college or university'],
+    ['individual', 'Individual', 'Personal use or freelancing'],
+    ['business', 'Business', 'Bank, CA or accounting firm, auditor or any company'],
+  ];
+  const save = async () => {
+    setBusy(true); setError('');
+    try {
+      const r = await fetch('/api/me/profile', { method:'POST', headers: authHeaders(token, {'Content-Type':'application/json'}), body: JSON.stringify({ userType: type, company }) });
+      const d = await r.json(); if (!r.ok) throw new Error(d.error || 'Could not save.');
+      onDone(d.user);
+    } catch (e) { setError(e.message); setBusy(false); }
+  };
+  return (
+    <div className="anim-fade overlay" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+      <div className="card-solid anim-up w-full max-w-md relative p-6 sm:p-8">
+        <h2 id="profile-title" className="text-xl font-bold mb-1" style={{color:'var(--text)'}}>Welcome! Which describes you?</h2>
+        <p className="text-sm mb-5" style={{color:'var(--muted)'}}>Your account has 1,000 free credits. Each use of a tool costs 5.</p>
+        <div className="space-y-2 mb-4" role="radiogroup">
+          {opts.map(([v, label, sub]) => (
+            <button key={v} type="button" role="radio" aria-checked={type===v} onClick={() => setType(v)}
+              className="w-full text-left rounded-xl p-3 transition-colors"
+              style={{background:'var(--bg-input)', border:`1px solid ${type===v ? '#2563EB' : 'var(--border-s)'}`}}>
+              <p className="text-sm font-semibold" style={{color:'var(--text)'}}>{label}</p>
+              <p className="text-xs" style={{color:'var(--muted)'}}>{sub}</p>
+            </button>
+          ))}
+        </div>
+        {type === 'business' && (
+          <input className="inp mb-4" placeholder="Company name (optional)" value={company} onChange={e => setCompany(e.target.value)} maxLength={120}/>
         )}
+        {error && <div className="mb-3 text-sm rounded-xl p-3" role="alert" style={{background:'rgba(239,68,68,0.1)',color:'#F87171'}}>{error}</div>}
+        <button onClick={save} disabled={!type || busy} className="w-full py-3 rounded-xl font-bold text-white text-sm disabled:opacity-50" style={{background:'#2563EB'}}>
+          {busy ? 'Saving…' : 'Continue'}
+        </button>
       </div>
     </div>
   );
@@ -696,9 +772,10 @@ async function callServerAPI(endpoint, file, toolId, token, fields = {}) {
   if (!r.ok) {
     const e = await r.json().catch(()=>({}));
     const err = new Error(e.error || `Server error ${r.status}`);
-    err.status = r.status; err.usage = e.usage;
+    err.status = r.status; err.credits = e;
     throw err;
   }
+  announceCredits(Number(r.headers.get('X-Credits-Balance') ?? NaN));
   const blob = await r.blob();
   const filename = (r.headers.get('Content-Disposition')||'').match(/filename="?([^"]+)"?/)?.[1] || `output.pdf`;
   return { blob, filename };
@@ -971,10 +1048,11 @@ function Workspace({ tool, onBack, preset }) {
         if(filename.endsWith('.pdf')){const b=new Uint8Array(await blob.arrayBuffer());setPdfBytes(b);setDlName(filename);setDlItems([{url:'#pdf',name:filename,size:fmtSz(b.byteLength)}]);}
         else{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();setDlItems([{url,name:filename,size:fmtSz(blob.size)}]);}
       } else {
-        // On-device: no quota and no server call.
+        // On-device: the files stay here; only the tool id and file count go to pay for the use.
         if (tool.id==='sign' && !config.sigData) throw new Error('Add your signature first.');
         if (tool.id==='protect' && config.password!==config.confirmPw) throw new Error('Passwords do not match.');
         if (tool.id==='merge' && files.length<2) throw new Error('Add at least two PDFs to merge.');
+        await consumeUsage(tool.id, token, tool.batch && files.length > 1 ? files.length : 1);
         setStatus(tr('ws.processing','Processing on your device…'));tick(20);
         const batch = tool.batch && files.length > 1;
         let result;
@@ -996,12 +1074,13 @@ function Workspace({ tool, onBack, preset }) {
       tick(100); setState('done'); refreshUsage();
     } catch(e) {
       console.error(e);
-      if (e.status === 429) { setShowUpgrade(true); setState('config'); refreshUsage(); return; }
+      if (e.status === 401) { setState('config'); openAuth('login', 'Your session ended. Sign in again to continue.'); return; }
+      if (e.status === 402) { setShowUpgrade(true); setState('config'); refreshUsage(); return; }
       setError(e.message||'Processing failed'); setState('config');
     }
   };
 
-  const quotaExhausted = usageStatus && usageStatus.limit !== null && usageStatus.remaining <= 0;
+  const quotaExhausted = !!usageStatus && usageStatus.balance < usageStatus.cost;
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-4">
@@ -1022,11 +1101,12 @@ function Workspace({ tool, onBack, preset }) {
         </div>
 
         <div className="mb-4"><PrivacyBadge tool={tool}/></div>
-        <UsageBadge status={usageStatus} isAuthenticated={isAuthenticated} onUpgrade={() => openAuth('login')}/>
+        <UsageBadge status={usageStatus}/>
 
         {/* Drop */}
         {state==='drop' && error && <div className="rounded-xl p-3 mb-4 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
-        {state==='drop' && <DropZone tool={tool} onFiles={handleFiles} disabled={quotaExhausted}/>}
+        {state==='drop' && !isAuthenticated && <SignInGate tool={tool} onSignIn={() => openAuth('login')}/>}
+        {state==='drop' && isAuthenticated && <DropZone tool={tool} onFiles={handleFiles} disabled={quotaExhausted}/>}
 
         {/* AI tools: chat / summarise */}
         {state==='config' && tool.ai && (
@@ -1038,8 +1118,8 @@ function Workspace({ tool, onBack, preset }) {
             </div>
             {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
             <AiWorkspace key={files[0]?.name+files[0]?.size} tool={tool} file={files[0]}
-              onQuota={async()=>{try{await consumeUsage(tool.id,token);refreshUsage();}catch(e){if(e.status===429){setShowUpgrade(true);setState('drop');setFiles([]);refreshUsage();}throw e;}}}
-              onError={e=>{if(e&&e.status===429)return;console.error(e);setError(e.message||'Something went wrong.');}}/>
+              onQuota={async()=>{try{await consumeUsage(tool.id,token);refreshUsage();}catch(e){if(e.status===402){setShowUpgrade(true);refreshUsage();}if(e.status===401)openAuth('login');throw e;}}}
+              onError={e=>{if(e&&(e.status===402||e.status===401))return;console.error(e);setError(e.message||'Something went wrong.');}}/>
           </div>
         )}
 
@@ -1053,8 +1133,8 @@ function Workspace({ tool, onBack, preset }) {
             </div>
             {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
             {(()=>{
-              const onQuota = async()=>{try{await consumeUsage(tool.id,token);refreshUsage();}catch(e){if(e.status===429){setShowUpgrade(true);setState('drop');setFiles([]);refreshUsage();}throw e;}};
-              const onError = e=>{if(e&&e.status===429)return;console.error(e);setError(e.message||'Something went wrong.');};
+              const onQuota = async()=>{try{await consumeUsage(tool.id,token);refreshUsage();}catch(e){if(e.status===402){setShowUpgrade(true);refreshUsage();}if(e.status===401)openAuth('login');throw e;}};
+              const onError = e=>{if(e&&(e.status===402||e.status===401))return;console.error(e);setError(e.message||'Something went wrong.');};
               const key = files.map(f=>f.name+f.size).join('|');
               if (tool.custom==='translate') return <TranslateWorkspace key={key} file={files[0]} initialTo={config.to} onQuota={onQuota} onError={onError}/>;
               if (tool.custom==='review') return <ReviewWorkspace key={key} file={files[0]} onQuota={onQuota} onError={onError}/>;
@@ -1072,8 +1152,8 @@ function Workspace({ tool, onBack, preset }) {
                 <button onClick={()=>{setState('drop');setFiles([]);setError('');}} className="text-xs text-blue-400">Start over</button></div>
               {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
               <CompareWorkspace key={files.map(f=>f.name+f.size).join('|')} files={files}
-                onQuota={async()=>{try{await consumeUsage(tool.id,token);refreshUsage();}catch(e){if(e.status===429){setShowUpgrade(true);setState('drop');setFiles([]);refreshUsage();}throw e;}}}
-                onError={e=>{if(e&&e.status===429)return;setError(e.message||'Something went wrong.');}}/>
+                onQuota={async()=>{try{await consumeUsage(tool.id,token);refreshUsage();}catch(e){if(e.status===402){setShowUpgrade(true);refreshUsage();}if(e.status===401)openAuth('login');throw e;}}}
+                onError={e=>{if(e&&(e.status===402||e.status===401))return;setError(e.message||'Something went wrong.');}}/>
             </div>)}
 
         {/* Config */}
@@ -1184,10 +1264,7 @@ function Workspace({ tool, onBack, preset }) {
       </div>
       {preview && pdfBytes && <PreviewModal pdfBytes={pdfBytes} onClose={()=>setPreview(false)} onDownload={()=>{download();setPreview(false);}} downloadName={dlName}/>}
       {showUpgrade && (
-        <UpgradeModal tool={tool} usageInfo={usageStatus} isAuthenticated={isAuthenticated}
-          onClose={()=>setShowUpgrade(false)}
-          onSignup={()=>{setShowUpgrade(false);openAuth('login');}}
-          onLogin={()=>{setShowUpgrade(false);openAuth('login');}}/>
+        <UpgradeModal tool={tool} usageInfo={usageStatus} onClose={()=>setShowUpgrade(false)}/>
       )}
     </div>
   );
@@ -1244,17 +1321,17 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
             {tr('hero.t1','PDF tools that')}<br/><span className="gradient-text">{tr('hero.t2','never upload your files')}</span>
           </h1>
           <p className="text-lg max-w-2xl mx-auto mb-6 leading-relaxed" style={{color:'var(--muted)'}}>
-            {tr('hero.sub','Merge, compress, sign, OCR, and chat with your PDFs using AI that runs on your own device. Your documents stay with you. No signup, no limits, no watermarks.')}
+            {tr('hero.sub','Merge, compress, sign, OCR, and chat with your PDFs using AI that runs on your own device. Your documents stay with you. Start free with 1,000 credits, no watermarks.')}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
-            {[tr('chip.nosignup','No signup'),tr('chip.unlimited','Unlimited, free forever'),tr('chip.offline','Works offline'),tr('chip.ai','On-device AI')].map(l=>(
+            {[tr('chip.credits','1,000 free credits'),tr('chip.google','Secure Google sign-in'),tr('chip.device','Files stay on your device'),tr('chip.ai','On-device AI')].map(l=>(
               <span key={l} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium" style={{background:'var(--bg-card)',border:'1px solid var(--border-s)',color:'var(--text)'}}>
                 <span className="text-emerald-400">✓</span>{l}
               </span>
             ))}
           </div>
           <div className="flex items-center justify-center gap-x-8 gap-y-4 mb-10 flex-wrap">
-            {[[`${TOOLS.filter(t=>t.engine==='client').length}/${TOOLS.length}`,tr('stat.device','Tools run on your device')],['0',tr('stat.ai','Files uploaded by AI tools')],['100%',tr('stat.free','Free')],[tr('stat.offline','Offline'),tr('stat.app','Works as an app')]].map(([v,l])=>(
+            {[[`${TOOLS.filter(t=>t.engine==='client').length}/${TOOLS.length}`,tr('stat.device','Tools run on your device')],['0',tr('stat.ai','Files uploaded by AI tools')],['1,000',tr('stat.credits','Free credits to start')],['Google',tr('stat.signin','Verified sign-in for every user')]].map(([v,l])=>(
               <div key={l} className="text-center">
                 <p className="text-blue-400 font-bold text-xl">{v}</p><p className="text-xs" style={{color:'var(--subtle)'}}>{l}</p>
               </div>
@@ -1302,7 +1379,7 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
           {[
             {icon:'lock',t:'Your files stay yours',d:'Green-lock tools run inside your browser. Nothing is uploaded, so nothing can leak.'},
             {icon:'sparkle',t:'Private AI',d:'Chat with PDFs and get summaries from an AI model that runs on your device, not in someone\'s cloud.'},
-            {icon:'download',t:'Works offline',d:'Install LetsConvertPDF as an app and keep using the on-device tools without a connection.'},
+            {icon:'user',t:'Every user verified',d:'Sign-in is through Google only, so every account is a real, verified person. Built for banks, CAs, accountants and auditors.'},
           ].map(f=>(
             <div key={f.t} className="card p-6 text-center">
               <div className="w-11 h-11 rounded-xl flex items-center justify-center mx-auto mb-4" style={{background:'rgba(37,99,235,0.1)',border:'1px solid rgba(37,99,235,0.3)'}}>
@@ -1385,12 +1462,14 @@ function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
                   {user?.name?.[0]?.toUpperCase()||'U'}
                 </div>
                 <span className="hidden sm:block max-w-24 truncate">{user?.name}</span>
+                {Number.isFinite(user?.credits) && <span className="text-xs font-semibold px-2 py-0.5 rounded-full" title="Your credits" style={{background:'rgba(37,99,235,0.15)',color:'#60A5FA'}}>{user.credits.toLocaleString()} cr</span>}
               </button>
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-2 w-56 card-solid anim-up overflow-hidden" style={{zIndex:50}}>
                   <div className="p-3 border-b" style={{borderColor:'var(--border)'}}>
                     <p className="text-xs font-semibold truncate" style={{color:'var(--text)'}}>{user?.name}</p>
                     <p className="text-xs truncate" style={{color:'var(--muted)'}}>{user?.email}</p>
+                    {Number.isFinite(user?.credits) && <p className="text-xs mt-1" style={{color:'var(--text)'}}>{user.credits.toLocaleString()} credits · tops up monthly</p>}
                   </div>
                   {user?.isAdmin && (
                     <a href="/admin" className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-blue-500/10 transition-colors" style={{color:'var(--text)'}}>
