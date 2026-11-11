@@ -8,7 +8,7 @@
  *  - Server-side conversions via LibreOffice
  *  - Auth: Google Sign-In only (no passwords stored)
  *  - Admin page (/admin): ad banners, users
- *  - Freemium usage metering: anonymous (by IP) + signed-up (by account), daily reset
+ *  - Credits: every tool needs a Google sign-in; each use costs credits
  *  - Rate limiting (abuse / brute-force protection)
  *  - Chat: offline message via email (nodemailer / Gmail)
  *  - Temp file cleanup (node-cron)
@@ -50,7 +50,6 @@ const OUTPUTS_DIR = path.join(os.tmpdir(), 'letsconvertpdf', 'outputs');
    account and logging everyone out. */
 const DATA_DIR    = process.env.DATA_DIR || path.join(__dirname, 'data');
 const USERS_FILE  = path.join(DATA_DIR, 'users.json');
-const USAGE_FILE  = path.join(DATA_DIR, 'usage.json');
 const TOKENS_FILE = path.join(DATA_DIR, 'tokens.json');
 const PYTHON      = process.env.PYTHON_BIN || 'python3';
 const PDF_CONVERT = path.join(__dirname, 'converters', 'pdf_convert.py');
@@ -77,7 +76,7 @@ const writeAds = cfg => { const tmp = `${ADS_FILE}.tmp`; fs.writeFileSync(tmp, J
 app.set('trust proxy', Number(process.env.TRUST_PROXY) || 1);
 
 /* ─── Auth state (in-memory + file persistence) ─── */
-let users  = {};  // { email: { name, passwordHash, salt, verified, premium, createdAt } }
+let users  = {};  // { email: { name, verified, authProvider, createdAt, lastLoginAt, userType, credits, refilledMonth, blocked } }
 let tokens = {};  // { token: { email, expires } }
 
 try { users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch {}
@@ -122,90 +121,93 @@ function getEmailFromToken(req) {
 }
 
 /* ═══════════════════════════════════════════
-   USAGE METERING (off by default)
-   Every tool is free and unlimited with no signup. On-device tools never
-   call the server at all. The meter below only applies to the server-side
-   conversions, and only if SERVER_TOOL_GUEST_DAILY_LIMIT / SERVER_TOOL_USER_DAILY_LIMIT
-   are set to a number. (The old FREE_*_DAILY_LIMIT variables are ignored, so
-   an existing .env doesn't silently bring the caps back.) (for example to protect a small server from abuse).
-   The global express-rate-limit on /api/* still applies either way.
+   CREDITS
+   Every tool needs a Google sign-in, and every use costs credits (5 by
+   default). New accounts start with 1000. Students and individuals get a
+   monthly top-up back up to a floor. All numbers are editable on /admin.
+   Files are never sent for this: only the tool id and the number of files.
+   Node runs one request handler at a time, so a check-and-deduct below can't
+   be interleaved with another one (no double spending across tabs).
 ═══════════════════════════════════════════ */
-const LIMITS = {
-  anonDaily: Number(process.env.SERVER_TOOL_GUEST_DAILY_LIMIT) || Infinity,
-  userDaily: Number(process.env.SERVER_TOOL_USER_DAILY_LIMIT) || Infinity,
+const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+const LEDGER_FILE   = path.join(DATA_DIR, 'credits-log.jsonl');
+const STATS_FILE    = path.join(DATA_DIR, 'stats.json');
+const USER_TYPES    = ['student', 'individual', 'business'];
+const DEFAULT_SETTINGS = {
+  startingCredits: 1000,
+  costPerUse: 5,
+  monthlyFloor: { student: 500, individual: 250, business: 250 },
+  toolCosts: {},   // { toolId: credits } overrides costPerUse for that tool
+};
+let settings = { ...DEFAULT_SETTINGS };
+try { settings = { ...DEFAULT_SETTINGS, ...JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')) }; } catch {}
+const saveSettings = () => { try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2)); } catch (e) { console.error('[Data] Could not save settings:', e.message); } };
+
+let stats = {}; // { "2026-11-11": { toolId: { uses, credits } } }
+try { stats = JSON.parse(fs.readFileSync(STATS_FILE, 'utf8')); } catch {}
+let statsDirty = false;
+setInterval(() => { if (statsDirty) { statsDirty = false; try { fs.writeFileSync(STATS_FILE, JSON.stringify(stats)); } catch {} } }, 10_000).unref();
+
+const todayStr = () => new Date().toISOString().slice(0, 10); // UTC YYYY-MM-DD
+const monthStr = () => new Date().toISOString().slice(0, 7);
+const toolCost = toolId => {
+  const c = settings.toolCosts?.[toolId];
+  return Number.isFinite(c) && c >= 0 ? c : settings.costPerUse;
 };
 
-let usage = {}; // { "user:email:toolId:2026-08-31": { count, day } }
-try { usage = JSON.parse(fs.readFileSync(USAGE_FILE, 'utf8')); } catch {}
-
-const saveUsage = () => {
-  try { fs.writeFileSync(USAGE_FILE, JSON.stringify(usage, null, 2)); } catch {}
-};
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10); // UTC YYYY-MM-DD
+/** Gives a user their starting credits the first time, and the monthly
+ *  top-up when a new month starts. Returns true if the record changed. */
+function topUp(u) {
+  let changed = false;
+  if (!Number.isFinite(u.credits)) { u.credits = settings.startingCredits; u.refilledMonth = monthStr(); changed = true; }
+  const floor = settings.monthlyFloor?.[u.userType];
+  if (u.userType && u.refilledMonth !== monthStr()) {
+    if (Number.isFinite(floor) && u.credits < floor) u.credits = floor;
+    u.refilledMonth = monthStr();
+    changed = true;
+  }
+  return changed;
 }
-function getClientIp(req) {
-  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
-  return ip.replace(/^::ffff:/, '');
+
+function logCredits(email, delta, balance, reason, extra = {}) {
+  const row = JSON.stringify({ t: new Date().toISOString(), email, delta, balance, reason, ...extra });
+  fs.appendFile(LEDGER_FILE, row + '\n').catch(e => console.error('[Data] Could not write credits log:', e.message));
 }
-function resolveIdentity(req) {
+
+/** Checks that the user can pay `units` uses of `toolId`. */
+function creditQuote(email, toolId, units = 1) {
+  const u = users[email];
+  if (topUp(u)) saveUsers();
+  const cost = toolCost(toolId) * units;
+  return { ok: u.credits >= cost, cost, balance: u.credits };
+}
+/** Deducts credits (call after creditQuote said ok, in the same tick, or after the work succeeded). */
+function chargeCredits(email, toolId, units = 1) {
+  const u = users[email];
+  const cost = toolCost(toolId) * units;
+  u.credits = Math.max(0, u.credits - cost);
+  saveUsers();
+  logCredits(email, -cost, u.credits, 'use', { toolId, units });
+  const day = (stats[todayStr()] ||= {});
+  const row = (day[toolId] ||= { uses: 0, credits: 0 });
+  row.uses += units; row.credits += cost; statsDirty = true;
+  return { cost, balance: u.credits };
+}
+
+const outOfCredits = (q, toolId) => ({
+  error: `This needs ${q.cost} credits and you have ${q.balance}. Your credits top up at the start of each month.`,
+  code: 'out_of_credits', cost: q.cost, balance: q.balance, toolId,
+});
+
+/** Middleware: signed-in (not blocked) user, or 401. */
+function requireUser(req, res, next) {
   const email = getEmailFromToken(req);
-  if (email && users[email]) return { type: 'user', id: email };
-  return { type: 'anon', id: getClientIp(req) };
-}
-function getLimitFor(identity) {
-  if (identity.type === 'user') {
-    const u = users[identity.id];
-    if (u && u.premium) return Infinity;
-    return LIMITS.userDaily;
+  if (!email || !users[email]) {
+    if (req.file) fs.remove(req.file.path).catch(() => {});
+    return res.status(401).json({ error: 'Please sign in with Google to use this tool.', code: 'signin_required' });
   }
-  return LIMITS.anonDaily;
-}
-function usageKey(identity, toolId, day) {
-  return `${identity.type}:${identity.id}:${toolId}:${day}`;
-}
-function readUsage(req, toolId) {
-  const identity = resolveIdentity(req);
-  const limit = getLimitFor(identity);
-  const day = todayStr();
-  const key = usageKey(identity, toolId, day);
-  const used = usage[key]?.count || 0;
-  const remaining = limit === Infinity ? Infinity : Math.max(0, limit - used);
-  return { identity, limit, used, remaining, day, key };
-}
-/** Attempts to consume one unit of usage for (identity, toolId) today.
- *  Returns { ok, limit, used, remaining, identity } — does NOT throw. */
-function tryConsume(req, toolId) {
-  const info = readUsage(req, toolId);
-  // Unlimited: don't record anything about who used which tool.
-  if (info.limit === Infinity) return { ok: true, ...info };
-  if (info.limit !== Infinity && info.used >= info.limit) {
-    return { ok: false, ...info };
-  }
-  const nextUsed = info.used + 1;
-  usage[info.key] = { count: nextUsed, day: info.day };
-  saveUsage();
-  const remaining = info.limit === Infinity ? Infinity : Math.max(0, info.limit - nextUsed);
-  return { ok: true, ...info, used: nextUsed, remaining };
-}
-/** Gives back a unit spent by tryConsume when the conversion itself failed,
- *  so a server-side error doesn't eat the user's daily allowance. */
-function refundUsage(result) {
-  if (!result?.ok || result.limit === Infinity) return;
-  const row = usage[result.key];
-  if (row && row.count > 0) { row.count -= 1; saveUsage(); }
-}
-function usageResponsePayload(info, toolId) {
-  return {
-    toolId,
-    tier: info.identity.type === 'user' ? 'free_account' : 'anonymous',
-    limit: info.limit === Infinity ? null : info.limit,
-    used: info.used,
-    remaining: info.remaining === Infinity ? null : info.remaining,
-    resetsAt: `${info.day}T23:59:59.999Z`,
-    isAuthenticated: info.identity.type === 'user',
-  };
+  req.userEmail = email;
+  next();
 }
 
 /* ─── Email transporter (nodemailer + Gmail) ─── */
@@ -450,52 +452,38 @@ async function sendFileAndCleanup(res, filePath, downloadName) {
   });
 }
 
-/** Shared guard for server-side conversion routes: consumes one unit of the
- *  caller's freemium quota for `toolId` before any processing happens.
- *  On rejection, cleans up the uploaded temp file and replies 429. */
-function enforceUsageOrReject(req, res, toolId) {
-  const result = tryConsume(req, toolId);
-  res.set('X-RateLimit-Limit', result.limit === Infinity ? 'unlimited' : String(result.limit));
-  res.set('X-RateLimit-Remaining', result.remaining === Infinity ? 'unlimited' : String(result.remaining));
-  if (!result.ok) {
-    if (req.file) fs.remove(req.file.path).catch(() => {});
-    res.status(429).json({
-      error: result.identity.type === 'user'
-        ? `You've used all ${result.limit} free daily uses of this tool. Your quota resets at midnight UTC.`
-        : `You've used your ${result.limit} free daily use of this tool as a guest. Please try again tomorrow.`,
-      usage: usageResponsePayload(result, toolId),
-    });
-    return null;
-  }
-  return result;
-}
-
 /* ═══════════════════════════════════════════
-   USAGE / FREEMIUM ROUTES
+   CREDIT ROUTES
 ═══════════════════════════════════════════ */
 
-/* Check current quota for a tool without consuming it */
-app.get('/api/usage/status', (req, res) => {
-  const toolId = String(req.query.toolId || '').trim();
-  if (!toolId) return res.status(400).json({ error: 'toolId query parameter is required.' });
-  const info = readUsage(req, toolId);
-  res.json(usageResponsePayload(info, toolId));
+/* Spend credits for an on-device tool, before it runs on the user's device.
+   Only the tool id and the number of files are sent, never the files. */
+app.post('/api/credits/spend', requireUser, (req, res) => {
+  const toolId = String(req.body?.toolId || '').trim().slice(0, 40);
+  if (!/^[\w-]+$/.test(toolId)) return res.status(400).json({ error: 'toolId is required.' });
+  const units = Math.min(100, Math.max(1, parseInt(req.body?.units, 10) || 1));
+  const q = creditQuote(req.userEmail, toolId, units);
+  if (!q.ok) return res.status(402).json(outOfCredits(q, toolId));
+  res.json(chargeCredits(req.userEmail, toolId, units));
 });
 
-/* Consume one unit of quota — used by client-side tools before local processing */
-app.post('/api/usage/consume', (req, res) => {
-  const toolId = String(req.body?.toolId || '').trim();
-  if (!toolId) return res.status(400).json({ error: 'toolId is required.' });
-  const result = tryConsume(req, toolId);
-  if (!result.ok) {
-    return res.status(429).json({
-      error: result.identity.type === 'user'
-        ? `You've used all ${result.limit} free daily uses of this tool. Your quota resets at midnight UTC.`
-        : `You've used your ${result.limit} free daily use of this tool as a guest. Please try again tomorrow.`,
-      usage: usageResponsePayload(result, toolId),
-    });
-  }
-  res.json(usageResponsePayload(result, toolId));
+/* How much a tool costs, and the user's balance (shown before running). */
+app.get('/api/credits/quote', requireUser, (req, res) => {
+  const toolId = String(req.query.toolId || '').trim().slice(0, 40);
+  const q = creditQuote(req.userEmail, toolId, 1);
+  res.json({ toolId, cost: q.cost, balance: q.balance });
+});
+
+/* First sign-in: the user says whether they are a student, an individual or a business. */
+app.post('/api/me/profile', requireUser, (req, res) => {
+  const type = String(req.body?.userType || '');
+  if (!USER_TYPES.includes(type)) return res.status(400).json({ error: 'Choose student, individual or business.' });
+  const u = users[req.userEmail];
+  u.userType = type;
+  if (type === 'business' && req.body?.company) u.company = String(req.body.company).trim().slice(0, 120);
+  topUp(u);
+  saveUsers();
+  res.json({ user: publicUser(req.userEmail) });
 });
 
 /* ═══════════════════════════════════════════
@@ -563,7 +551,6 @@ app.post('/api/auth/google', async (req, res) => {
     users[key] = {
       name: payload.name || key.split('@')[0],
       verified: true,     // Google already verified this email
-      premium: false,
       authProvider: 'google',
       createdAt: now,
     };
@@ -593,7 +580,13 @@ const isAdmin = email => !!email && ADMIN_EMAILS.includes(email);
 
 function publicUser(email) {
   const u = users[email] || {};
-  return { email, name: u.name || '', premium: !!u.premium, isAdmin: isAdmin(email) };
+  if (users[email] && topUp(u)) saveUsers();
+  return {
+    email, name: u.name || '', isAdmin: isAdmin(email),
+    userType: u.userType || null, company: u.company || null,
+    credits: Number.isFinite(u.credits) ? u.credits : 0,
+    costPerUse: settings.costPerUse,
+  };
 }
 
 function requireAdmin(req, res, next) {
@@ -705,14 +698,74 @@ app.get('/api/admin/users', requireAdmin, (req, res) => {
   const list = Object.entries(users).map(([email, u]) => ({
     email, name: u.name || '', createdAt: u.createdAt || null, lastLoginAt: u.lastLoginAt || null,
     googleDomain: u.googleDomain || null, blocked: !!u.blocked, isAdmin: isAdmin(email),
+    userType: u.userType || null, company: u.company || null, credits: Number.isFinite(u.credits) ? u.credits : null,
   })).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   res.json({
     total: list.length,
     activeThisWeek: list.filter(u => u.lastLoginAt && u.lastLoginAt >= weekAgo).length,
     newThisWeek: list.filter(u => u.createdAt && u.createdAt >= weekAgo).length,
+    byType: USER_TYPES.concat('unset').reduce((o, t) => ({ ...o, [t]: list.filter(u => (u.userType || 'unset') === t).length }), {}),
     users: list,
   });
 });
+/* Give or take credits, e.g. for a refund or a promotion. */
+app.post('/api/admin/users/:email/credits', requireAdmin, (req, res) => {
+  const key = String(req.params.email || '').toLowerCase();
+  const u = users[key];
+  if (!u) return res.status(404).json({ error: 'No such user.' });
+  const delta = parseInt(req.body?.delta, 10);
+  if (!Number.isFinite(delta) || delta === 0 || Math.abs(delta) > 1_000_000) return res.status(400).json({ error: 'Enter a whole number of credits, e.g. 500 or -100.' });
+  topUp(u);
+  u.credits = Math.max(0, u.credits + delta);
+  saveUsers();
+  logCredits(key, delta, u.credits, 'admin', { by: req.adminEmail, note: String(req.body?.note || '').slice(0, 200) });
+  res.json({ ok: true, credits: u.credits });
+});
+
+app.get('/api/admin/settings', requireAdmin, (req, res) => res.json(settings));
+app.put('/api/admin/settings', requireAdmin, (req, res) => {
+  const b = req.body || {};
+  const num = (v, name, max = 1_000_000) => {
+    const n = Number(v);
+    if (!Number.isInteger(n) || n < 0 || n > max) throw new Error(`${name} must be a whole number from 0 to ${max}.`);
+    return n;
+  };
+  try {
+    const next = {
+      startingCredits: num(b.startingCredits, 'Starting credits'),
+      costPerUse: num(b.costPerUse, 'Credits per use', 10_000),
+      monthlyFloor: Object.fromEntries(USER_TYPES.map(t => [t, num(b.monthlyFloor?.[t] ?? 0, `Monthly top-up for ${t}`)])),
+      toolCosts: {},
+    };
+    for (const [id, c] of Object.entries(b.toolCosts || {})) {
+      if (!/^[\w-]{1,40}$/.test(id)) continue;
+      if (c === '' || c == null) continue;
+      next.toolCosts[id] = num(c, `Cost of ${id}`, 10_000);
+    }
+    settings = next;
+    saveSettings();
+    console.log(`[Admin] ${req.adminEmail} changed credit settings`);
+    res.json(settings);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+/* Uses and credits spent per tool, for the last N days. */
+app.get('/api/admin/stats', requireAdmin, (req, res) => {
+  const days = Math.min(90, Math.max(1, parseInt(req.query.days, 10) || 30));
+  const since = new Date(Date.now() - (days - 1) * 864e5).toISOString().slice(0, 10);
+  const perTool = {}; const perDay = [];
+  for (const [day, tools] of Object.entries(stats).sort()) {
+    if (day < since) continue;
+    let uses = 0, credits = 0;
+    for (const [id, r] of Object.entries(tools)) {
+      const t = (perTool[id] ||= { toolId: id, uses: 0, credits: 0 });
+      t.uses += r.uses; t.credits += r.credits; uses += r.uses; credits += r.credits;
+    }
+    perDay.push({ day, uses, credits });
+  }
+  res.json({ days, perDay, perTool: Object.values(perTool).sort((a, b) => b.uses - a.uses) });
+});
+
 app.post('/api/admin/users/:email/block', requireAdmin, (req, res) => {
   const key = String(req.params.email || '').toLowerCase();
   if (!users[key]) return res.status(404).json({ error: 'No such user.' });
@@ -781,22 +834,30 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-/** Wraps a server-side tool: meters usage, gives the job its own output
+/** Wraps a server-side tool: requires sign-in and credits (charged on success), gives the job its own output
  *  folder, refunds the use and reports a readable error if the job fails,
  *  and always cleans up the upload. `job` returns { file, name }. */
 function conversionRoute(defaultToolId, job, { acceptBodyToolId = false } = {}) {
   return async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const toolId = (acceptBodyToolId && req.body.toolId) || defaultToolId;
-    const usageResult = enforceUsageOrReject(req, res, toolId);
-    if (!usageResult) return;
+    const toolId = (acceptBodyToolId && /^[\w-]{1,40}$/.test(req.body.toolId || '') && req.body.toolId) || defaultToolId;
+    const email = getEmailFromToken(req);
+    if (!email || !users[email]) {
+      fs.remove(req.file.path).catch(() => {});
+      return res.status(401).json({ error: 'Please sign in with Google to use this tool.', code: 'signin_required' });
+    }
+    const quote = creditQuote(email, toolId);
+    if (!quote.ok) { fs.remove(req.file.path).catch(() => {}); return res.status(402).json(outOfCredits(quote, toolId)); }
     const sessionDir = path.join(OUTPUTS_DIR, uuidv4());
     try {
       await fs.ensureDir(sessionDir);
       const { file, name } = await job(req, sessionDir);
+      // Charged only once the conversion worked, so a failure costs nothing.
+      if (!(await fs.pathExists(file))) throw new Error('Conversion produced no output.');
+      const { balance } = chargeCredits(email, toolId);
+      res.set('X-Credits-Balance', String(balance));
       await sendFileAndCleanup(res, file, name);
     } catch (e) {
-      refundUsage(usageResult);
       console.error(`[Convert:${toolId}]`, e.message);
       const status = e.status || (e.notFound ? 503 : 500);
       if (!res.headersSent) res.status(status).json({ error: e.publicMessage || e.message });
@@ -955,15 +1016,6 @@ cron.schedule('*/30 * * * *', async () => {
   Object.keys(tokens).forEach(t => { if (tokens[t].expires < now) delete tokens[t]; });
   if (Object.keys(tokens).length !== tokenCount) saveTokens();
 
-  // Usage rows older than 2 days are no longer needed for any reset window.
-  const today = todayStr();
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  let changed = false;
-  Object.keys(usage).forEach(k => {
-    const day = usage[k]?.day;
-    if (day && day !== today && day !== yesterday) { delete usage[k]; changed = true; }
-  });
-  if (changed) saveUsage();
 });
 
 /* ── Start ── */
@@ -980,10 +1032,10 @@ app.listen(PORT, () => {
 ║        Maqsusi Digital Industries Software           ║
 ╠══════════════════════════════════════════════════════╣
 ║  URL  : http://localhost:${PORT}                        ║
-║  Email : ${transporter ? '✓ SMTP ready — ' + process.env.EMAIL_USER : '✗ NOT configured — OTPs will only print to this log, not send'}
+║  Email : ${transporter ? '✓ SMTP ready — ' + process.env.EMAIL_USER : '✗ NOT configured — contact form messages are only logged'}
 ║  Google: ${googleClient ? '✓ Sign-In ready' : '✗ Not configured — "Continue with Google" returns 501'}
 ║  Mode  : ${process.env.NODE_ENV || 'development'}                             ║
-║  Usage: unlimited on-device · server tools guest ${LIMITS.anonDaily}/day · account ${LIMITS.userDaily}/day
+║  Credits: ${settings.startingCredits} to start · ${settings.costPerUse} per use · admins: ${ADMIN_EMAILS.length}
 ╚══════════════════════════════════════════════════════╝
   `);
 });

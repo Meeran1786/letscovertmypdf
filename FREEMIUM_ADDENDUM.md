@@ -1,3 +1,5 @@
+> **Superseded again (11 November 2026):** there are no anonymous users. Every tool needs a Google sign-in, and each use costs credits (1,000 to start, 5 per use, monthly top-ups by user type, all editable on `/admin`). See `server.js` → CREDITS.
+
 > **Superseded (November 2026):** every tool is now free and unlimited with no signup. On-device tools no longer call `/api/usage/consume`. The meter only applies to the server-side conversions, and only if `SERVER_TOOL_GUEST_DAILY_LIMIT` / `SERVER_TOOL_USER_DAILY_LIMIT` are set. The old `FREE_*_DAILY_LIMIT` variables are ignored.
 
 # Freemium & Usage Metering — Addendum to PRD v2.0.0
