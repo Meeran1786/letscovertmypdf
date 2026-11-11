@@ -51,8 +51,8 @@ clearly. The checker (`npm run check:guides`) prints hints for these.
   broad topic ("all about PDFs").
 - Never write a second guide for a topic already covered; update the old one
   and set `updated:` instead.
-- Prefer long-tail questions where privacy or "free, no signup" is a real
-  advantage.
+- Prefer long-tail questions where privacy (files never uploaded) or
+  verified, secure use is a real advantage.
 
 ## Topic backlog
 Pick from here first, and remove a line once its guide is merged.

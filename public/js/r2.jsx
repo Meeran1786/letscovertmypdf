@@ -445,7 +445,7 @@ function PrivacyPage({ onTool }) {
         </div>
         <div className="card p-5 space-y-2">
           <h2 className="font-bold" style={{color:'var(--text)'}}>Check it yourself</h2>
-          <p className="text-sm" style={{color:'var(--muted)'}}>Open your browser's developer tools, go to the Network tab, and use any green-badged tool. You will see no upload. Or install LetsConvertPDF as an app, switch on airplane mode, and the on-device tools keep working.</p>
+          <p className="text-sm" style={{color:'var(--muted)'}}>Open your browser's developer tools, go to the Network tab, and use any green-badged tool. You will see no upload. The only request a green-badged tool makes is a tiny one to pay its credits: it carries the tool's name and the number of files, nothing else.</p>
         </div>
         <div className="grid md:grid-cols-2 gap-4">
           <div className="card p-4"><h2 className="font-bold text-sm mb-2 px-3" style={{color:'var(--text)'}}>Runs on your device ({local.length})</h2>{local.map(t => <Row key={t.id} t={t}/>)}</div>
@@ -455,8 +455,8 @@ function PrivacyPage({ onTool }) {
         <div className="card p-5 space-y-2">
           <h2 className="font-bold" style={{color:'var(--text)'}}>What we do store</h2>
           <ul className="text-sm list-disc pl-5 space-y-1" style={{color:'var(--muted)'}}>
-            <li>If you create an account: your name, email and a hashed password.</li>
-            <li>A daily count of how many times each tool was used, so free limits work. Counts are deleted after a day.</li>
+            <li>Your account: the name and email from your Google sign-in. We never see or store a password.</li>
+            <li>Your credit balance, and a log of each use: which tool, when, how many files and the credits it cost. Never the file, its name or its contents.</li>
             <li>Your saved signature and theme choice stay in your own browser's storage, never on our servers.</li>
           </ul>
           <p className="text-sm" style={{color:'var(--muted)'}}>The Smart AI model is downloaded once from Hugging Face's public model library and cached in your browser. Your document text is never sent anywhere.</p>
