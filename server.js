@@ -362,6 +362,13 @@ const readIndex = () => {
   if (!indexHtml || process.env.NODE_ENV !== 'production') indexHtml = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
   return indexHtml;
 };
+// One URL per page: /merge-pdf/ and /index.html redirect to the canonical URL,
+// so Google doesn't list them as duplicates ("Alternate page with canonical").
+app.get('/index.html', (req, res) => res.redirect(301, '/'));
+app.get(/^\/.+\/$/, (req, res) => {
+  const q = req.originalUrl.indexOf('?');
+  res.redirect(301, '/' + req.path.replace(/^\/+|\/+$/g, '') + (q >= 0 ? req.originalUrl.slice(q) : ''));
+});
 const guides = require('./guides');
 app.get('/guides', (req, res) => res.type('html').send(guides.renderIndex(seo.PAGES)));
 app.get('/guides/:slug', (req, res) => {
@@ -1046,7 +1053,12 @@ app.post('/api/unlock', upload.single('file'), conversionRoute('unlock', async (
 }));
 
 /* ── SPA catch-all ── */
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+// Unknown paths get a real 404 (the app still loads and shows the home page), so
+// old or mistyped URLs drop out of Google instead of piling up as copies of "/".
+app.get('*', (req, res) => {
+  res.status(404).set('X-Robots-Tag', 'noindex');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 /* ── Error handler ── */
 app.use((err, req, res, next) => {

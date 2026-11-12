@@ -121,6 +121,14 @@
     .drop-zone:hover { border-color: #2563EB; background: rgba(37,99,235,0.05); }
     .drop-active   { border-color: #2563EB !important; background: rgba(37,99,235,0.08) !important; }
     [data-theme="light"] .nav-blur { box-shadow: 0 1px 16px rgba(0,0,0,0.06); }
+    .seo-article { color:var(--muted); font-size:0.95rem; line-height:1.7; }
+    .seo-article h2 { color:var(--text); font-weight:700; font-size:1.25rem; margin:1.75rem 0 0.5rem; }
+    .seo-article h3 { color:var(--text); font-weight:600; margin:1rem 0 0.25rem; }
+    .seo-article p { margin:0.5rem 0; }
+    .seo-article ol { list-style:decimal; padding-left:1.5rem; }
+    .seo-article ul { list-style:disc; padding-left:1.5rem; columns:2 220px; }
+    .seo-article a { color:#60A5FA; }
+    .seo-article a:hover { text-decoration:underline; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
     }
@@ -1545,6 +1553,13 @@ function routeFromPath(path) {
 }
 const TITLE_HOME = tr('home.title', 'LetsConvertPDF — Private PDF Tools That Never Upload Your Files');
 
+/* The server puts a how-to article for the tool inside #root. React replaces
+   #root, so keep that article and show it under the tool: search engines read the
+   rendered page, and without it they only see the sign-in card (thin content). */
+const SEO_PATH = location.pathname.replace(/\/+$/, '') || '/';
+const SEO_HTML = (document.querySelector('#root > main')?.innerHTML || '')
+  .replace(/<h1[^>]*>[\s\S]*?<\/h1>/, '');
+
 function App() {
   const [route, setRoute] = useState(() => routeFromPath(location.pathname));
   const [cat, setCat] = useState('All');
@@ -1583,7 +1598,11 @@ function App() {
           <Navbar onHome={goHome} onCategory={showCategory} onPrivacy={openPrivacy} onCommand={() => setPalette(true)}/>
           <main className="flex-1">
             {route.view === 'tool'
-              ? <Workspace key={route.tool.id + (route.preset ? JSON.stringify(route.preset) : '')} tool={route.tool} preset={route.preset} onBack={goHome}/>
+              ? <>
+                  <Workspace key={route.tool.id + (route.preset ? JSON.stringify(route.preset) : '')} tool={route.tool} preset={route.preset} onBack={goHome}/>
+                  {SEO_HTML && (location.pathname.replace(/\/+$/, '') || '/') === SEO_PATH &&
+                    <section className="seo-article max-w-3xl mx-auto px-4 sm:px-6 pb-16" dangerouslySetInnerHTML={{__html: SEO_HTML}}/>}
+                </>
               : route.view === 'privacy'
                 ? <PrivacyPage onTool={openTool}/>
                 : <HomePage onTool={openTool} cat={cat} setCat={setCat} onPrivacy={openPrivacy} onCommand={runCommand}/>
