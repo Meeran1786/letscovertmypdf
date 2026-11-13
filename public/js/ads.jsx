@@ -13,7 +13,6 @@
 
    Loaded as text/babel after r4.jsx; the app renders <AdCarousel placement="home"/>. */
 
-const ADS_DISMISS_KEY = 'lcpdf-ads-dismissed';
 const adsSeen = new Set(); // one impression per banner per page load
 
 function adBeacon(id, kind) {
@@ -28,13 +27,9 @@ function AdCarousel({ placement = 'home' }) {
   const [cfg, setCfg] = useState(null);
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [dismissed, setDismissed] = useState(() => {
-    try { return sessionStorage.getItem(`${ADS_DISMISS_KEY}-${placement}`) === '1'; } catch { return false; }
-  });
   const reduceMotion = useRef(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 
   useEffect(() => {
-    if (dismissed) return;
     let live = true;
     fetch('/ads.json', { cache: 'no-cache' })
       .then(r => (r.ok ? r.json() : null))
@@ -45,7 +40,7 @@ function AdCarousel({ placement = 'home' }) {
       })
       .catch(() => {});
     return () => { live = false; };
-  }, [dismissed, placement]);
+  }, [placement]);
 
   const slides = cfg?.slides || [];
   const n = slides.length;
@@ -63,16 +58,15 @@ function AdCarousel({ placement = 'home' }) {
     adsSeen.add(s.id); adBeacon(s.id, 'view');
   }, [s && s.id]);
 
-  if (dismissed || !s) return null;
+  if (!s) return null;
   const external = /^https?:\/\//i.test(s.href || '');
   const rel = ['sponsored', external && 'noopener noreferrer'].filter(Boolean).join(' ');
-  const close = () => { try { sessionStorage.setItem(`${ADS_DISMISS_KEY}-${placement}`, '1'); } catch {} setDismissed(true); };
   const onKey = e => {
     if (n < 2) return;
     if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
   };
-  // Arrows and close only appear on hover or keyboard focus, so they never cover the advertiser's own artwork.
+  // Arrows only appear on hover or keyboard focus, so they never cover the advertiser's own artwork.
   const btn = 'w-8 h-8 rounded-full flex items-center justify-center bg-black/45 hover:bg-black/65 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white';
   const label = s.label || (s.advertiser ? 'Sponsored' : 'Ad');
 
@@ -113,7 +107,6 @@ function AdCarousel({ placement = 'home' }) {
             ))}
           </div>
         </>}
-        <button type="button" onClick={close} aria-label="Hide banners" className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center bg-black/45 text-white hover:bg-black/65 text-sm opacity-60 group-hover:opacity-100 focus:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white">×</button>
       </div>
     </section>
   );
