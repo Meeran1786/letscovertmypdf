@@ -637,6 +637,16 @@ function alternates(slug) {
     + `\n<link rel="alternate" hreflang="x-default" href="${SITE}${tail}" />`;
 }
 
+/** BreadcrumbList (Home › Tool) so results show the site name and path, not a bare URL. */
+function crumbs(name, url, lang = 'en') {
+  const home = lang === 'en' ? `${SITE}/` : `${SITE}/${lang}`;
+  return `<script type="application/ld+json">${JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'LetsConvertPDF', item: home },
+      { '@type': 'ListItem', position: 2, name, item: url }],
+  }).replace(/</g, '\\u003c')}</script>`;
+}
+
 /** Sets <html lang/dir> and hands the page its language pack (only that one). */
 function injectLang(html, lang) {
   if (!i18n.has(lang)) return html;
@@ -696,7 +706,7 @@ function renderPage(html, slug, lang = 'en') {
     const url = `${SITE}/${lang}/${slug}`;
     const out = setHead(html, { title: page.title, desc: page.desc, url })
       .replace(/<script type="application\/ld\+json">\{"@context":"https:\/\/schema.org","@type":"WebApplication"[^<]*<\/script>/, toolSchema({ ...page, local: undefined }, url))
-      .replace('</head>', `${alternates(slug)}\n</head>`)
+      .replace('</head>', `${crumbs(page.h1, url, lang)}\n${alternates(slug)}\n</head>`)
       .replace('<div id="root"></div>', `<div id="root">${localArticle(html, page, slug, lang)}</div>`);
     return injectLang(out, lang);
   }
@@ -705,7 +715,7 @@ function renderPage(html, slug, lang = 'en') {
   const url = `${SITE}/${slug}`;
   return setHead(html, { title: page.title, desc: page.desc, url })
     .replace(/<script type="application\/ld\+json">\{"@context":"https:\/\/schema.org","@type":"WebApplication"[^<]*<\/script>/, page.h1 && page.steps ? toolSchema(page, url) : '$&')
-    .replace('</head>', `${faqSchema(page)}\n${slug === 'privacy' ? '' : alternates(slug)}\n</head>`)
+    .replace('</head>', `${faqSchema(page)}\n${crumbs(page.h1, url)}\n${slug === 'privacy' ? '' : alternates(slug)}\n</head>`)
     .replace('<div id="root"></div>', `<div id="root">${article(page, slug)}</div>`);
 }
 
@@ -738,6 +748,7 @@ function llmsTxt() {
 
 - Private by design: ${PRIVACY_PAGE.intro}
 - Works on phones, tablets and computers in any modern browser, and can be installed as an app.
+- Also written as Lets Convert PDF or Let's Convert PDF. Website: https://letsconvertpdf.com
 - Made by Maqsusi Digital Industries Software.
 
 ## Tools that run on your device (files are never uploaded)

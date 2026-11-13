@@ -108,7 +108,7 @@ function shell({ title, desc, url, body, schema }) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${url}">
 <meta property="og:type" content="article"><meta property="og:url" content="${url}"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">
-<meta name="twitter:card" content="summary"><meta name="theme-color" content="#2563EB"><link rel="icon" href="/icon-192.png">
+<meta property="og:site_name" content="LetsConvertPDF"><meta property="og:image" content="${SITE}/icon-512.png"><meta name="twitter:card" content="summary"><meta name="theme-color" content="#2563EB"><link rel="icon" href="/icon-192.png">
 ${schema ? `<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>` : ''}
 <style>${STYLE}</style></head><body>
 <header><a class="brand" href="/">LetsConvertPDF</a><nav><a href="/guides">Guides</a> · <a href="/privacy">Privacy</a></nav></header>
@@ -145,7 +145,11 @@ ${related.length ? `<h2>More guides</h2><ul class="cards">${related.map(r => `<l
   const qa = questions(g.body);
   const articleSchema = { '@type': 'Article', headline: g.title, description: g.description, datePublished: g.date, dateModified: g.updated || g.date,
     mainEntityOfPage: url, author: { '@type': 'Organization', name: 'LetsConvertPDF' }, publisher: { '@type': 'Organization', name: 'LetsConvertPDF', logo: { '@type': 'ImageObject', url: `${SITE}/icon-512.png` } } };
-  const schema = { '@context': 'https://schema.org', '@graph': [articleSchema,
+  const crumbs = { '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'LetsConvertPDF', item: `${SITE}/` },
+    { '@type': 'ListItem', position: 2, name: 'Guides', item: `${SITE}/guides` },
+    { '@type': 'ListItem', position: 3, name: g.title, item: url }] };
+  const schema = { '@context': 'https://schema.org', '@graph': [articleSchema, crumbs,
     ...(qa.length ? [{ '@type': 'FAQPage', mainEntity: qa.map(x => ({ '@type': 'Question', name: x.q, acceptedAnswer: { '@type': 'Answer', text: x.a } })) }] : [])] };
   return shell({ title: `${g.title} | LetsConvertPDF`, desc: g.description, url, body, schema });
 }

@@ -14,10 +14,15 @@
   <meta property="og:url" content="https://letsconvertpdf.com/" />
   <meta property="og:title" content="LetsConvertPDF — Private PDF Tools" />
   <meta property="og:description" content="Free PDF tools and on-device AI that never upload your files: merge, compress, sign, OCR, chat with PDF and more." />
+  <meta property="og:site_name" content="LetsConvertPDF" />
+  <meta property="og:image" content="https://letsconvertpdf.com/icon-512.png" />
+  <meta name="application-name" content="LetsConvertPDF" />
+  <meta name="apple-mobile-web-app-title" content="LetsConvertPDF" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="LetsConvertPDF — Private PDF Tools" />
   <meta name="theme-color" content="#0A1628" />
   <link rel="manifest" href="/manifest.webmanifest" />
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://letsconvertpdf.com/#org","name":"LetsConvertPDF","alternateName":["Lets Convert PDF","Let's Convert PDF","LetsConvert PDF","letsconvertpdf.com"],"url":"https://letsconvertpdf.com/","logo":"https://letsconvertpdf.com/icon-512.png","description":"Private PDF tools and on-device AI that process files in the browser, so documents are never uploaded.","parentOrganization":{"@type":"Organization","name":"Maqsusi Digital Industries Software","url":"https://maqsusi.com"}},{"@type":"WebSite","@id":"https://letsconvertpdf.com/#website","name":"LetsConvertPDF","alternateName":["Lets Convert PDF","Let's Convert PDF"],"url":"https://letsconvertpdf.com/","publisher":{"@id":"https://letsconvertpdf.com/#org"},"inLanguage":["en","es","pt","fr","de","id","hi","ur","ar"]}]}</script>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"LetsConvertPDF","url":"https://letsconvertpdf.com","description":"Free, private PDF tools that run in your browser: your files never leave your device.","applicationCategory":"UtilitiesApplication","operatingSystem":"Web Browser","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"creator":{"@type":"Organization","name":"Maqsusi Digital Industries Software","url":"https://maqsusi.com"}}</script>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232563EB'/><text x='4' y='24' font-family='Arial' font-size='20' font-weight='bold' fill='white'>L</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -1439,6 +1444,24 @@ function LanguagePicker() {
   );
 }
 
+/* Shown on a translated page when the browser doesn't ask for that language
+   (for example after following a Google result or a shared /hi/ link), so the
+   visitor can get back to English in one tap. Hidden once dismissed. */
+function LangHint() {
+  const prefs = (navigator.languages || [navigator.language || 'en']).map(l => String(l).toLowerCase().slice(0, 2));
+  const [show, setShow] = useState(() => LANG !== 'en' && !prefs.includes(LANG) && !sessionStorage.getItem('lcp-langhint'));
+  if (!show) return null;
+  const rest = location.pathname.replace(new RegExp(`^${LP}(?=/|$)`), '') || '/';
+  const close = () => { sessionStorage.setItem('lcp-langhint', '1'); setShow(false); };
+  return (
+    <div dir="ltr" lang="en" className="text-sm text-center px-4 py-2 flex items-center justify-center gap-3 flex-wrap" style={{background:'#1E3A8A',color:'#fff'}}>
+      <span>This page is in {LANG_NAMES[LANG]}.</span>
+      <a href={rest + location.search} className="font-bold underline">View in English</a>
+      <button onClick={close} aria-label="Keep this language" className="opacity-80 hover:opacity-100">✕</button>
+    </div>
+  );
+}
+
 function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
   const { isDark, toggle } = useTheme();
   const { user, logout, openAuth, isAuthenticated } = useAuth();
@@ -1595,6 +1618,7 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <div className="min-h-screen flex flex-col" style={{background:'var(--bg)'}}>
+          <LangHint/>
           <Navbar onHome={goHome} onCategory={showCategory} onPrivacy={openPrivacy} onCommand={() => setPalette(true)}/>
           <main className="flex-1">
             {route.view === 'tool'
