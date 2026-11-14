@@ -894,6 +894,7 @@ app.get('/api/health', (req, res) => {
     emailConfigured: !!transporter,
     googleSignInConfigured: !!googleClient,
     engines,
+    indexNow: indexNow.status.last, // last ping to Bing/IndexNow: { at, ok, sent | error }
   });
 });
 
@@ -1090,9 +1091,10 @@ cron.schedule('*/30 * * * *', async () => {
 app.listen(PORT, () => {
   // Tell Bing about new pages and guides once the site is up (production only).
   if (process.env.NODE_ENV === 'production' && process.env.INDEXNOW !== 'off') {
-    setTimeout(() => indexNow.ping(seo.sitemapUrls())
-      .then(r => r.sent && console.log(`[indexnow] sent ${r.sent} URLs`))
-      .catch(e => console.warn(`[indexnow] ${e.message}`)), 30000);
+    const pingNow = () => indexNow.ping(seo.sitemapUrls())
+      .then(r => console.log(`[indexnow] sent ${r.sent} URLs`))
+      .catch(e => { console.warn(`[indexnow] ${e.message}`); setTimeout(pingNow, 3600000); });
+    setTimeout(pingNow, 30000);
   }
   console.log(`
 ╔══════════════════════════════════════════════════════╗
