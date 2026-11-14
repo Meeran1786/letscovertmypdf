@@ -719,8 +719,23 @@ function renderPage(html, slug, lang = 'en') {
     .replace('<div id="root"></div>', `<div id="root">${article(page, slug)}</div>`);
 }
 
+let builtOn = null;
+function contentDate() {
+  if (!builtOn) {
+    const fs = require('fs'), path = require('path');
+    const files = [path.join(__dirname, 'public', 'index.html'), __filename,
+      ...fs.readdirSync(path.join(__dirname, 'i18n')).map(f => path.join(__dirname, 'i18n', f))];
+    const newest = Math.max(...files.map(f => { try { return fs.statSync(f).mtimeMs; } catch { return 0; } }));
+    builtOn = new Date(newest || Date.now()).toISOString().slice(0, 10);
+  }
+  return builtOn;
+}
+
 function sitemapUrls() {
-  const today = new Date().toISOString().slice(0, 10);
+  // lastmod is the day the page content last changed (newest of the files the
+  // pages are built from), not "today": Bing and Google ignore a lastmod that
+  // changes on every fetch, and IndexNow re-sends pages only when it changes.
+  const today = contentDate();
   const urls = ['', 'privacy', ...Object.keys(PAGES)].map(u => ({ loc: `${SITE}/${u}`, lastmod: today, priority: u === '' ? '1.0' : '0.8' }));
   for (const l of i18n.LANGS.slice(1)) {
     urls.push({ loc: `${SITE}/${l}`, lastmod: today, priority: '0.9' });
