@@ -379,6 +379,12 @@ app.get('/guides/:slug', (req, res) => {
 });
 // Translated interface: /es, /es/merge-pdf, … (English stays at the root).
 const LANG_RE = require('./i18n').LANGS.slice(1).join('|');
+// Steps for every tool, shown in the app's "How it works" panel (not under /api/,
+// which robots.txt blocks, so Google can render the panel too).
+app.get('/howto.json', (req, res) => {
+  const lang = require('./i18n').has(req.query.lang) ? req.query.lang : 'en';
+  res.set('Cache-Control', 'public, max-age=3600').json(seo.howto(readIndex(), lang));
+});
 app.get('/', (req, res) => res.type('html').send(seo.renderHome(readIndex())));
 app.get(`/:lang(${LANG_RE})`, (req, res) => res.type('html').send(seo.renderHome(readIndex(), req.params.lang)));
 app.get(`/:lang(${LANG_RE})/:slug`, (req, res, next) => {
