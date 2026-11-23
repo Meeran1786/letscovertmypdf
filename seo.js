@@ -600,6 +600,39 @@ function article(page, slug) {
 <h2>More free, private PDF tools</h2><ul>${links}</ul><p><a href="/privacy">How we keep your files private</a></p></main>`;
 }
 
+/* Audience pages (/pdf-tools-for-lawyers, …) and the trust centre (/trust).
+   Their text lives in public/js/audiences.js, which the app also reads. */
+const { AUDIENCES, TRUST } = require('./public/js/audiences.js');
+const AUD = Object.fromEntries(AUDIENCES.map(a => [a.slug, a]));
+const MAIN = '<main style="max-width:720px;margin:0 auto;padding:96px 16px;font-family:system-ui,sans-serif;color:#E2E8F0">';
+const faqHtml = page => page.faq ? `<h2>Questions</h2>${page.faq.map(([q, a]) => `<h3>${esc(q)}</h3><p>${esc(a)}</p>`).join('')}` : '';
+const audienceLinks = skip => `<h2>Who LetsConvertPDF is for</h2><ul>${AUDIENCES.filter(a => a.slug !== skip).map(a => `<li><a href="/${a.slug}">${esc(a.h1)}</a></li>`).join('')}</ul>`;
+
+function audienceArticle(a) {
+  const tools = a.tools.map(s => `<li><a href="/${s}">${esc(PAGES[s].h1)}</a>: ${esc(PAGES[s].desc)}</li>`).join('');
+  return `${MAIN}
+<h1>${esc(a.h1)}</h1><p>${esc(a.intro)}</p>${a.needs.map(([t, d]) => `<h2>${esc(t)}</h2><p>${esc(d)}</p>`).join('')}
+<h2>Recommended tools</h2><ul>${tools}</ul>${a.flows ? `<h2>Ready-made workflows</h2><ul>${a.flows.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
+${faqHtml(a)}${audienceLinks(a.slug)}<p><a href="/trust">Trust and security</a> · <a href="/privacy">How we keep your files private</a></p></main>`;
+}
+
+function trustArticle() {
+  return `${MAIN}
+<h1>${esc(TRUST.h1)}</h1><p>${esc(TRUST.intro)}</p><h2>What protects your files today</h2>${TRUST.today.map(([, t, d]) => `<h3>${esc(t)}</h3><p>${esc(d)}</p>`).join('')}
+<h2>Certifications and compliance</h2><ul>${TRUST.roadmap.map(([n, st, d]) => `<li><strong>${esc(n)}</strong> (${st === 'planned' ? 'on our roadmap, not yet certified' : 'aligned, not certified'}): ${esc(d)}</li>`).join('')}</ul>
+<h2>Check it yourself</h2><p>${esc(TRUST.verify)}</p>${faqHtml(TRUST)}${audienceLinks()}<p><a href="/privacy">Which tools run on your device</a></p></main>`;
+}
+
+/** Steps for every tool, for the "How it works" panel in the app. */
+function howto(html, lang = 'en') {
+  const out = {};
+  for (const [slug, p] of Object.entries(PAGES)) {
+    const page = lang === 'en' ? p : localPage(html, slug, lang);
+    out[slug] = { steps: (page || p).steps, local: !!p.local };
+  }
+  return out;
+}
+
 function faqSchema(page) {
   if (!page.faq) return '';
   return `<script type="application/ld+json">${JSON.stringify({
@@ -700,7 +733,7 @@ function renderHome(html, lang = 'en') {
 function renderPage(html, slug, lang = 'en') {
   if (lang !== 'en') {
     if (!i18n.has(lang)) return null;
-    if (slug === 'privacy') return injectLang(renderPage(html, slug), lang);
+    if (slug === 'privacy' || AUD[slug] || slug === TRUST.slug) return injectLang(renderPage(html, slug), lang);
     const page = localPage(html, slug, lang);
     if (!page) return null;
     const url = `${SITE}/${lang}/${slug}`;
@@ -709,6 +742,12 @@ function renderPage(html, slug, lang = 'en') {
       .replace('</head>', `${crumbs(page.h1, url, lang)}\n${alternates(slug)}\n</head>`)
       .replace('<div id="root"></div>', `<div id="root">${localArticle(html, page, slug, lang)}</div>`);
     return injectLang(out, lang);
+  }
+  if (AUD[slug] || slug === TRUST.slug) {
+    const page = AUD[slug] || TRUST, url = `${SITE}/${slug}`;
+    return setHead(html, { title: page.title, desc: page.desc, url })
+      .replace('</head>', `${faqSchema(page)}\n${crumbs(page.h1, url)}\n</head>`)
+      .replace('<div id="root"></div>', `<div id="root">${AUD[slug] ? audienceArticle(page) : trustArticle()}</div>`);
   }
   const page = slug === 'privacy' ? PRIVACY_PAGE : PAGES[slug];
   if (!page) return null;
@@ -723,7 +762,7 @@ let builtOn = null;
 function contentDate() {
   if (!builtOn) {
     const fs = require('fs'), path = require('path');
-    const files = [path.join(__dirname, 'public', 'index.html'), __filename,
+    const files = [path.join(__dirname, 'public', 'index.html'), path.join(__dirname, 'public', 'js', 'audiences.js'), __filename,
       ...fs.readdirSync(path.join(__dirname, 'i18n')).map(f => path.join(__dirname, 'i18n', f))];
     const newest = Math.max(...files.map(f => { try { return fs.statSync(f).mtimeMs; } catch { return 0; } }));
     builtOn = new Date(newest || Date.now()).toISOString().slice(0, 10);
@@ -736,7 +775,7 @@ function sitemapUrls() {
   // pages are built from), not "today": Bing and Google ignore a lastmod that
   // changes on every fetch, and IndexNow re-sends pages only when it changes.
   const today = contentDate();
-  const urls = ['', 'privacy', ...Object.keys(PAGES)].map(u => ({ loc: `${SITE}/${u}`, lastmod: today, priority: u === '' ? '1.0' : '0.8' }));
+  const urls = ['', 'privacy', TRUST.slug, ...Object.keys(AUD), ...Object.keys(PAGES)].map(u => ({ loc: `${SITE}/${u}`, lastmod: today, priority: u === '' ? '1.0' : '0.8' }));
   for (const l of i18n.LANGS.slice(1)) {
     urls.push({ loc: `${SITE}/${l}`, lastmod: today, priority: '0.9' });
     for (const slug of Object.keys(PAGES)) urls.push({ loc: `${SITE}/${l}/${slug}`, lastmod: today, priority: '0.7' });
@@ -778,9 +817,14 @@ ${guides.length ? `
 
 ${guides.map(g => `- [${g.title}](${SITE}/guides/${g.slug}): ${g.description}`).join('\n')}
 ` : ''}
+## Who it is for
+
+${AUDIENCES.map(a => `- [${a.h1}](${SITE}/${a.slug}): ${a.desc}`).join('\n')}
+
 ## Optional
 
 - [How we keep files private](${SITE}/privacy)
+- [Trust and security](${SITE}/trust): ${TRUST.desc}
 - [All guides](${SITE}/guides)
 - [Sitemap](${SITE}/sitemap.xml)
 `;
@@ -788,4 +832,4 @@ ${guides.map(g => `- [${g.title}](${SITE}/guides/${g.slug}): ${g.description}`).
 
 const robots = () => `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin\n\nSitemap: ${SITE}/sitemap.xml\n`;
 
-module.exports = { PAGES, SITE, renderPage, renderHome, sitemap, sitemapUrls, robots, llmsTxt };
+module.exports = { PAGES, SITE, AUDIENCES, TRUST, howto, renderPage, renderHome, sitemap, sitemapUrls, robots, llmsTxt };

@@ -53,6 +53,7 @@
   <script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="/js/engine.js"></script>
+  <script src="/js/audiences.js"></script>
 
   <style>
     /* ── CSS custom properties for theming ── */
@@ -147,6 +148,7 @@
 <script type="text/babel" src="/js/r3.jsx"></script>
 <script type="text/babel" src="/js/r4.jsx"></script>
 <script type="text/babel" src="/js/ads.jsx"></script>
+<script type="text/babel" src="/js/r5.jsx"></script>
 <script type="text/babel">
 const { useState, useCallback, useRef, useEffect, useContext, createContext, useMemo } = React;
 
@@ -667,6 +669,8 @@ function ChatWidget() {
   const [error, setError] = useState('');
   const [f, setF] = useState({ name:'', email:'', message:'' });
   const set = k => e => setF(p => ({...p, [k]: e.target.value}));
+  // "Contact us" / "Ask about a licence" buttons elsewhere open this panel.
+  useEffect(() => { const o = () => setOpen(true); window.addEventListener('lcp-open-chat', o); return () => window.removeEventListener('lcp-open-chat', o); }, []);
 
   const submit = async e => {
     e.preventDefault(); setError(''); setLoading(true);
@@ -1312,7 +1316,7 @@ function ToolCard({ tool, onClick }) {
 /* ══════════════════════════════════════
    HOME PAGE
 ══════════════════════════════════════ */
-function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
+function HomePage({ onTool, cat, setCat, onPrivacy, onCommand, onAudience, onTrust }) {
   const [search, setSearch] = useState('');
   const { isAuthenticated, user, openAuth } = useAuth();
 
@@ -1422,6 +1426,9 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand }) {
           ))}
         </div>
       </section>
+
+      <AudienceSection onAudience={onAudience}/>
+      <TrustSection onTrust={onTrust}/>
     </div>
   );
 }
@@ -1546,7 +1553,7 @@ function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
 /* ══════════════════════════════════════
    FOOTER
 ══════════════════════════════════════ */
-function Footer({ onTool, onPrivacy }) {
+function Footer({ onTool, onPrivacy, onTrust }) {
   return (
     <footer style={{borderTop:'1px solid var(--border)'}}>
       <div className="max-w-7xl mx-auto px-4 pt-10 pb-24 md:pb-10 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -1558,6 +1565,7 @@ function Footer({ onTool, onPrivacy }) {
           {TOOLS.slice(0,8).map(t=><a key={t.id} href={`${LP}/${t.slug}`} onClick={e=>{e.preventDefault();onTool(t);}} className="hover:text-blue-400 transition-colors">{t.label}</a>)}
           <a href="/guides" className="hover:text-blue-400 transition-colors">{tr('foot.guides','Guides')}</a>
           <a href={`${LP}/privacy`} onClick={e=>{e.preventDefault();onPrivacy();}} className="hover:text-blue-400 transition-colors">{tr('foot.privacy','Privacy')}</a>
+          <a href={`${LP}/trust`} onClick={e=>{e.preventDefault();onTrust();}} className="hover:text-blue-400 transition-colors">{tr('foot.trust','Trust & security')}</a>
         </div>
         <p className="text-xs" style={{color:'var(--subtle)'}}>© {new Date().getFullYear()} Maqsusi Digital Industries</p>
       </div>
@@ -1571,6 +1579,9 @@ function Footer({ onTool, onPrivacy }) {
 function routeFromPath(path) {
   const slug = (path || '/').replace(LP ? new RegExp(`^${LP}(?=/|$)`) : /^$/, '').replace(/^\/+|\/+$/g, '');
   if (slug === 'privacy') return { view:'privacy' };
+  if (slug === 'trust') return { view:'trust' };
+  const audience = (window.LCP_AUDIENCES || []).find(a => a.slug === slug);
+  if (audience) return { view:'audience', audience };
   const tool = TOOLS.find(t => t.slug === slug);
   return tool ? { view:'tool', tool } : { view:'home' };
 }
@@ -1581,7 +1592,9 @@ const TITLE_HOME = tr('home.title', 'LetsConvertPDF — Private PDF Tools That N
    rendered page, and without it they only see the sign-in card (thin content). */
 const SEO_PATH = location.pathname.replace(/\/+$/, '') || '/';
 const SEO_HTML = (document.querySelector('#root > main')?.innerHTML || '')
-  .replace(/<h1[^>]*>[\s\S]*?<\/h1>/, '');
+  .replace(/<h1[^>]*>[\s\S]*?<\/h1>/, '')
+  // The steps are shown by <HowItWorks> right above, so drop the duplicate list.
+  .replace(/<h2>[^<]*<\/h2><ol>[\s\S]*?<\/ol>/, '');
 
 function App() {
   const [route, setRoute] = useState(() => routeFromPath(location.pathname));
@@ -1598,7 +1611,9 @@ function App() {
   }, []);
   useEffect(() => {
     document.title = route.view === 'tool' ? `${tr('seo.title', '{tool} — Free & Private').replace('{tool}', route.tool.label)} | LetsConvertPDF`
-      : route.view === 'privacy' ? 'Private by design | LetsConvertPDF' : TITLE_HOME;
+      : route.view === 'privacy' ? 'Private by design | LetsConvertPDF'
+      : route.view === 'trust' ? 'Trust and security | LetsConvertPDF'
+      : route.view === 'audience' ? `${route.audience.h1} | LetsConvertPDF` : TITLE_HOME;
   }, [route]);
   const openTool = (t, preset) => go({ view:'tool', tool:t, preset }, `${LP}/${t.slug}`);
   const [palette, setPalette] = useState(false);
@@ -1609,6 +1624,8 @@ function App() {
     return () => window.removeEventListener('keydown', k);
   }, []);
   const openPrivacy = () => go({ view:'privacy' }, `${LP}/privacy`);
+  const openTrust = () => go({ view:'trust' }, `${LP}/trust`);
+  const openAudience = a => go({ view:'audience', audience:a }, `${LP}/${a.slug}`);
   const goHome = () => go({ view:'home' }, LP || '/');
   const showCategory = c => {
     go({ view:'home' }, LP || '/'); setCat(c);
@@ -1624,15 +1641,20 @@ function App() {
             {route.view === 'tool'
               ? <>
                   <Workspace key={route.tool.id + (route.preset ? JSON.stringify(route.preset) : '')} tool={route.tool} preset={route.preset} onBack={goHome}/>
+                  <HowItWorks tool={route.tool}/>
                   {SEO_HTML && (location.pathname.replace(/\/+$/, '') || '/') === SEO_PATH &&
                     <section className="seo-article max-w-3xl mx-auto px-4 sm:px-6 pb-16" dangerouslySetInnerHTML={{__html: SEO_HTML}}/>}
                 </>
               : route.view === 'privacy'
                 ? <PrivacyPage onTool={openTool}/>
-                : <HomePage onTool={openTool} cat={cat} setCat={setCat} onPrivacy={openPrivacy} onCommand={runCommand}/>
+              : route.view === 'trust'
+                ? <TrustPage onAudience={openAudience} onPrivacy={openPrivacy}/>
+              : route.view === 'audience'
+                ? <AudiencePage key={route.audience.slug} audience={route.audience} onTool={openTool} onAudience={openAudience} onTrust={openTrust}/>
+                : <HomePage onTool={openTool} cat={cat} setCat={setCat} onPrivacy={openPrivacy} onCommand={runCommand} onAudience={openAudience} onTrust={openTrust}/>
             }
           </main>
-          <Footer onTool={openTool} onPrivacy={openPrivacy}/>
+          <Footer onTool={openTool} onPrivacy={openPrivacy} onTrust={openTrust}/>
           {palette && <CommandPalette onRun={runCommand} onClose={() => setPalette(false)}/>}
           <ChatWidget/>
         </div>
