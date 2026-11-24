@@ -732,22 +732,27 @@ function parseCommand(raw) {
 
 const CMD_EXAMPLES = ['merge these, compress, then password-protect', 'translate this into Spanish', 'pull the invoice totals into Excel', 'check this contract for risky clauses', 'add Bates numbers ACME and flatten'];
 
-function CommandBar({ onRun, autoFocus, compact }) {
+/* On the home page the same box also searches the tool grid (onQuery), so
+   there is one place to type instead of a command box plus a search box. */
+function CommandBar({ onRun, autoFocus, compact, onQuery, matches }) {
   const [q, setQ] = useState('');
   const plan = useMemo(() => parseCommand(q), [q]);
-  const submit = e => { e && e.preventDefault(); if (plan) onRun(plan); };
+  const change = v => { setQ(v); onQuery && onQuery(v); };
+  const submit = e => { e && e.preventDefault(); if (plan) onRun(plan); else if (matches && matches.length) onRun({ tool: matches[0].id, preset: {}, label: [matches[0].label] }); };
+  const searching = !!onQuery;
   return (
     <form onSubmit={submit} className="text-left">
       <div className="relative">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-400"><Ic n="sparkle" sz={16}/></span>
-        <input value={q} onChange={e => setQ(e.target.value)} autoFocus={autoFocus} aria-label="Tell us what to do with your PDF"
-          placeholder="Tell me what to do… e.g. merge, compress, then password-protect" className="inp w-full" style={{borderRadius:'1rem',padding:'0.875rem 6.5rem 0.875rem 2.75rem'}}/>
-        <button type="submit" disabled={!plan} className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-40" style={{background:'#2563EB'}}>Go</button>
+        <input value={q} onChange={e => change(e.target.value)} autoFocus={autoFocus} aria-label={searching ? 'Search tools or tell us what to do' : 'Tell us what to do with your PDF'}
+          placeholder={searching ? 'Search tools, or say what you need… e.g. merge, compress, then protect' : 'Tell me what to do… e.g. merge, compress, then password-protect'} className="inp w-full" style={{borderRadius:'1rem',padding:'0.875rem 6.5rem 0.875rem 2.75rem'}}/>
+        <button type="submit" disabled={!plan && !(matches && matches.length && q.trim())} className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-40" style={{background:'#2563EB'}}>Go</button>
       </div>
       <div className="mt-2 min-h-6 text-xs" style={{color:'var(--muted)'}}>
         {plan ? <span className="flex flex-wrap items-center gap-1.5">I’ll {plan.label.map((l, i) => <React.Fragment key={i}>{i > 0 && <span>→</span>}<span className="px-2 py-0.5 rounded-full" style={{background:'rgba(37,99,235,0.15)',color:'var(--c-blue-soft)'}}>{l}</span></React.Fragment>)}</span>
+          : searching && q.trim() && matches && matches.length ? <span>{matches.length === 1 ? `Press Enter to open ${matches[0].label}` : `${matches.length} matching tools below. Press Enter to open ${matches[0].label}.`}</span>
           : q.trim().length > 2 ? <span>Not sure what to do yet. Try naming a tool, like “compress” or “translate”.</span>
-          : !compact && <span className="flex flex-wrap gap-1.5">{CMD_EXAMPLES.slice(0, 3).map(x => <button type="button" key={x} onClick={() => setQ(x)} className="px-2 py-0.5 rounded-full hover:text-blue-300" style={{border:'1px solid var(--border-s)'}}>{x}</button>)}</span>}
+          : !compact && <span className="flex flex-wrap gap-1.5">{CMD_EXAMPLES.slice(0, 3).map(x => <button type="button" key={x} onClick={() => change(x)} className="px-2 py-0.5 rounded-full hover:text-blue-300" style={{border:'1px solid var(--border-s)'}}>{x}</button>)}</span>}
       </div>
     </form>
   );
