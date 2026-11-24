@@ -1659,6 +1659,7 @@ function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
                 <div style={{borderTop:'1px solid var(--border)'}}>
                   <button role="menuitem" onClick={() => { setNavOpen(false); onCommand(); }} className={navItem} style={{color:'var(--text)'}}><Ic n="sparkle" sz={14}/>{tr('nav.ask','Ask: tell us what to do')}</button>
                   <a role="menuitem" href={`${LP}/privacy`} onClick={e=>{e.preventDefault();setNavOpen(false);onPrivacy();}} className={navItem} style={{color:'var(--c-green)'}}><Ic n="lock" sz={14}/>{tr('nav.privacy','Privacy')}</a>
+                  <a role="menuitem" href={`${LP}/pricing`} onClick={e=>{e.preventDefault();setNavOpen(false);goPricing();}} className={navItem} style={{color:'var(--text)'}}><Ic n="sparkle" sz={14}/>{tr('nav.pricing','Plans')}</a>
                 </div>
                 <div className="px-4 py-3" style={{borderTop:'1px solid var(--border)'}}><LanguagePicker/></div>
               </div>
