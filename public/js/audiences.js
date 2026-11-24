@@ -17,7 +17,7 @@
       slug: 'pdf-tools-for-students', group: 'everyday', label: 'Students', icon: 'user',
       title: 'PDF Tools for Students — Private, On-Device AI for Notes and Papers',
       h1: 'PDF tools for students',
-      desc: 'Summarise readings, chat with lecture notes, make scans searchable and merge assignments. Runs in your browser, so your work stays yours. Extra credits for students.',
+      desc: 'Summarise readings, chat with lecture notes, make scans searchable and merge assignments. Runs in your browser, so your work stays yours. 1,000 free credits every month.',
       intro: 'Readings, lecture slides, scanned handouts and assignment submissions: most of student life is PDFs. LetsConvertPDF handles them in your browser, and the AI that summarises and answers questions runs on your own device, so your notes and drafts are never uploaded.',
       needs: [
         ['Study faster', 'Get a summary of a 40-page reading, or ask a PDF a question and jump to the page the answer came from.'],
@@ -26,7 +26,7 @@
       ],
       tools: ['summarize-pdf', 'chat-with-pdf', 'ocr-pdf', 'merge-pdf', 'compress-pdf', 'jpg-to-pdf', 'word-to-pdf', 'translate-pdf'],
       faq: [
-        ['Is there a student plan?', 'When you first sign in with Google, choose "Student". Student accounts get a larger free monthly credit top-up than other accounts.'],
+        ['Is there a student plan?', 'Every free account, students included, gets 1,000 credits each month after a Google sign-in. That is about 100 uses of the basic tools.'],
         ['Will my essay be uploaded or used to train an AI?', 'No. Summaries and chat run on your own device. Your file never reaches our servers, so it cannot be stored or used for training.'],
       ],
     },
@@ -60,7 +60,7 @@
       ],
       tools: ['pdf-data-to-excel', 'review-contract', 'sign-pdf', 'watermark-pdf', 'compress-pdf', 'pdf-to-word', 'add-header-footer-to-pdf', 'pdf-workflows'],
       faq: [
-        ['Can my whole team use it?', 'Yes. Each person signs in with their own Google account. For shared credits and seats, ask us about a business licence using the chat button.'],
+        ['Can my whole team use it?', 'Yes. Each person signs in with their own Google account. For unlimited use and team seats, see the Business plan on our Plans page.'],
         ['Does it work with Google Workspace accounts?', 'Yes. Sign-in is with Google, including Google Workspace accounts on your company domain.'],
       ],
     },
@@ -163,7 +163,36 @@
     ],
   };
 
-  const out = { GROUPS, AUDIENCES, TRUST };
+  /* Plans (/pricing). Numbers match the server defaults; an admin can change
+     the live numbers on /admin, so keep this text in step if they do. */
+  const PRICING = {
+    slug: 'pricing',
+    title: 'Plans & Credits — Free, Pro and Business | LetsConvertPDF',
+    h1: 'Plans and credits',
+    desc: 'Free: 1,000 credits every month with Google sign-in. Pro: 10,000 credits a month and bigger files. Business: unlimited use, team seats and an audit log for banks, CAs and auditors.',
+    intro: 'Every account signs in with Google and gets 1,000 free credits each month. Most tools cost 10 credits a use, so that is about 100 uses a month. Upgrade when you need more.',
+    plans: [
+      { id: 'free', name: 'Free', price: 'Free', tagline: 'For students and occasional use',
+        features: ['1,000 credits every month', 'About 100 uses of basic tools', 'Files up to 25 MB', 'All 60+ tools, including on-device AI', 'Credits reset on the 1st, no rollover'] },
+      { id: 'pro', name: 'Pro', price: 'Ask us', tagline: 'For freelancers and power users', highlight: true,
+        features: ['10,000 credits every month', 'Files up to 200 MB', 'Batch processing and workflows on many files', 'Everything in Free', 'Invoice on request'] },
+      { id: 'business', name: 'Business', price: 'Custom', tagline: 'For banks, CAs, accountants and auditors',
+        features: ['Unlimited use for every seat', 'Files up to 500 MB', 'Team seats and company Google domain', 'Usage audit log without file contents', 'Invoice and a named contact'] },
+    ],
+    costs: [
+      ['Basic tools', '10 credits', 'Merge, split, compress, convert, rotate, sign, protect, watermark and most others.'],
+      ['Heavy tools', '25 credits', 'OCR, Chat with PDF, Summarize, Translate, Review contract, Invoices to Excel, Redact and Compare.'],
+      ['Batches', 'Per file', 'Running a tool on 20 files costs 20 uses.'],
+    ],
+    faq: [
+      ['Do unused credits roll over?', 'No. Your balance resets to your plan\'s monthly credits on the 1st of each month.'],
+      ['Why do I need to sign in?', 'Every use is tied to a verified Google account. It keeps the service fair and lets businesses see who used what. Your files still stay on your device for most tools.'],
+      ['How do I pay for Pro or Business?', 'Send a request from this page. We reply with an invoice and switch your plan on. Online card payment is coming later.'],
+      ['What happens when I run out?', 'Tools stop until your credits reset on the 1st, or until you upgrade. Nothing you made is lost.'],
+    ],
+  };
+
+  const out = { GROUPS, AUDIENCES, TRUST, PRICING };
   if (typeof module !== 'undefined' && module.exports) module.exports = out;
-  else { root.LCP_AUDIENCES = AUDIENCES; root.LCP_GROUPS = GROUPS; root.LCP_TRUST = TRUST; }
+  else { root.LCP_AUDIENCES = AUDIENCES; root.LCP_GROUPS = GROUPS; root.LCP_TRUST = TRUST; root.LCP_PRICING = PRICING; }
 })(typeof window !== 'undefined' ? window : globalThis);

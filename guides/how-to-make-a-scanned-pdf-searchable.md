@@ -60,4 +60,4 @@ Yes. It works in modern mobile browsers such as Safari and Chrome. Long scans ar
 
 ### Is it free?
 
-It's free to start. Sign in with Google and you get 1,000 free credits; each use costs 5. There is no watermark, and your file is still processed on your own device.
+It's free to start. Sign in with Google and you get 1,000 free credits every month; most tools cost 10 credits a use, AI and OCR tools 25. There is no watermark, and your file is still processed on your own device.

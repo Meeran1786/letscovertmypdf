@@ -1,6 +1,4 @@
-> **Superseded again (11 November 2026):** there are no anonymous users. Every tool needs a Google sign-in, and each use costs credits (1,000 to start, 5 per use, monthly top-ups by user type, all editable on `/admin`). See `server.js` → CREDITS.
-
-> **Superseded (November 2026):** every tool is now free and unlimited with no signup. On-device tools no longer call `/api/usage/consume`. The meter only applies to the server-side conversions, and only if `SERVER_TOOL_GUEST_DAILY_LIMIT` / `SERVER_TOOL_USER_DAILY_LIMIT` are set. The old `FREE_*_DAILY_LIMIT` variables are ignored.
+> **Current policy (24 November 2026):** there are no anonymous users and no lifetime-free or unlimited-free use. Every tool needs a Google sign-in and costs credits. Plans: **Free** 1,000 credits a month (reset on the 1st UTC, no rollover, files up to 25 MB), **Pro** 10,000 a month (200 MB), **Business** unlimited (500 MB). Basic tools cost 10 credits a use, heavy tools (OCR and the on-device AI tools) 25, batches pay per file. An upgrade prompt shows at 80% of the month's credits. All numbers are editable on `/admin`; see `server.js` → CREDITS AND PLANS. Everything below is history and no longer applies.
 
 # Freemium & Usage Metering — Addendum to PRD v2.0.0
 

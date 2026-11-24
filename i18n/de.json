@@ -1,6 +1,8 @@
 {
 "ui": {
 "lang": "Sprache",
+"nav.pricing": "Tarife",
+"foot.pricing": "Tarife",
 "nav.privacy": "Datenschutz",
 "nav.signout": "Abmelden",
 "nav.ask": "Fragen",
@@ -56,11 +58,11 @@
 "chip.credits": "1.000 Gratis-Credits",
 "chip.google": "Sichere Anmeldung mit Google",
 "chip.device": "Dateien bleiben auf Ihrem Gerät",
-"stat.credits": "Gratis-Credits zum Start",
+"stat.credits": "Gratis-Credits jeden Monat",
 "stat.signin": "Verifizierte Anmeldung für jeden Nutzer",
 "nav.signin": "Mit Google anmelden",
 "gate.title": "Melden Sie sich an, um dieses Tool zu nutzen",
-"gate.sub": "Neue Konten erhalten 1.000 Gratis-Credits. Jede Nutzung kostet 5. Ihre Dateien werden weiterhin auf Ihrem eigenen Gerät verarbeitet.",
+"gate.sub": "Kostenlose Konten erhalten jeden Monat 1.000 Credits. Die meisten Tools kosten 10 Credits pro Nutzung, KI- und OCR-Tools 25. Ihre Dateien werden weiterhin auf Ihrem eigenen Gerät verarbeitet.",
 "auth.title": "Anmelden, um fortzufahren",
 "auth.sub": "Wir nutzen Ihr Google-Konto, damit jeder Nutzer verifiziert ist. Ihr Google-Passwort sehen wir nie, und Ihre Dateien bleiben auf Ihrem Gerät.",
 "home.title": "LetsConvertPDF: private PDF-Tools, die deine Dateien nie hochladen",
