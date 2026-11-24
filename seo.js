@@ -728,12 +728,41 @@ function setHead(html, { title, desc, url }) {
     .replace(/(<meta name="twitter:title" content=")[^"]*(")/, `$1${esc(title)}$2`);
 }
 
+const HOME_FAQ = [
+  ['What is LetsConvertPDF?', 'LetsConvertPDF (also written Lets Convert PDF) is a set of private PDF tools and on-device AI that run in your web browser. Most tools process files on your own device, so your documents are never uploaded.'],
+  ['Is LetsConvertPDF free?', 'Yes, to start. Sign in with Google and a free account gets 1,000 credits every month. Basic tools cost 10 credits a use and AI or OCR tools 25. Pro and Business plans are on the pricing page. There are no watermarks.'],
+  ['Are my files uploaded?', 'Most tools, including all AI features, run inside your browser and never upload your file. Word, Excel, PowerPoint, PDF/A and HTML conversions use our server, and those files are deleted within 60 seconds.'],
+  ['Does it work on a phone?', 'Yes. It works in any modern browser on phones, tablets and computers, and can be installed as an app.'],
+];
+
+/* The home page as plain HTML inside #root. Search engines and AI crawlers that
+   don't run JavaScript (GPTBot, PerplexityBot, ClaudeBot and often Bing) would
+   otherwise see an empty page. React replaces it for people. */
+function homeArticle(html, lang) {
+  const en = lang === 'en';
+  const u = (k, f) => (en ? f : i18n.ui(lang, k, f));
+  const label = slug => { if (en) return PAGES[slug].h1; const id = toolIdFor(html, slug); const tr = id && i18n.tool(lang, id); return tr ? tr[0] : PAGES[slug].h1; };
+  const href = slug => (en ? `/${slug}` : `/${lang}/${slug}`);
+  const list = slugs => `<ul>${slugs.map(s => `<li><a href="${href(s)}">${esc(label(s))}</a>${en ? ` — ${esc(PAGES[s].desc)}` : ''}</li>`).join('')}</ul>`;
+  const local = Object.keys(PAGES).filter(s => PAGES[s].local), server = Object.keys(PAGES).filter(s => !PAGES[s].local);
+  const guides = en ? require('./guides').load(Object.keys(PAGES)) : [];
+  return `<main style="max-width:720px;margin:0 auto;padding:96px 16px;font-family:system-ui,sans-serif;color:#E2E8F0">
+<h1>${esc(u('home.title', 'LetsConvertPDF — Private PDF Tools That Never Upload Your Files'))}</h1>
+<p>${esc(en ? PRIVACY_PAGE.intro : u('home.desc', ''))}</p>
+<h2>${esc(en ? 'Tools that run on your device' : u('seo.more', 'More free, private PDF tools'))}</h2>${list(en ? local : [...local, ...server])}
+${en ? `<h2>Conversions that use our server (files deleted within 60 seconds)</h2>${list(server)}` : ''}
+${guides.length ? `<h2>Guides</h2><ul>${guides.map(g => `<li><a href="/guides/${g.slug}">${esc(g.title)}</a></li>`).join('')}</ul>` : ''}
+${en ? `<h2>Questions</h2>${HOME_FAQ.map(([q, a]) => `<h3>${esc(q)}</h3><p>${esc(a)}</p>`).join('')}` : ''}
+<p><a href="/privacy">How we keep your files private</a> · <a href="/pricing">Plans and credits</a></p></main>`;
+}
+
 /** The home page in `lang` ('en' adds only the hreflang links). */
 function renderHome(html, lang = 'en') {
-  if (lang === 'en') return html.replace('</head>', `${alternates('')}\n</head>`);
+  const body = h => h.replace('<div id="root"></div>', () => `<div id="root">${homeArticle(html, lang)}</div>`);
+  if (lang === 'en') return body(html.replace('</head>', `${faqSchema({ faq: HOME_FAQ })}\n${alternates('')}\n</head>`));
   if (!i18n.has(lang)) return null;
   const out = setHead(html, { title: i18n.ui(lang, 'home.title', ''), desc: i18n.ui(lang, 'home.desc', ''), url: `${SITE}/${lang}` });
-  return injectLang(out.replace('</head>', `${alternates('')}\n</head>`), lang);
+  return injectLang(body(out.replace('</head>', `${alternates('')}\n</head>`)), lang);
 }
 
 /** Returns index.html personalised for `slug` (in `lang`), or null for unknown paths. */
