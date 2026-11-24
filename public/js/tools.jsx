@@ -433,7 +433,7 @@ function FormFiller({ file, config, set }) {
   if (state === 'none') return <p className="text-sm" style={{color:'var(--muted)'}}>We couldn't find any blanks to fill. If this is a scan, run <a href="/ocr-pdf" className="text-blue-400">OCR PDF</a> first and try again, or use <a href="/edit-pdf" className="text-blue-400">Edit PDF</a> to type straight onto the page.</p>;
   return (
     <div className="space-y-4">
-      {config.flat && <p className="text-xs rounded-xl p-2.5" style={{background:'rgba(37,99,235,0.1)',color:'#93C5FD'}}>This form has no fillable fields, so we found {fields.length} blank{fields.length === 1 ? '' : 's'} on the page instead. Your answers are typed onto the lines.</p>}
+      {config.flat && <p className="text-xs rounded-xl p-2.5" style={{background:'rgba(37,99,235,0.1)',color:'var(--c-blue-soft)'}}>This form has no fillable fields, so we found {fields.length} blank{fields.length === 1 ? '' : 's'} on the page instead. Your answers are typed onto the lines.</p>}
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={autofill} disabled={!hasProfile} className="px-4 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50 flex items-center gap-1.5" style={{background:'#2563EB'}}><Ic n="sparkle" sz={13}/>Autofill from my profile</button>
         <button onClick={() => setProfileOpen(o => !o)} className="px-4 py-2 rounded-xl text-xs font-semibold" style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>{hasProfile ? 'Edit my profile' : 'Set up my profile'}</button>
@@ -789,7 +789,7 @@ function CompareWorkspace({ files, onQuota, onError }) {
           <p className="text-xs font-semibold mb-2" style={{color:'var(--muted)'}}>Page {p.page}{view === 'text' ? ` · ${p.changes} change${p.changes === 1 ? '' : 's'}` : visual[p.page] ? ` · ${(visual[p.page].changed * 100).toFixed(1)}% of the page differs` : ''}</p>
           {view === 'text'
             ? <p className="text-sm leading-relaxed" style={{color:'var(--text)'}}>{p.diff.map((s, i) => s.t === '=' ? (s.w.length > 24 ? <span key={i} style={{color:'var(--muted)'}}> {s.w.slice(0, 8).join(' ')} … {s.w.slice(-8).join(' ')} </span> : <span key={i}> {s.w.join(' ')} </span>)
-                : <span key={i} className={s.t === '-' ? 'line-through' : ''} style={{background: s.t === '-' ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)', color: s.t === '-' ? '#F87171' : '#34D399', borderRadius: 3, padding: '0 2px'}}>{s.w.join(' ')}</span>)}</p>
+                : <span key={i} className={s.t === '-' ? 'line-through' : ''} style={{background: s.t === '-' ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)', color: s.t === '-' ? 'var(--c-red)' : 'var(--c-green)', borderRadius: 3, padding: '0 2px'}}>{s.w.join(' ')}</span>)}</p>
             : visual[p.page] ? <img src={visual[p.page].url} alt={`Differences on page ${p.page}`} className="max-w-full mx-auto rounded shadow"/> : <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"/>}
         </div>
       ))}
