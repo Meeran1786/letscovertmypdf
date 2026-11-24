@@ -73,9 +73,9 @@ function AdCarousel({ placement = 'home' }) {
   const inner = s.image
     ? <img src={s.image} alt={s.title} className="block w-full h-full object-cover" loading="eager" decoding="async"/>
     : (
-      <div className="w-full h-full flex items-center gap-4 px-6 sm:px-14 text-white" style={{ background: s.bg || 'linear-gradient(90deg,#1D4ED8,#6D28D9)' }}>
+      <div className="w-full h-full flex items-center gap-3 sm:gap-4 px-4 pt-3 pb-6 sm:py-3 sm:px-14 text-white" style={{ background: s.bg || 'linear-gradient(90deg,#1D4ED8,#6D28D9)', minHeight: 'clamp(84px, 12vw, 120px)' }}>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-base sm:text-xl leading-snug truncate">{s.title}</p>
+          <p className="font-bold text-sm sm:text-xl leading-snug line-clamp-2 sm:truncate">{s.title}</p>
           {s.text && <p className="hidden sm:block text-sm text-white/80 mt-1 truncate">{s.text}</p>}
         </div>
         {s.href && <span className="shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-white text-slate-900 text-xs sm:text-sm font-semibold">{s.cta || 'Learn more'}</span>}
@@ -86,7 +86,7 @@ function AdCarousel({ placement = 'home' }) {
     <section aria-roledescription="carousel" aria-label="Promotions" className="max-w-7xl mx-auto w-full px-4"
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)} onBlur={() => setPaused(false)} onKeyDown={onKey}>
-      <div className="group relative overflow-hidden rounded-2xl shadow-lg" style={{ aspectRatio: s.image ? '4 / 1' : undefined, height: s.image ? undefined : 'clamp(72px, 12vw, 120px)', border: '1px solid var(--border)' }}>
+      <div className="group relative overflow-hidden rounded-2xl shadow-lg" style={{ aspectRatio: s.image ? '4 / 1' : undefined, minHeight: s.image ? undefined : 'clamp(84px, 12vw, 120px)', border: '1px solid var(--border)' }}>
         <div role="group" aria-roledescription="slide" aria-label={`${idx + 1} of ${n}: ${s.title}`} key={s.id} className="w-full h-full anim-fade">
           {s.href
             ? <a href={s.href} rel={rel} target={external ? '_blank' : undefined} onClick={() => adBeacon(s.id, 'click')}
