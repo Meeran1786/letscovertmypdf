@@ -9,8 +9,8 @@
 function PrivacyBadge({ tool, compact }) {
   const local = tool.engine === 'client';
   const style = local
-    ? { background:'rgba(16,185,129,0.1)', color:'#34D399', border:'1px solid rgba(16,185,129,0.3)' }
-    : { background:'rgba(245,158,11,0.1)', color:'#FBBF24', border:'1px solid rgba(245,158,11,0.3)' };
+    ? { background:'rgba(16,185,129,0.1)', color:'var(--c-green)', border:'1px solid rgba(16,185,129,0.3)' }
+    : { background:'rgba(245,158,11,0.1)', color:'var(--c-amber)', border:'1px solid rgba(245,158,11,0.3)' };
   const text = local
     ? (compact ? tr('badge.localShort','On your device') : tr('badge.local','Processed on your device. Your file is never uploaded.'))
     : (compact ? tr('badge.serverShort','Secure server') : tr('badge.server','Converted on our server over HTTPS, then deleted within 60 seconds.'));
@@ -225,7 +225,7 @@ function CitedText({ text, onPage }) {
         if (!m) return <span key={i}>{p.replace(/\*\*/g,'')}</span>;
         const n = parseInt(m[1], 10);
         return <button key={i} onClick={() => onPage(n)} className="inline-flex items-center mx-0.5 px-1.5 rounded text-[11px] font-semibold align-baseline hover:bg-blue-600 hover:text-white transition-colors"
-          style={{background:'rgba(37,99,235,0.15)', color:'#60A5FA'}} title={`Open page ${n}`}>p.{n}</button>;
+          style={{background:'rgba(37,99,235,0.15)', color:'var(--c-blue)'}} title={`Open page ${n}`}>p.{n}</button>;
       })}
     </div>
   );

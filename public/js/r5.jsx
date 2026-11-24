@@ -34,7 +34,7 @@ function HowItWorks({ tool }) {
           </li>
         ))}
       </ol>
-      <p className="text-xs mt-3 flex items-center gap-1.5" style={{color: local ? '#34D399' : '#FBBF24'}}>
+      <p className="text-xs mt-3 flex items-center gap-1.5" style={{color: local ? 'var(--c-green)' : 'var(--c-amber)'}}>
         <Ic n={local ? 'lock' : 'protect'} sz={13}/>
         {local ? tr('badge.local', 'Processed on your device. Your file is never uploaded.') : tr('badge.server', 'Converted on our server over HTTPS, then deleted within 60 seconds.')}
       </p>
@@ -99,7 +99,7 @@ function TrustSection({ onTrust }) {
 const StatusPill = ({ status }) => {
   const s = status === 'planned'
     ? { label: 'On roadmap', bg: 'rgba(148,163,184,0.12)', fg: '#94A3B8', bd: 'rgba(148,163,184,0.3)' }
-    : { label: 'Aligned, not certified', bg: 'rgba(59,130,246,0.12)', fg: '#60A5FA', bd: 'rgba(59,130,246,0.3)' };
+    : { label: 'Aligned, not certified', bg: 'rgba(59,130,246,0.12)', fg: 'var(--c-blue)', bd: 'rgba(59,130,246,0.3)' };
   return <span className="text-[11px] px-2 py-0.5 rounded-full whitespace-nowrap" style={{background:s.bg,color:s.fg,border:`1px solid ${s.bd}`}}>{s.label}</span>;
 };
 

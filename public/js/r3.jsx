@@ -626,7 +626,7 @@ function ReviewWorkspace({ file, onQuota, onError }) {
       <div className="card p-4 space-y-3">
         <h3 className="text-sm font-semibold" style={{color:'var(--text)'}}>Needs attention</h3>
         {r.findings.length ? r.findings.map((f, i) => (
-          <div key={i} className="rounded-xl p-3 space-y-1" style={{background:'var(--bg-input)',borderLeft:`3px solid ${f.level === 'high' ? '#F87171' : '#FBBF24'}`}}>
+          <div key={i} className="rounded-xl p-3 space-y-1" style={{background:'var(--bg-input)',borderLeft:`3px solid ${f.level === 'high' ? 'var(--c-red)' : 'var(--c-amber)'}`}}>
             <div className="flex flex-wrap items-center gap-2"><span className={`text-[10px] font-bold uppercase ${f.level === 'high' ? 'text-red-400' : 'text-amber-400'}`}>{f.level === 'high' ? 'High' : 'Medium'}</span><span className="text-sm font-semibold" style={{color:'var(--text)'}}>{f.title}</span><Pages pages={f.pages}/></div>
             <p className="text-xs" style={{color:'var(--muted)'}}>{f.why}</p>
             <p className="text-xs italic" style={{color:'var(--text)'}}>“{f.text}”</p>
@@ -745,7 +745,7 @@ function CommandBar({ onRun, autoFocus, compact }) {
         <button type="submit" disabled={!plan} className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-40" style={{background:'#2563EB'}}>Go</button>
       </div>
       <div className="mt-2 min-h-6 text-xs" style={{color:'var(--muted)'}}>
-        {plan ? <span className="flex flex-wrap items-center gap-1.5">I’ll {plan.label.map((l, i) => <React.Fragment key={i}>{i > 0 && <span>→</span>}<span className="px-2 py-0.5 rounded-full" style={{background:'rgba(37,99,235,0.15)',color:'#93C5FD'}}>{l}</span></React.Fragment>)}</span>
+        {plan ? <span className="flex flex-wrap items-center gap-1.5">I’ll {plan.label.map((l, i) => <React.Fragment key={i}>{i > 0 && <span>→</span>}<span className="px-2 py-0.5 rounded-full" style={{background:'rgba(37,99,235,0.15)',color:'var(--c-blue-soft)'}}>{l}</span></React.Fragment>)}</span>
           : q.trim().length > 2 ? <span>Not sure what to do yet. Try naming a tool, like “compress” or “translate”.</span>
           : !compact && <span className="flex flex-wrap gap-1.5">{CMD_EXAMPLES.slice(0, 3).map(x => <button type="button" key={x} onClick={() => setQ(x)} className="px-2 py-0.5 rounded-full hover:text-blue-300" style={{border:'1px solid var(--border-s)'}}>{x}</button>)}</span>}
       </div>
