@@ -34,7 +34,7 @@ function HowItWorks({ tool }) {
           </li>
         ))}
       </ol>
-      <p className="text-xs mt-3 flex items-center gap-1.5" style={{color: local ? '#34D399' : '#FBBF24'}}>
+      <p className="text-xs mt-3 flex items-center gap-1.5" style={{color: local ? 'var(--c-green)' : 'var(--c-amber)'}}>
         <Ic n={local ? 'lock' : 'protect'} sz={13}/>
         {local ? tr('badge.local', 'Processed on your device. Your file is never uploaded.') : tr('badge.server', 'Converted on our server over HTTPS, then deleted within 60 seconds.')}
       </p>
@@ -99,7 +99,7 @@ function TrustSection({ onTrust }) {
 const StatusPill = ({ status }) => {
   const s = status === 'planned'
     ? { label: 'On roadmap', bg: 'rgba(148,163,184,0.12)', fg: '#94A3B8', bd: 'rgba(148,163,184,0.3)' }
-    : { label: 'Aligned, not certified', bg: 'rgba(59,130,246,0.12)', fg: '#60A5FA', bd: 'rgba(59,130,246,0.3)' };
+    : { label: 'Aligned, not certified', bg: 'rgba(59,130,246,0.12)', fg: 'var(--c-blue)', bd: 'rgba(59,130,246,0.3)' };
   return <span className="text-[11px] px-2 py-0.5 rounded-full whitespace-nowrap" style={{background:s.bg,color:s.fg,border:`1px solid ${s.bd}`}}>{s.label}</span>;
 };
 
@@ -264,12 +264,12 @@ function PricingPage({ onTrust }) {
                 <div className="flex items-center gap-2 mb-1">
                   <h2 className="text-xl font-bold" style={{color:'var(--text)'}}>{p.name}</h2>
                   {p.highlight && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full text-white" style={{background:'#2563EB'}}>Most popular</span>}
-                  {mine && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{background:'rgba(16,185,129,0.15)',color:'var(--ok-text)'}}>Your plan</span>}
+                  {mine && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{background:'rgba(16,185,129,0.15)',color:'var(--c-green)'}}>Your plan</span>}
                 </div>
                 <p className="text-sm mb-4" style={{color:'var(--muted)'}}>{p.tagline}</p>
                 <p className="text-3xl font-extrabold mb-5" style={{color:'var(--text)'}}>{p.price}</p>
                 <ul className="space-y-2 mb-6 flex-1">
-                  {p.features.map(f => <li key={f} className="text-sm flex gap-2" style={{color:'var(--text)'}}><span style={{color:'var(--ok-text)'}}>✓</span>{f}</li>)}
+                  {p.features.map(f => <li key={f} className="text-sm flex gap-2" style={{color:'var(--text)'}}><span style={{color:'var(--c-green)'}}>✓</span>{f}</li>)}
                 </ul>
                 {p.id === 'free'
                   ? (isAuthenticated
@@ -278,7 +278,7 @@ function PricingPage({ onTrust }) {
                   : mine
                     ? <p className="text-center text-sm py-2.5" style={{color:'var(--muted)'}}>You're on this plan{user?.planUntil ? ` until ${user.planUntil}` : ''}.</p>
                     : sent === p.id
-                      ? <p className="text-center text-sm py-2.5" role="status" style={{color:'var(--ok-text)'}}>Thanks! We'll email {user?.email} soon.</p>
+                      ? <p className="text-center text-sm py-2.5" role="status" style={{color:'var(--c-green)'}}>Thanks! We'll email {user?.email} soon.</p>
                       : <button onClick={() => ask(p.id)} className="py-2.5 rounded-xl text-sm font-semibold text-white" style={{background: p.highlight ? '#2563EB' : '#0F172A'}}>
                           {p.id === 'pro' ? 'Request Pro' : 'Talk to us'}
                         </button>}
@@ -295,7 +295,7 @@ function PricingPage({ onTrust }) {
             {asking === 'business' && <input className="inp" type="number" min="1" placeholder="How many people?" value={form.seats} onChange={set('seats')}/>}
             <input className="inp" placeholder="Phone or WhatsApp (optional)" value={form.phone} onChange={set('phone')} maxLength={40}/>
             <textarea className="inp" rows={3} placeholder="Anything we should know? (optional)" value={form.message} onChange={set('message')} maxLength={1000}/>
-            {error && <div className="text-sm rounded-xl p-3" role="alert" style={{background:'rgba(239,68,68,0.1)',color:'var(--err-text)'}}>{error}</div>}
+            {error && <div className="text-sm rounded-xl p-3" role="alert" style={{background:'rgba(239,68,68,0.1)',color:'var(--c-red)'}}>{error}</div>}
             <div className="flex gap-2">
               <button type="submit" disabled={busy} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50" style={{background:'#2563EB'}}>{busy ? 'Sending…' : 'Send request'}</button>
               <button type="button" onClick={() => setAsking(null)} className="px-5 py-2.5 rounded-xl text-sm font-semibold" style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>Cancel</button>
@@ -308,7 +308,7 @@ function PricingPage({ onTrust }) {
           <div>
             {PRICING.costs.map(([n, c, d], i) => (
               <div key={n} style={i ? {borderTop:'1px solid var(--border)'} : undefined} className="py-3 flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-                <div className="sm:w-48 shrink-0"><span className="font-semibold text-sm" style={{color:'var(--text)'}}>{n}</span> <span className="text-sm" style={{color:'var(--accent-text)'}}>{c}</span></div>
+                <div className="sm:w-48 shrink-0"><span className="font-semibold text-sm" style={{color:'var(--text)'}}>{n}</span> <span className="text-sm" style={{color:'var(--c-blue)'}}>{c}</span></div>
                 <p className="text-sm" style={{color:'var(--muted)'}}>{d}</p>
               </div>
             ))}

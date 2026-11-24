@@ -67,11 +67,18 @@
       --border-s: rgba(255,255,255,0.16);
       --text:     #E2E8F0;
       --muted:    #94A3B8;
-      --subtle:   #475569;
-      --accent-text: #60A5FA;
-      --ok-text:  #34D399;
-      --err-text: #F87171;
+      --subtle:   #8494AB;
       --hero-glow:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(37,99,235,0.18) 0%, transparent 70%);
+      /* Accent text colours. Bright shades read well on navy; light mode
+         swaps them for darker shades below so they stay readable on white. */
+      --c-blue:   #60A5FA;
+      --c-blue-soft:#93C5FD;
+      --c-cyan:   #22D3EE;
+      --c-green:  #34D399;
+      --c-red:    #F87171;
+      --c-amber:  #FBBF24;
+      --c-violet: #A78BFA;
+      --grad-text: linear-gradient(135deg,#60A5FA 0%,#06B6D4 50%,#34D399 100%);
     }
     [data-theme="light"] {
       --bg:       #F1F5F9;
@@ -82,13 +89,25 @@
       --border:   rgba(0,0,0,0.08);
       --border-s: rgba(0,0,0,0.16);
       --text:     #1E293B;
-      --muted:    #64748B;
-      --subtle:   #94A3B8;
-      --accent-text: #1D4ED8;
-      --ok-text:  #047857;
-      --err-text: #B91C1C;
+      --muted:    #475569;
+      --subtle:   #5B6779;
       --hero-glow:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(37,99,235,0.08) 0%, transparent 70%);
+      --c-blue:   #1D4ED8;
+      --c-blue-soft:#1E40AF;
+      --c-cyan:   #0E7490;
+      --c-green:  #047857;
+      --c-red:    #B91C1C;
+      --c-amber:  #9A4A0A;
+      --c-violet: #6D28D9;
+      --grad-text: linear-gradient(135deg,#1D4ED8 0%,#0E7490 50%,#047857 100%);
     }
+    /* Tailwind's -300/-400 text shades are written for the dark theme all
+       over the components; point them at the theme colours instead. */
+    [data-theme="light"] .text-blue-300, [data-theme="light"] .text-blue-400,
+    [data-theme="light"] .hover\:text-blue-400:hover { color: var(--c-blue); }
+    [data-theme="light"] .text-emerald-400 { color: var(--c-green); }
+    [data-theme="light"] .text-red-300, [data-theme="light"] .text-red-400 { color: var(--c-red); }
+    [data-theme="light"] .text-amber-400 { color: var(--c-amber); }
     *, *::before, *::after { box-sizing: border-box; }
     body {
       margin: 0;
@@ -116,7 +135,7 @@
     .inp { background: var(--bg-input); border: 1px solid var(--border-s); color: var(--text); border-radius: 0.75rem; padding: 0.625rem 0.875rem; font-size: 0.875rem; width: 100%; outline: none; font-family: inherit; transition: border-color 0.2s; }
     .inp:focus { border-color: #2563EB; }
     .inp::placeholder { color: var(--muted); }
-    .gradient-text { background: linear-gradient(135deg,#60A5FA 0%,#06B6D4 50%,#34D399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .gradient-text { background: var(--grad-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .hero-glow { background: var(--hero-glow); }
     .progress-bar { background: linear-gradient(90deg,#2563EB,#06B6D4,#10B981); background-size: 200% 100%; animation: shimmer 1.5s linear infinite; }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
@@ -139,7 +158,7 @@
     .seo-article p { margin:0.5rem 0; }
     .seo-article ol { list-style:decimal; padding-left:1.5rem; }
     .seo-article ul { list-style:disc; padding-left:1.5rem; columns:2 220px; }
-    .seo-article a { color:#60A5FA; }
+    .seo-article a { color:var(--c-blue); }
     .seo-article a:hover { text-decoration:underline; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
@@ -265,7 +284,27 @@ function authHeaders(token, extra) {
    ICONS
 ══════════════════════════════════════ */
 const ICONS = {
-  merge:'M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3',
+  expand:'M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3',
+  shrink:'M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7',
+  zap:'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+  tag:'M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42zM7.5 7.5h.01',
+  grid:'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
+  reverse:'M21 16l-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16',
+  shuffle:'M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22M18 2l4 4-4 4M2 6h1.9c1.5 0 2.9.9 3.6 2.2M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8M18 14l4 4-4 4',
+  extractPages:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 15h6M12 12l3 3-3 3',
+  shieldX:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9.5 9.5l5 5M14.5 9.5l-5 5',
+  headerFooter:'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM3 8h18M3 16h18',
+  book:'M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z',
+  contrast:'M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20zM12 2v20M12 7h5M12 12h7M12 17h5',
+  archive:'M3 3h18v5H3zM5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M10 12h4',
+  filePlus:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M12 12v6M9 15h6',
+  fileMinus:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 15h6',
+  code:'M16 18l6-6-6-6M8 6l-6 6 6 6',
+  text:'M4 7V4h16v3M9 20h6M12 4v16',
+  markdown:'M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM6 15V9l3 3 3-3v6M17 9v6M15 13l2 2 2-2',
+  stamp:'M5 22h14M19.27 13.73A2.5 2.5 0 0 0 17.5 13h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.66-.26-1.3-.73-1.77zM14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-6 0c0 2 1 2 1 3.5V13',
+  vector:'M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5zM2 2l7.586 7.586M11 13a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  merge:'M8 6l4-4 4 4M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22M20 22l-5-5',
   split:'M16 3l4 4-4 4M8 3l-4 4 4 4M21 7H3m15 10l4 4-4 4M6 17l-4 4 4 4M21 21H3',
   compress:'M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242M15 17l-3-3m0 0l-3 3m3-3v9',
   rotate:'M4 4v5h.582m15.356 2A8.001 8.001 0 0 0 4.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 0 1-15.357-2m15.357 2H15',
@@ -355,7 +394,7 @@ const TOOLS = [
   { id:'organize', slug:'organize-pdf',   label:'Organize Pages', desc:'Reorder, delete and rearrange PDF pages.',             icon:'organize', cat:'Organize', color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
   { id:'crop',     slug:'crop-pdf',       label:'Crop PDF',       desc:'Trim PDF page margins and resize the content area.',   icon:'crop',     cat:'Organize', color:'cyan',    accept:'.pdf',       multi:false, engine:'client', batch:true },
   { id:'rotate',   slug:'rotate-pdf',     label:'Rotate PDF',     desc:'Rotate all or specific pages of a PDF.',               icon:'rotate',   cat:'Organize', color:'emerald', accept:'.pdf',       multi:false, engine:'client', batch:true },
-  { id:'compress', slug:'compress-pdf',   label:'Compress PDF',   desc:'Shrink images inside your PDF without uploading it.',  icon:'compress', cat:'Optimize', color:'emerald', accept:'.pdf',       multi:false, engine:'client', batch:true },
+  { id:'compress', slug:'compress-pdf',   label:'Compress PDF',   desc:'Shrink images inside your PDF without uploading it.',  icon:'shrink', cat:'Optimize', color:'emerald', accept:'.pdf',       multi:false, engine:'client', batch:true },
   { id:'img2pdf',  slug:'jpg-to-pdf',     label:'Image to PDF',   desc:'Convert JPG, PNG, WebP images to a PDF document.',    icon:'img2pdf',  cat:'Convert',  color:'blue',    accept:'image/*',    multi:true,  engine:'client' },
   { id:'pdf2jpg',  slug:'pdf-to-jpg',     label:'PDF to JPG',     desc:'Extract every page as a high-quality JPEG image.',    icon:'pdf2jpg',  cat:'Convert',  color:'blue',    accept:'.pdf',       multi:false, engine:'client' },
   { id:'word2pdf', slug:'word-to-pdf',    label:'Word to PDF',    desc:'Convert DOCX/DOC to PDF preserving formatting.',      icon:'word',     cat:'Convert',  color:'blue',    accept:'.docx,.doc,.odt,.rtf', multi:false, engine:'server' },
@@ -374,44 +413,54 @@ const TOOLS = [
   { id:'redact',   slug:'redact-pdf',     label:'Redact PDF',     desc:'Find and permanently remove emails, phone and ID numbers.', icon:'redact', cat:'AI',     color:'red',     accept:'.pdf',       multi:false, engine:'client', batch:true, isNew:true },
   { id:'compare',  slug:'compare-pdf',    label:'Compare PDF',    desc:'See every text and visual change between two versions.', icon:'compare', cat:'Organize', color:'cyan',  accept:'.pdf',       multi:true,  engine:'client', custom:'compare', isNew:true },
   { id:'pagenumbers',slug:'add-page-numbers',label:'Page Numbers', desc:'Add page numbers or Bates numbering to every page.', icon:'numbers',  cat:'Organize', color:'blue',    accept:'.pdf',       multi:false, engine:'client', batch:true, isNew:true },
-  { id:'flatten',  slug:'flatten-pdf',    label:'Flatten PDF',    desc:'Lock form answers into the page so they can\'t be changed.', icon:'layers', cat:'Optimize', color:'emerald', accept:'.pdf',     multi:false, engine:'client', batch:true, isNew:true },
+  { id:'flatten',  slug:'flatten-pdf',    label:'Flatten PDF',    desc:'Lock form answers into the page so they can\'t be changed.', icon:'stamp', cat:'Optimize', color:'emerald', accept:'.pdf',     multi:false, engine:'client', batch:true, isNew:true },
   { id:'pdf2png',  slug:'pdf-to-png',     label:'PDF to PNG',     desc:'Save every page as a lossless PNG image.',            icon:'pdf2jpg',  cat:'Convert',  color:'blue',    accept:'.pdf',       multi:false, engine:'client', isNew:true },
-  { id:'pdfa',     slug:'pdf-to-pdfa',    label:'PDF to PDF/A',   desc:'Convert to PDF/A-2b for long-term archiving.',        icon:'file',     cat:'Convert',  color:'emerald', accept:'.pdf',       multi:false, engine:'server', isNew:true },
-  { id:'html2pdf', slug:'html-to-pdf',    label:'HTML to PDF',    desc:'Convert saved web pages and HTML files to PDF.',      icon:'word',     cat:'Convert',  color:'cyan',    accept:'.html,.htm', multi:false, engine:'server', isNew:true },
-  { id:'extractpages', slug:'extract-pdf-pages', label:'Extract Pages', desc:'Pull out just the pages you need into a new PDF.', icon:'split', cat:'Organize', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'pdfa',     slug:'pdf-to-pdfa',    label:'PDF to PDF/A',   desc:'Convert to PDF/A-2b for long-term archiving.',        icon:'archive',     cat:'Convert',  color:'emerald', accept:'.pdf',       multi:false, engine:'server', isNew:true },
+  { id:'html2pdf', slug:'html-to-pdf',    label:'HTML to PDF',    desc:'Convert saved web pages and HTML files to PDF.',      icon:'code',     cat:'Convert',  color:'cyan',    accept:'.html,.htm', multi:false, engine:'server', isNew:true },
+  { id:'extractpages', slug:'extract-pdf-pages', label:'Extract Pages', desc:'Pull out just the pages you need into a new PDF.', icon:'extractPages', cat:'Organize', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
   { id:'delete', slug:'delete-pdf-pages', label:'Delete Pages', desc:'Remove unwanted pages from a PDF.', icon:'trash', cat:'Organize', color:'red', accept:'.pdf', multi:false, engine:'client', isNew:true },
-  { id:'removeblank', slug:'remove-blank-pages', label:'Remove Blank Pages', desc:'Find and delete empty pages automatically.', icon:'trash', cat:'Organize', color:'emerald', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
-  { id:'addblank', slug:'add-blank-page-to-pdf', label:'Add Blank Page', desc:'Insert empty pages anywhere in a PDF.', icon:'file', cat:'Organize', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
-  { id:'reverse', slug:'reverse-pdf', label:'Reverse Pages', desc:'Flip the page order, last page first.', icon:'rotate', cat:'Organize', color:'cyan', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
-  { id:'nup', slug:'n-up-pdf', label:'N-up PDF', desc:'Print 2, 4, 6 or 9 pages on one sheet.', icon:'organize', cat:'Organize', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
-  { id:'booklet', slug:'pdf-booklet', label:'Make Booklet', desc:'Arrange pages to print, fold and staple a booklet.', icon:'layers', cat:'Organize', color:'cyan', accept:'.pdf', multi:false, engine:'client', isNew:true },
-  { id:'alternate', slug:'alternate-mix-pdf', label:'Alternate & Mix', desc:'Interleave pages from two PDFs, ideal for duplex scans.', icon:'merge', cat:'Organize', color:'emerald', accept:'.pdf', multi:true, engine:'client', isNew:true },
-  { id:'headerfooter', slug:'add-header-footer-to-pdf', label:'Header & Footer', desc:'Add text, dates and page counts to the top or bottom of every page.', icon:'numbers', cat:'Organize', color:'blue', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'removeblank', slug:'remove-blank-pages', label:'Remove Blank Pages', desc:'Find and delete empty pages automatically.', icon:'fileMinus', cat:'Organize', color:'emerald', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'addblank', slug:'add-blank-page-to-pdf', label:'Add Blank Page', desc:'Insert empty pages anywhere in a PDF.', icon:'filePlus', cat:'Organize', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'reverse', slug:'reverse-pdf', label:'Reverse Pages', desc:'Flip the page order, last page first.', icon:'reverse', cat:'Organize', color:'cyan', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'nup', slug:'n-up-pdf', label:'N-up PDF', desc:'Print 2, 4, 6 or 9 pages on one sheet.', icon:'grid', cat:'Organize', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'booklet', slug:'pdf-booklet', label:'Make Booklet', desc:'Arrange pages to print, fold and staple a booklet.', icon:'book', cat:'Organize', color:'cyan', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'alternate', slug:'alternate-mix-pdf', label:'Alternate & Mix', desc:'Interleave pages from two PDFs, ideal for duplex scans.', icon:'shuffle', cat:'Organize', color:'emerald', accept:'.pdf', multi:true, engine:'client', isNew:true },
+  { id:'headerfooter', slug:'add-header-footer-to-pdf', label:'Header & Footer', desc:'Add text, dates and page counts to the top or bottom of every page.', icon:'headerFooter', cat:'Organize', color:'blue', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
   { id:'removeannots', slug:'remove-pdf-annotations', label:'Remove Annotations', desc:'Strip comments, highlights and markups.', icon:'close', cat:'Organize', color:'red', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
-  { id:'pdf2text', slug:'pdf-to-text', label:'PDF to Text', desc:'Save all the text in a PDF as a .txt file.', icon:'word', cat:'Convert', color:'blue', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
-  { id:'pdf2md', slug:'pdf-to-markdown', label:'PDF to Markdown', desc:'Turn a PDF into clean Markdown with headings and lists.', icon:'word', cat:'Convert', color:'cyan', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'pdf2text', slug:'pdf-to-text', label:'PDF to Text', desc:'Save all the text in a PDF as a .txt file.', icon:'text', cat:'Convert', color:'blue', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'pdf2md', slug:'pdf-to-markdown', label:'PDF to Markdown', desc:'Turn a PDF into clean Markdown with headings and lists.', icon:'markdown', cat:'Convert', color:'cyan', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
   { id:'extractimages', slug:'extract-images-from-pdf', label:'Extract Images', desc:'Save every picture inside a PDF as PNG.', icon:'img2pdf', cat:'Convert', color:'emerald', accept:'.pdf', multi:false, engine:'client', isNew:true },
   { id:'pdf2webp', slug:'pdf-to-webp', label:'PDF to WebP', desc:'Save each page as a small, sharp WebP image.', icon:'pdf2jpg', cat:'Convert', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
   { id:'png2pdf', slug:'png-to-pdf', label:'PNG to PDF', desc:'Combine PNG images into one PDF.', icon:'img2pdf', cat:'Convert', color:'blue', accept:'.png,image/png', multi:true, engine:'client', isNew:true },
   { id:'webp2pdf', slug:'webp-to-pdf', label:'WebP to PDF', desc:'Convert WebP images to PDF.', icon:'img2pdf', cat:'Convert', color:'cyan', accept:'.webp,image/webp', multi:true, engine:'client', isNew:true },
-  { id:'svg2pdf', slug:'svg-to-pdf', label:'SVG to PDF', desc:'Convert SVG drawings and logos to PDF.', icon:'img2pdf', cat:'Convert', color:'emerald', accept:'.svg,image/svg+xml', multi:true, engine:'client', isNew:true },
-  { id:'txt2pdf', slug:'text-to-pdf', label:'Text to PDF', desc:'Turn a .txt, log or code file into a tidy PDF.', icon:'word', cat:'Convert', color:'blue', accept:'.txt,.text,.log,.csv,.json,.xml,.md', multi:false, engine:'client', batch:true, isNew:true },
-  { id:'md2pdf', slug:'markdown-to-pdf', label:'Markdown to PDF', desc:'Convert Markdown with headings, lists and code to PDF.', icon:'word', cat:'Convert', color:'cyan', accept:'.md,.markdown,.txt', multi:false, engine:'client', batch:true, isNew:true },
-  { id:'greyscale', slug:'pdf-to-grayscale', label:'PDF to Greyscale', desc:'Convert colour pages to black and white for printing.', icon:'layers', cat:'Optimize', color:'emerald', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
-  { id:'resize', slug:'resize-pdf', label:'Resize Pages', desc:'Fit every page to A4, Letter, Legal, A3 or A5.', icon:'crop', cat:'Optimize', color:'blue', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
-  { id:'linearize', slug:'linearize-pdf', label:'Fast Web View', desc:'Optimise a PDF so it opens instantly online.', icon:'compress', cat:'Optimize', color:'cyan', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
-  { id:'metadata', slug:'edit-pdf-metadata', label:'Edit Metadata', desc:'Change the title, author, subject and keywords.', icon:'edit', cat:'Security', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
+  { id:'svg2pdf', slug:'svg-to-pdf', label:'SVG to PDF', desc:'Convert SVG drawings and logos to PDF.', icon:'vector', cat:'Convert', color:'emerald', accept:'.svg,image/svg+xml', multi:true, engine:'client', isNew:true },
+  { id:'txt2pdf', slug:'text-to-pdf', label:'Text to PDF', desc:'Turn a .txt, log or code file into a tidy PDF.', icon:'text', cat:'Convert', color:'blue', accept:'.txt,.text,.log,.csv,.json,.xml,.md', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'md2pdf', slug:'markdown-to-pdf', label:'Markdown to PDF', desc:'Convert Markdown with headings, lists and code to PDF.', icon:'markdown', cat:'Convert', color:'cyan', accept:'.md,.markdown,.txt', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'greyscale', slug:'pdf-to-grayscale', label:'PDF to Greyscale', desc:'Convert colour pages to black and white for printing.', icon:'contrast', cat:'Optimize', color:'emerald', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'resize', slug:'resize-pdf', label:'Resize Pages', desc:'Fit every page to A4, Letter, Legal, A3 or A5.', icon:'expand', cat:'Optimize', color:'blue', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'linearize', slug:'linearize-pdf', label:'Fast Web View', desc:'Optimise a PDF so it opens instantly online.', icon:'zap', cat:'Optimize', color:'cyan', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'metadata', slug:'edit-pdf-metadata', label:'Edit Metadata', desc:'Change the title, author, subject and keywords.', icon:'tag', cat:'Security', color:'blue', accept:'.pdf', multi:false, engine:'client', isNew:true },
   { id:'removemeta', slug:'remove-pdf-metadata', label:'Remove Metadata', desc:'Strip the author, dates and hidden info before sharing.', icon:'eyeOff', cat:'Security', color:'red', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
-  { id:'sanitize', slug:'sanitize-pdf', label:'Sanitize PDF', desc:'Remove JavaScript, hidden files and actions from a PDF.', icon:'protect', cat:'Security', color:'red', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
+  { id:'sanitize', slug:'sanitize-pdf', label:'Sanitize PDF', desc:'Remove JavaScript, hidden files and actions from a PDF.', icon:'shieldX', cat:'Security', color:'red', accept:'.pdf', multi:false, engine:'client', batch:true, isNew:true },
   { id:'workflow', slug:'pdf-workflows',  label:'Workflows',      desc:'Chain tools like compress, number and protect, and run them on many files.', icon:'flow', cat:'Workflows', color:'blue', accept:'.pdf', multi:true, engine:'client', isNew:true },
 ];
 TOOLS.forEach(x => { const v = I18N.tools[x.id]; if (v) { x.label = v[0]; x.desc = v[1]; } });
 const C = {
-  blue:    { bg:'rgba(37,99,235,0.1)',    bd:'rgba(37,99,235,0.3)',    ic:'#60A5FA', badge:'rgba(37,99,235,0.15)' },
-  cyan:    { bg:'rgba(6,182,212,0.1)',    bd:'rgba(6,182,212,0.3)',    ic:'#22D3EE', badge:'rgba(6,182,212,0.15)' },
-  emerald: { bg:'rgba(16,185,129,0.1)',   bd:'rgba(16,185,129,0.3)',   ic:'#34D399', badge:'rgba(16,185,129,0.15)' },
-  red:     { bg:'rgba(239,68,68,0.1)',    bd:'rgba(239,68,68,0.3)',    ic:'#F87171', badge:'rgba(239,68,68,0.15)' },
+  blue:    { bg:'rgba(37,99,235,0.1)',    bd:'rgba(37,99,235,0.3)',    ic:'var(--c-blue)',   badge:'rgba(37,99,235,0.15)' },
+  cyan:    { bg:'rgba(6,182,212,0.1)',    bd:'rgba(6,182,212,0.3)',    ic:'var(--c-cyan)',   badge:'rgba(6,182,212,0.15)' },
+  emerald: { bg:'rgba(16,185,129,0.1)',   bd:'rgba(16,185,129,0.3)',   ic:'var(--c-green)',  badge:'rgba(16,185,129,0.15)' },
+  red:     { bg:'rgba(239,68,68,0.1)',    bd:'rgba(239,68,68,0.3)',    ic:'var(--c-red)',    badge:'rgba(239,68,68,0.15)' },
+  violet:  { bg:'rgba(139,92,246,0.1)',   bd:'rgba(139,92,246,0.3)',   ic:'var(--c-violet)', badge:'rgba(139,92,246,0.15)' },
+  amber:   { bg:'rgba(245,158,11,0.1)',   bd:'rgba(245,158,11,0.3)',   ic:'var(--c-amber)',  badge:'rgba(245,158,11,0.15)' },
 };
+/* One colour per category, so the colour on a card tells you what kind of
+   tool it is (it used to vary tool by tool). */
+const CAT_COLOR = { AI:'violet', Organize:'blue', Convert:'cyan', Optimize:'emerald', Security:'red', Workflows:'amber' };
+TOOLS.forEach(x => { x.color = CAT_COLOR[x.cat] || 'blue'; });
+/* Only the latest additions carry a NEW badge; when almost every tool said
+   NEW the badge stopped meaning anything. Update this list when tools ship. */
+const NEW_TOOLS = new Set(['resize', 'linearize', 'metadata', 'removemeta', 'sanitize']);
+TOOLS.forEach(x => { x.isNew = NEW_TOOLS.has(x.id); });
 
 /* ══════════════════════════════════════
    GOOGLE SIGN-IN
@@ -499,7 +548,7 @@ function AuthModal({ intro, onClose }) {
           </div>
         )}
 
-        {error && <div className="mb-4 text-sm rounded-xl p-3" role="alert" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
+        {error && <div className="mb-4 text-sm rounded-xl p-3" role="alert" style={{background:'rgba(239,68,68,0.1)',color:'var(--c-red)',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
 
         {googleConfig?.googleSignInEnabled && !googleBlocked && (
           <div className="mb-2 flex justify-center" style={{minHeight:44}} aria-busy={loading}>
@@ -565,7 +614,7 @@ function UsageBadge({ status }) {
   if (!status) return null;
   if (status.unlimited) return (
     <div className="flex flex-wrap items-center gap-2 mb-5">
-      <div className="flex items-center gap-2 text-xs rounded-full px-3 py-1.5 w-fit" style={{background:'rgba(16,185,129,0.1)',color:'var(--ok-text)',border:'1px solid rgba(16,185,129,0.3)'}}>
+      <div className="flex items-center gap-2 text-xs rounded-full px-3 py-1.5 w-fit" style={{background:'rgba(16,185,129,0.1)',color:'var(--c-green)',border:'1px solid rgba(16,185,129,0.3)'}}>
         <Ic n="sparkle" sz={13}/>{tr('credits.unlimited','Business plan: unlimited use')}
       </div>
     </div>
@@ -580,7 +629,7 @@ function UsageBadge({ status }) {
         <div className="flex items-center gap-2 text-xs rounded-full px-3 py-1.5 w-fit"
           style={{
             background: short ? 'rgba(239,68,68,0.1)' : 'rgba(37,99,235,0.1)',
-            color: short ? 'var(--err-text)' : 'var(--accent-text)',
+            color: short ? 'var(--c-red)' : 'var(--c-blue)',
             border: `1px solid ${short ? 'rgba(239,68,68,0.3)' : 'rgba(37,99,235,0.3)'}`,
           }}>
           <Ic n="sparkle" sz={13}/>
@@ -688,7 +737,7 @@ function ProfilePicker({ onDone }) {
         {type === 'business' && (
           <input className="inp mb-4" placeholder="Company name (optional)" value={company} onChange={e => setCompany(e.target.value)} maxLength={120}/>
         )}
-        {error && <div className="mb-3 text-sm rounded-xl p-3" role="alert" style={{background:'rgba(239,68,68,0.1)',color:'#F87171'}}>{error}</div>}
+        {error && <div className="mb-3 text-sm rounded-xl p-3" role="alert" style={{background:'rgba(239,68,68,0.1)',color:'var(--c-red)'}}>{error}</div>}
         <button onClick={save} disabled={!type || busy} className="w-full py-3 rounded-xl font-bold text-white text-sm disabled:opacity-50" style={{background:'#2563EB'}}>
           {busy ? 'Saving…' : 'Continue'}
         </button>
@@ -757,7 +806,7 @@ function ChatWidget() {
             ) : (
               <form onSubmit={submit} className="space-y-3">
                 <p className="text-xs mb-3" style={{color:'var(--muted)'}}>Our team is offline right now. Leave a message and we'll reply to your email.</p>
-                {error && <p className="text-xs p-2 rounded-lg" style={{background:'rgba(239,68,68,0.1)',color:'#F87171'}}>{error}</p>}
+                {error && <p className="text-xs p-2 rounded-lg" style={{background:'rgba(239,68,68,0.1)',color:'var(--c-red)'}}>{error}</p>}
                 <input className="inp text-sm" placeholder="Your name" value={f.name} onChange={set('name')} required style={{padding:'0.5rem 0.75rem'}}/>
                 <input className="inp text-sm" type="email" placeholder="Your email" value={f.email} onChange={set('email')} required style={{padding:'0.5rem 0.75rem'}}/>
                 <textarea className="inp text-sm resize-none" placeholder="How can we help?" rows={3} value={f.message} onChange={set('message')} required style={{padding:'0.5rem 0.75rem'}}/>
@@ -932,7 +981,7 @@ function DropZone({ tool, onFiles, disabled }) {
       style={{borderColor:drag?'#2563EB':'var(--border-s)', background:drag?'rgba(37,99,235,0.06)':'var(--bg-card)'}}>
       <input ref={ref} type="file" className="hidden" accept={tool.accept} multiple={tool.multi || tool.batch} disabled={disabled} onChange={e=>{handle(Array.from(e.target.files));e.target.value='';}}/>
       <div className="mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-6" style={{background:col.bg,border:`1px solid ${col.bd}`}}>
-        <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={col.ic} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{color:col.ic}} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           {(ICONS[tool.icon]||ICONS.file).split('M').filter(Boolean).map((s,i)=><path key={i} d={'M'+s}/>)}
         </svg>
       </div>
@@ -1149,7 +1198,7 @@ function Workspace({ tool, onBack, preset }) {
         </button>
         <div className="flex items-center gap-4 mb-6">
           <div className="w-13 h-13 rounded-2xl flex items-center justify-center" style={{background:col.bg,border:`1px solid ${col.bd}`,width:'3.25rem',height:'3.25rem'}}>
-            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={col.ic} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{color:col.ic}} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               {(ICONS[tool.icon]||ICONS.file).split('M').filter(Boolean).map((s,i)=><path key={i} d={'M'+s}/>)}
             </svg>
           </div>
@@ -1163,7 +1212,7 @@ function Workspace({ tool, onBack, preset }) {
         <UsageBadge status={usageStatus}/>
 
         {/* Drop */}
-        {state==='drop' && error && <div className="rounded-xl p-3 mb-4 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
+        {state==='drop' && error && <div className="rounded-xl p-3 mb-4 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'var(--c-red)',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
         {state==='drop' && !isAuthenticated && <SignInGate tool={tool} onSignIn={() => openAuth('login')}/>}
         {state==='drop' && isAuthenticated && <DropZone tool={tool} onFiles={handleFiles} disabled={quotaExhausted}/>}
 
@@ -1175,7 +1224,7 @@ function Workspace({ tool, onBack, preset }) {
               <p className="text-sm font-medium truncate flex-1" style={{color:'var(--text)'}}>{files[0]?.name}</p>
               <button onClick={()=>{setState('drop');setFiles([]);setError('');}} className="text-xs text-blue-400 hover:text-blue-300">Change file</button>
             </div>
-            {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
+            {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'var(--c-red)',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
             <AiWorkspace key={files[0]?.name+files[0]?.size} tool={tool} file={files[0]}
               onQuota={async()=>{try{await consumeUsage(tool.id,token,1,largest(files));refreshUsage();}catch(e){if(e.status===402){setShowUpgrade(true);refreshUsage();}if(e.status===401)openAuth('login');throw e;}}}
               onError={e=>{if(e&&(e.status===402||e.status===401))return;console.error(e);setError(e.message||'Something went wrong.');}}/>
@@ -1190,7 +1239,7 @@ function Workspace({ tool, onBack, preset }) {
               <p className="text-sm font-medium truncate flex-1" style={{color:'var(--text)'}}>{files.length > 1 ? `${files.length} files` : files[0]?.name}</p>
               <button onClick={()=>{setState('drop');setFiles([]);setError('');}} className="text-xs text-blue-400 hover:text-blue-300">Change file{files.length>1?'s':''}</button>
             </div>
-            {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
+            {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'var(--c-red)',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
             {(()=>{
               const onQuota = async()=>{try{await consumeUsage(tool.id,token,1,largest(files));refreshUsage();}catch(e){if(e.status===402){setShowUpgrade(true);refreshUsage();}if(e.status===401)openAuth('login');throw e;}};
               const onError = e=>{if(e&&(e.status===402||e.status===401))return;console.error(e);setError(e.message||'Something went wrong.');};
@@ -1209,7 +1258,7 @@ function Workspace({ tool, onBack, preset }) {
               <div className="card p-3 text-sm flex flex-wrap items-center gap-2" style={{color:'var(--text)'}}><span className="text-red-400">Old:</span> {files[0].name} <span className="text-emerald-400 ml-2">New:</span> {files[1].name}
                 <button onClick={()=>setFiles(f=>[f[1],f[0]])} className="text-xs text-blue-400 ml-auto">Swap</button>
                 <button onClick={()=>{setState('drop');setFiles([]);setError('');}} className="text-xs text-blue-400">Start over</button></div>
-              {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
+              {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'var(--c-red)',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
               <CompareWorkspace key={files.map(f=>f.name+f.size).join('|')} files={files}
                 onQuota={async()=>{try{await consumeUsage(tool.id,token,1,largest(files));refreshUsage();}catch(e){if(e.status===402){setShowUpgrade(true);refreshUsage();}if(e.status===401)openAuth('login');throw e;}}}
                 onError={e=>{if(e&&(e.status===402||e.status===401))return;setError(e.message||'Something went wrong.');}}/>
@@ -1233,7 +1282,7 @@ function Workspace({ tool, onBack, preset }) {
               ))}
               {(tool.multi||tool.batch) && <label className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 cursor-pointer mt-1"><input type="file" className="hidden" accept={tool.accept} multiple onChange={e=>{const added=Array.from(e.target.files);e.target.value='';setFiles(f=>[...f,...added]);}}/><Ic n="upload" sz={12}/> {tr('ws.addmore','Add more')}</label>}
             </div>
-            {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
+            {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'var(--c-red)',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
             <div className="card p-5 space-y-4">
               <h3 className="font-semibold text-sm" style={{color:'var(--text)'}}>{tr('ws.options','Options')}</h3>
               <ConfigPanel tool={tool} config={config} set={setConfig} file={files[0]}/>
@@ -1256,7 +1305,7 @@ function Workspace({ tool, onBack, preset }) {
               <div className="absolute inset-0 rounded-full border-2 border-blue-600/20"/>
               <div className="absolute inset-0 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"/>
               <div className="absolute inset-3 rounded-full flex items-center justify-center" style={{background:col.bg}}>
-                <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={col.ic} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{color:col.ic}} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   {(ICONS[tool.icon]||ICONS.file).split('M').filter(Boolean).map((s,i)=><path key={i} d={'M'+s}/>)}
                 </svg>
               </div>
@@ -1336,9 +1385,9 @@ function ToolCard({ tool, onClick }) {
   const col = C[tool.color]||C.blue;
   return (
     <a href={`/${tool.slug}`} onClick={e=>{if(e.metaKey||e.ctrlKey||e.shiftKey)return;e.preventDefault();onClick();}} className="card card-hover text-left p-5 w-full group block relative" style={{borderColor:'var(--border)'}}>
-      {tool.isNew && <span className="absolute top-3 right-3 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{background:'rgba(6,182,212,0.15)',color:'#22D3EE'}}>NEW</span>}
+      {tool.isNew && <span className="absolute top-3 right-3 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{background:'rgba(6,182,212,0.15)',color:'var(--c-cyan)'}}>NEW</span>}
       <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style={{background:col.bg,border:`1px solid ${col.bd}`}}>
-        <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={col.ic} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-300 group-hover:scale-110">
+        <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{color:col.ic}} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-300 group-hover:scale-110">
           {(ICONS[tool.icon]||ICONS.file).split('M').filter(Boolean).map((s,i)=><path key={i} d={'M'+s}/>)}
         </svg>
       </div>
@@ -1535,7 +1584,7 @@ function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
           {CATEGORIES.slice(1).map(c=>(
             <button key={c} onClick={() => onCategory(c)} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400" style={{color:'var(--muted)'}}>{tr('cat.'+c, c)}</button>
           ))}
-          <a href={`${LP}/privacy`} onClick={e=>{e.preventDefault();onPrivacy();}} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400 flex items-center gap-1" style={{color:'#34D399'}}><Ic n="lock" sz={12}/>{tr('nav.privacy','Privacy')}</a>
+          <a href={`${LP}/privacy`} onClick={e=>{e.preventDefault();onPrivacy();}} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400 flex items-center gap-1" style={{color:'var(--c-green)'}}><Ic n="lock" sz={12}/>{tr('nav.privacy','Privacy')}</a>
           <a href={`${LP}/pricing`} onClick={e=>{e.preventDefault();goPricing();}} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400" style={{color:'var(--muted)'}}>{tr('nav.pricing','Plans')}</a>
           <button onClick={onCommand} className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 hover:text-blue-400" style={{color:'var(--muted)',border:'1px solid var(--border-s)'}} aria-label="Open the command bar" title="Tell LetsConvertPDF what to do (Ctrl+K)"><Ic n="sparkle" sz={12}/>Ask <kbd className="text-[10px] opacity-70">⌘K</kbd></button>
         </div>
@@ -1561,8 +1610,8 @@ function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
                 </div>
                 <span className="hidden sm:block max-w-24 truncate">{user?.name}</span>
                 {user?.unlimited
-                  ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full" title="Business plan" style={{background:'rgba(16,185,129,0.15)',color:'var(--ok-text)'}}>∞</span>
-                  : Number.isFinite(user?.credits) && <span className="text-xs font-semibold px-2 py-0.5 rounded-full" title="Credits left this month" style={{background:'rgba(37,99,235,0.15)',color:'var(--accent-text)'}}>{user.credits.toLocaleString()} cr</span>}
+                  ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full" title="Business plan" style={{background:'rgba(16,185,129,0.15)',color:'var(--c-green)'}}>∞</span>
+                  : Number.isFinite(user?.credits) && <span className="text-xs font-semibold px-2 py-0.5 rounded-full" title="Credits left this month" style={{background:'rgba(37,99,235,0.15)',color:'var(--c-blue)'}}>{user.credits.toLocaleString()} cr</span>}
               </button>
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-2 w-56 card-solid anim-up overflow-hidden" style={{zIndex:50}}>
