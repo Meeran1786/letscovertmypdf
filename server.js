@@ -145,10 +145,12 @@ function getEmailFromToken(req) {
 }
 
 /* ═══════════════════════════════════════════
-   CREDITS
-   Every tool needs a Google sign-in, and every use costs credits (5 by
-   default). New accounts start with 1000. Students and individuals get a
-   monthly top-up back up to a floor. All numbers are editable on /admin.
+   CREDITS AND PLANS
+   Every tool needs a Google sign-in, and every use costs credits: 10 for a
+   basic tool, 25 for a heavy one (OCR and the on-device AI tools). Batch
+   tools pay per file. Each plan gets a monthly allowance that resets on the
+   1st (UTC) with no rollover: Free 1,000, Pro 10,000, Business unlimited.
+   Plans also cap the file size (Free 25 MB). All numbers are editable on /admin.
    Files are never sent for this: only the tool id and the number of files.
    Node runs one request handler at a time, so a check-and-deduct below can't
    be interleaved with another one (no double spending across tabs).
@@ -156,15 +158,33 @@ function getEmailFromToken(req) {
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const LEDGER_FILE   = path.join(DATA_DIR, 'credits-log.jsonl');
 const STATS_FILE    = path.join(DATA_DIR, 'stats.json');
+const REQUESTS_FILE = path.join(DATA_DIR, 'upgrade-requests.jsonl');
 const USER_TYPES    = ['student', 'individual', 'business'];
+const PLAN_IDS      = ['free', 'pro', 'business'];
 const DEFAULT_SETTINGS = {
-  startingCredits: 1000,
-  costPerUse: 5,
-  monthlyFloor: { student: 500, individual: 250, business: 250 },
-  toolCosts: {},   // { toolId: credits } overrides costPerUse for that tool
+  version: 2,
+  costPerUse: 10,  // basic tools
+  heavyCost: 25,   // tools listed in heavyTools
+  heavyTools: ['chat', 'translate', 'review', 'extract', 'summarize', 'ocr', 'redact', 'compare'],
+  toolCosts: {},   // { toolId: credits } overrides both of the above for that tool
+  warnAtPercent: 80, // show the upgrade prompt once this much of the month's credits is used
+  plans: {
+    free:     { monthlyCredits: 1000,  maxFileMB: 25,  unlimited: false },
+    pro:      { monthlyCredits: 10000, maxFileMB: 200, unlimited: false },
+    business: { monthlyCredits: 0,     maxFileMB: 500, unlimited: true },
+  },
 };
-let settings = { ...DEFAULT_SETTINGS };
-try { settings = { ...DEFAULT_SETTINGS, ...JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')) }; } catch {}
+const clone = o => JSON.parse(JSON.stringify(o));
+function loadSettings() {
+  let saved = {};
+  try { saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); } catch {}
+  // Settings saved before plans existed (5 credits a use, starting credits and
+  // monthly floors) are replaced by the new defaults; per-tool overrides stay.
+  if (saved.version !== 2) return { ...clone(DEFAULT_SETTINGS), toolCosts: saved.toolCosts || {} };
+  const base = clone(DEFAULT_SETTINGS);
+  return { ...base, ...saved, plans: Object.fromEntries(PLAN_IDS.map(id => [id, { ...base.plans[id], ...(saved.plans?.[id] || {}) }])) };
+}
+let settings = loadSettings();
 const saveSettings = () => { try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2)); } catch (e) { console.error('[Data] Could not save settings:', e.message); } };
 
 let stats = {}; // { "2026-11-11": { toolId: { uses, credits } } }
@@ -174,23 +194,37 @@ setInterval(() => { if (statsDirty) { statsDirty = false; try { fs.writeFileSync
 
 const todayStr = () => new Date().toISOString().slice(0, 10); // UTC YYYY-MM-DD
 const monthStr = () => new Date().toISOString().slice(0, 7);
+/** The day the credits next reset, YYYY-MM-DD (1st of next month, UTC). */
+const resetDay = () => { const d = new Date(); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString().slice(0, 10); };
+const fmtResetDay = () => new Date(resetDay() + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' });
 const toolCost = toolId => {
   const c = settings.toolCosts?.[toolId];
-  return Number.isFinite(c) && c >= 0 ? c : settings.costPerUse;
+  if (Number.isFinite(c) && c >= 0) return c;
+  return (settings.heavyTools || []).includes(toolId) ? settings.heavyCost : settings.costPerUse;
 };
 
-/** Gives a user their starting credits the first time, and the monthly
- *  top-up when a new month starts. Returns true if the record changed. */
+/** The user's current plan id. A paid plan with a past end date counts as free. */
+function planIdOf(u) {
+  if (!u || !PLAN_IDS.includes(u.plan)) return 'free';
+  if (u.plan !== 'free' && u.planUntil && u.planUntil < todayStr()) return 'free';
+  return u.plan;
+}
+const planOf = u => settings.plans[planIdOf(u)] || settings.plans.free;
+
+/** Sets a new account's credits, and resets them to the plan's allowance when a
+ *  new month starts (no rollover). Returns true if the record changed. */
 function topUp(u) {
-  let changed = false;
-  if (!Number.isFinite(u.credits)) { u.credits = settings.startingCredits; u.refilledMonth = monthStr(); changed = true; }
-  const floor = settings.monthlyFloor?.[u.userType];
-  if (u.userType && u.refilledMonth !== monthStr()) {
-    if (Number.isFinite(floor) && u.credits < floor) u.credits = floor;
-    u.refilledMonth = monthStr();
-    changed = true;
+  const plan = planOf(u), month = monthStr();
+  if (!Number.isFinite(u.credits)) { u.credits = plan.monthlyCredits; u.refilledMonth = month; return true; }
+  if (u.refilledMonth !== month || u.creditPlan !== planIdOf(u)) {
+    // A plan change mid-month: an upgrade gets the new allowance now, a
+    // downgrade (or an expired plan) keeps at most the new allowance.
+    const upgrade = u.refilledMonth === month && u.creditPlan && plan.monthlyCredits > (settings.plans[u.creditPlan]?.monthlyCredits ?? 0);
+    u.credits = u.refilledMonth !== month || upgrade ? plan.monthlyCredits : Math.min(u.credits, plan.monthlyCredits);
+    u.refilledMonth = month; u.creditPlan = planIdOf(u);
+    return true;
   }
-  return changed;
+  return false;
 }
 
 function logCredits(email, delta, balance, reason, extra = {}) {
@@ -203,25 +237,34 @@ function creditQuote(email, toolId, units = 1) {
   const u = users[email];
   if (topUp(u)) saveUsers();
   const cost = toolCost(toolId) * units;
+  if (planOf(u).unlimited) return { ok: true, cost, balance: null, unlimited: true };
   return { ok: u.credits >= cost, cost, balance: u.credits };
 }
-/** Deducts credits (call after creditQuote said ok, in the same tick, or after the work succeeded). */
+/** Deducts credits (call after creditQuote said ok, in the same tick, or after the work succeeded).
+ *  Unlimited plans are not charged, but the use is still logged. */
 function chargeCredits(email, toolId, units = 1) {
   const u = users[email];
   const cost = toolCost(toolId) * units;
-  u.credits = Math.max(0, u.credits - cost);
-  saveUsers();
-  logCredits(email, -cost, u.credits, 'use', { toolId, units });
+  const unlimited = !!planOf(u).unlimited;
+  if (!unlimited) { u.credits = Math.max(0, u.credits - cost); saveUsers(); }
+  logCredits(email, unlimited ? 0 : -cost, unlimited ? null : u.credits, 'use', { toolId, units, ...(unlimited && { cost }) });
   const day = (stats[todayStr()] ||= {});
   const row = (day[toolId] ||= { uses: 0, credits: 0 });
   row.uses += units; row.credits += cost; statsDirty = true;
-  return { cost, balance: u.credits };
+  return { cost, balance: unlimited ? null : u.credits };
 }
 
 const outOfCredits = (q, toolId) => ({
-  error: `This needs ${q.cost} credits and you have ${q.balance}. Your credits top up at the start of each month.`,
-  code: 'out_of_credits', cost: q.cost, balance: q.balance, toolId,
+  error: `This needs ${q.cost} credits and you have ${q.balance}. Your credits reset on ${fmtResetDay()}, or upgrade to Pro for ${settings.plans.pro.monthlyCredits.toLocaleString('en')} a month.`,
+  code: 'out_of_credits', cost: q.cost, balance: q.balance, toolId, resetsOn: resetDay(),
 });
+
+/** Null if the file fits the user's plan, else the error body for a 413. */
+function fileTooBig(email, bytes) {
+  const mb = planOf(users[email]).maxFileMB;
+  if (!Number.isFinite(mb) || mb <= 0 || bytes <= mb * 1024 * 1024) return null;
+  return { error: `Your plan allows files up to ${mb} MB. Upgrade for bigger files.`, code: 'file_too_large', maxFileMB: mb };
+}
 
 /** Middleware: signed-in (not blocked) user, or 401. */
 function requireUser(req, res, next) {
@@ -501,11 +544,14 @@ async function sendFileAndCleanup(res, filePath, downloadName) {
 ═══════════════════════════════════════════ */
 
 /* Spend credits for an on-device tool, before it runs on the user's device.
-   Only the tool id and the number of files are sent, never the files. */
+   Only the tool id, the number of files and the largest file's size are sent, never the files. */
 app.post('/api/credits/spend', requireUser, (req, res) => {
   const toolId = String(req.body?.toolId || '').trim().slice(0, 40);
   if (!/^[\w-]+$/.test(toolId)) return res.status(400).json({ error: 'toolId is required.' });
   const units = Math.min(100, Math.max(1, parseInt(req.body?.units, 10) || 1));
+  // The size of the largest file (a number only; the file stays on the device).
+  const big = fileTooBig(req.userEmail, Number(req.body?.maxBytes) || 0);
+  if (big) return res.status(413).json(big);
   const q = creditQuote(req.userEmail, toolId, units);
   if (!q.ok) return res.status(402).json(outOfCredits(q, toolId));
   res.json(chargeCredits(req.userEmail, toolId, units));
@@ -515,7 +561,37 @@ app.post('/api/credits/spend', requireUser, (req, res) => {
 app.get('/api/credits/quote', requireUser, (req, res) => {
   const toolId = String(req.query.toolId || '').trim().slice(0, 40);
   const q = creditQuote(req.userEmail, toolId, 1);
-  res.json({ toolId, cost: q.cost, balance: q.balance });
+  const u = users[req.userEmail];
+  res.json({ toolId, cost: q.cost, balance: q.balance, unlimited: !!q.unlimited, monthlyCredits: planOf(u).monthlyCredits,
+    plan: planIdOf(u), maxFileMB: planOf(u).maxFileMB, warnAtPercent: settings.warnAtPercent, resetsOn: resetDay() });
+});
+
+/* "Upgrade" on the pricing page. There is no payment gateway yet: the request
+   is stored for the admin, who sends an invoice and switches the plan on. */
+const upgradeLimiter = new Map(); // email -> last request time
+app.post('/api/upgrade-request', requireUser, (req, res) => {
+  const plan = String(req.body?.plan || '');
+  if (!['pro', 'business'].includes(plan)) return res.status(400).json({ error: 'Choose Pro or Business.' });
+  const last = upgradeLimiter.get(req.userEmail) || 0;
+  if (Date.now() - last < 60_000) return res.status(429).json({ error: 'We already have your request. We will be in touch soon.' });
+  upgradeLimiter.set(req.userEmail, Date.now());
+  const u = users[req.userEmail];
+  const clean = (v, n) => String(v || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, n);
+  const row = {
+    t: new Date().toISOString(), email: req.userEmail, name: u.name || '', plan, currentPlan: planIdOf(u),
+    company: clean(req.body?.company, 120), seats: Math.min(100_000, Math.max(0, parseInt(req.body?.seats, 10) || 0)) || null,
+    phone: clean(req.body?.phone, 40), message: clean(req.body?.message, 1000),
+  };
+  fs.appendFile(REQUESTS_FILE, JSON.stringify(row) + '\n').catch(e => console.error('[Data] Could not save upgrade request:', e.message));
+  console.log(`[Upgrade] ${row.email} asked for ${plan}`);
+  if (transporter && ADMIN_EMAILS.length) {
+    transporter.sendMail({
+      from: process.env.EMAIL_USER, to: ADMIN_EMAILS.join(','), replyTo: row.email,
+      subject: `LetsConvertPDF: ${plan === 'pro' ? 'Pro' : 'Business'} request from ${row.email}`,
+      text: Object.entries(row).map(([k, v]) => `${k}: ${v ?? ''}`).join('\n'),
+    }).catch(e => console.error('[Upgrade] Email failed:', e.message));
+  }
+  res.json({ ok: true });
 });
 
 /* First sign-in: the user says whether they are a student, an individual or a business. */
@@ -629,7 +705,10 @@ function publicUser(email) {
     email, name: u.name || '', isAdmin: isAdmin(email),
     userType: u.userType || null, company: u.company || null,
     credits: Number.isFinite(u.credits) ? u.credits : 0,
-    costPerUse: settings.costPerUse,
+    plan: planIdOf(u), planUntil: planIdOf(u) === 'free' ? null : (u.planUntil || null),
+    ...planOf(u), resetsOn: resetDay(),
+    costPerUse: settings.costPerUse, heavyCost: settings.heavyCost, heavyTools: settings.heavyTools,
+    toolCosts: settings.toolCosts, warnAtPercent: settings.warnAtPercent,
   };
 }
 
@@ -768,12 +847,14 @@ app.get('/api/admin/users', requireAdmin, (req, res) => {
     email, name: u.name || '', createdAt: u.createdAt || null, lastLoginAt: u.lastLoginAt || null,
     googleDomain: u.googleDomain || null, blocked: !!u.blocked, isAdmin: isAdmin(email),
     userType: u.userType || null, company: u.company || null, credits: Number.isFinite(u.credits) ? u.credits : null,
+    plan: planIdOf(u), planUntil: u.planUntil || null,
   })).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   res.json({
     total: list.length,
     activeThisWeek: list.filter(u => u.lastLoginAt && u.lastLoginAt >= weekAgo).length,
     newThisWeek: list.filter(u => u.createdAt && u.createdAt >= weekAgo).length,
     byType: USER_TYPES.concat('unset').reduce((o, t) => ({ ...o, [t]: list.filter(u => (u.userType || 'unset') === t).length }), {}),
+    byPlan: PLAN_IDS.reduce((o, p) => ({ ...o, [p]: list.filter(u => u.plan === p).length }), {}),
     users: list,
   });
 });
@@ -791,6 +872,31 @@ app.post('/api/admin/users/:email/credits', requireAdmin, (req, res) => {
   res.json({ ok: true, credits: u.credits });
 });
 
+/* Put a user on a plan (free, pro or business), optionally until a date. */
+app.post('/api/admin/users/:email/plan', requireAdmin, (req, res) => {
+  const key = String(req.params.email || '').toLowerCase();
+  const u = users[key];
+  if (!u) return res.status(404).json({ error: 'No such user.' });
+  const plan = String(req.body?.plan || '');
+  if (!PLAN_IDS.includes(plan)) return res.status(400).json({ error: 'Choose free, pro or business.' });
+  const until = String(req.body?.until || '').trim();
+  if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) return res.status(400).json({ error: 'End date must look like 2027-12-31, or be empty.' });
+  topUp(u);
+  u.plan = plan; u.planUntil = plan === 'free' ? null : (until || null);
+  topUp(u); // applies the new allowance now
+  saveUsers();
+  logCredits(key, 0, u.credits, 'plan', { by: req.adminEmail, plan, until: u.planUntil });
+  console.log(`[Admin] ${req.adminEmail} put ${key} on ${plan}${u.planUntil ? ` until ${u.planUntil}` : ''}`);
+  res.json({ ok: true, plan: planIdOf(u), planUntil: u.planUntil, credits: u.credits });
+});
+
+/* Upgrade requests from the pricing page, newest first. */
+app.get('/api/admin/upgrade-requests', requireAdmin, async (req, res) => {
+  const text = await fs.readFile(REQUESTS_FILE, 'utf8').catch(() => '');
+  const rows = text.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  res.json({ requests: rows.reverse().slice(0, 500) });
+});
+
 app.get('/api/admin/settings', requireAdmin, (req, res) => res.json(settings));
 app.put('/api/admin/settings', requireAdmin, (req, res) => {
   const b = req.body || {};
@@ -801,9 +907,20 @@ app.put('/api/admin/settings', requireAdmin, (req, res) => {
   };
   try {
     const next = {
-      startingCredits: num(b.startingCredits, 'Starting credits'),
-      costPerUse: num(b.costPerUse, 'Credits per use', 10_000),
-      monthlyFloor: Object.fromEntries(USER_TYPES.map(t => [t, num(b.monthlyFloor?.[t] ?? 0, `Monthly top-up for ${t}`)])),
+      version: 2,
+      costPerUse: num(b.costPerUse, 'Credits per use (basic tools)', 10_000),
+      heavyCost: num(b.heavyCost, 'Credits per use (heavy tools)', 10_000),
+      heavyTools: [...new Set((Array.isArray(b.heavyTools) ? b.heavyTools : String(b.heavyTools || '').split(','))
+        .map(x => String(x).trim()).filter(x => /^[\w-]{1,40}$/.test(x)))],
+      warnAtPercent: num(b.warnAtPercent ?? 80, 'Upgrade prompt at', 100),
+      plans: Object.fromEntries(PLAN_IDS.map(id => {
+        const p = b.plans?.[id] || {};
+        return [id, {
+          monthlyCredits: num(p.monthlyCredits ?? 0, `Monthly credits for ${id}`, 100_000_000),
+          maxFileMB: num(p.maxFileMB ?? 25, `File size limit for ${id}`, 2048),
+          unlimited: !!p.unlimited,
+        }];
+      })),
       toolCosts: {},
     };
     for (const [id, c] of Object.entries(b.toolCosts || {})) {
@@ -916,6 +1033,8 @@ function conversionRoute(defaultToolId, job, { acceptBodyToolId = false } = {}) 
       fs.remove(req.file.path).catch(() => {});
       return res.status(401).json({ error: 'Please sign in with Google to use this tool.', code: 'signin_required' });
     }
+    const big = fileTooBig(email, req.file.size);
+    if (big) { fs.remove(req.file.path).catch(() => {}); return res.status(413).json(big); }
     const quote = creditQuote(email, toolId);
     if (!quote.ok) { fs.remove(req.file.path).catch(() => {}); return res.status(402).json(outOfCredits(quote, toolId)); }
     const sessionDir = path.join(OUTPUTS_DIR, uuidv4());
@@ -925,7 +1044,7 @@ function conversionRoute(defaultToolId, job, { acceptBodyToolId = false } = {}) 
       // Charged only once the conversion worked, so a failure costs nothing.
       if (!(await fs.pathExists(file))) throw new Error('Conversion produced no output.');
       const { balance } = chargeCredits(email, toolId);
-      res.set('X-Credits-Balance', String(balance));
+      if (balance != null) res.set('X-Credits-Balance', String(balance));
       await sendFileAndCleanup(res, file, name);
     } catch (e) {
       console.error(`[Convert:${toolId}]`, e.message);
@@ -1111,7 +1230,7 @@ app.listen(PORT, () => {
 ║  Email : ${transporter ? '✓ SMTP ready — ' + process.env.EMAIL_USER : '✗ NOT configured — contact form messages are only logged'}
 ║  Google: ${googleClient ? '✓ Sign-In ready' : '✗ Not configured — "Continue with Google" returns 501'}
 ║  Mode  : ${process.env.NODE_ENV || 'development'}                             ║
-║  Credits: ${settings.startingCredits} to start · ${settings.costPerUse} per use · admins: ${ADMIN_EMAILS.length}
+║  Credits: free ${settings.plans.free.monthlyCredits}/month · ${settings.costPerUse} basic / ${settings.heavyCost} heavy · admins: ${ADMIN_EMAILS.length}
 ╚══════════════════════════════════════════════════════╝
   `);
 });

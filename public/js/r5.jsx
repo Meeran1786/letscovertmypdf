@@ -219,3 +219,106 @@ function AudiencePage({ audience: a, onTool, onAudience, onTrust }) {
     </div>
   );
 }
+
+/* ── /pricing ─────────────────────────────────────────────── */
+const PRICING = window.LCP_PRICING || null;
+
+function PricingPage({ onTrust }) {
+  const { user, token, openAuth, isAuthenticated } = useAuth();
+  const [asking, setAsking] = useState(null); // 'pro' | 'business'
+  const [form, setForm] = useState({ company: '', seats: '', phone: '', message: '' });
+  const [sent, setSent] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (!PRICING) return null;
+  const current = user ? (user.plan || 'free') : null;
+  const ask = plan => {
+    setSent(''); setError('');
+    if (!isAuthenticated) return openAuth('login', 'Sign in with Google first, so we know which account to upgrade.');
+    setAsking(plan);
+  };
+  const submit = async e => {
+    e.preventDefault(); setBusy(true); setError('');
+    try {
+      const r = await fetch('/api/upgrade-request', { method: 'POST', headers: authHeaders(token, { 'Content-Type': 'application/json' }), body: JSON.stringify({ plan: asking, ...form }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Could not send your request.');
+      setSent(asking); setAsking(null);
+    } catch (err) { setError(err.message); }
+    setBusy(false);
+  };
+  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
+  return (
+    <div className="min-h-screen pt-24 pb-16 px-4">
+      <div className="max-w-5xl mx-auto space-y-10">
+        <div className="text-center max-w-2xl mx-auto">
+          <h1 className="text-3xl sm:text-4xl font-extrabold mb-3" style={{color:'var(--text)'}}>{PRICING.h1}</h1>
+          <p className="text-lg" style={{color:'var(--muted)'}}>{PRICING.intro}</p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-5">
+          {PRICING.plans.map(p => {
+            const mine = current === p.id;
+            return (
+              <div key={p.id} className="card p-6 flex flex-col" style={p.highlight ? {border:'2px solid #2563EB'} : undefined}>
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-xl font-bold" style={{color:'var(--text)'}}>{p.name}</h2>
+                  {p.highlight && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full text-white" style={{background:'#2563EB'}}>Most popular</span>}
+                  {mine && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{background:'rgba(16,185,129,0.15)',color:'var(--ok-text)'}}>Your plan</span>}
+                </div>
+                <p className="text-sm mb-4" style={{color:'var(--muted)'}}>{p.tagline}</p>
+                <p className="text-3xl font-extrabold mb-5" style={{color:'var(--text)'}}>{p.price}</p>
+                <ul className="space-y-2 mb-6 flex-1">
+                  {p.features.map(f => <li key={f} className="text-sm flex gap-2" style={{color:'var(--text)'}}><span style={{color:'var(--ok-text)'}}>✓</span>{f}</li>)}
+                </ul>
+                {p.id === 'free'
+                  ? (isAuthenticated
+                      ? <a href={`${LP}/#tools`} className="text-center py-2.5 rounded-xl text-sm font-semibold" style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>{mine ? 'Use the tools' : 'Included'}</a>
+                      : <button onClick={() => openAuth('login')} className="py-2.5 rounded-xl text-sm font-semibold text-white" style={{background:'#2563EB'}}>Start free with Google</button>)
+                  : mine
+                    ? <p className="text-center text-sm py-2.5" style={{color:'var(--muted)'}}>You're on this plan{user?.planUntil ? ` until ${user.planUntil}` : ''}.</p>
+                    : sent === p.id
+                      ? <p className="text-center text-sm py-2.5" role="status" style={{color:'var(--ok-text)'}}>Thanks! We'll email {user?.email} soon.</p>
+                      : <button onClick={() => ask(p.id)} className="py-2.5 rounded-xl text-sm font-semibold text-white" style={{background: p.highlight ? '#2563EB' : '#0F172A'}}>
+                          {p.id === 'pro' ? 'Request Pro' : 'Talk to us'}
+                        </button>}
+              </div>
+            );
+          })}
+        </div>
+
+        {asking && (
+          <form onSubmit={submit} className="card p-6 max-w-xl mx-auto space-y-3" aria-labelledby="ask-title">
+            <h2 id="ask-title" className="font-bold text-lg" style={{color:'var(--text)'}}>{asking === 'pro' ? 'Request Pro' : 'Business plan'}</h2>
+            <p className="text-sm" style={{color:'var(--muted)'}}>We'll reply to {user?.email} with a quote and an invoice, then switch the plan on for you.</p>
+            <input className="inp" placeholder={asking === 'business' ? 'Company name' : 'Company (optional)'} value={form.company} onChange={set('company')} maxLength={120} required={asking === 'business'}/>
+            {asking === 'business' && <input className="inp" type="number" min="1" placeholder="How many people?" value={form.seats} onChange={set('seats')}/>}
+            <input className="inp" placeholder="Phone or WhatsApp (optional)" value={form.phone} onChange={set('phone')} maxLength={40}/>
+            <textarea className="inp" rows={3} placeholder="Anything we should know? (optional)" value={form.message} onChange={set('message')} maxLength={1000}/>
+            {error && <div className="text-sm rounded-xl p-3" role="alert" style={{background:'rgba(239,68,68,0.1)',color:'var(--err-text)'}}>{error}</div>}
+            <div className="flex gap-2">
+              <button type="submit" disabled={busy} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50" style={{background:'#2563EB'}}>{busy ? 'Sending…' : 'Send request'}</button>
+              <button type="button" onClick={() => setAsking(null)} className="px-5 py-2.5 rounded-xl text-sm font-semibold" style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>Cancel</button>
+            </div>
+          </form>
+        )}
+
+        <div className="card p-5">
+          <h2 className="font-bold mb-3" style={{color:'var(--text)'}}>What a use costs</h2>
+          <div>
+            {PRICING.costs.map(([n, c, d], i) => (
+              <div key={n} style={i ? {borderTop:'1px solid var(--border)'} : undefined} className="py-3 flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+                <div className="sm:w-48 shrink-0"><span className="font-semibold text-sm" style={{color:'var(--text)'}}>{n}</span> <span className="text-sm" style={{color:'var(--accent-text)'}}>{c}</span></div>
+                <p className="text-sm" style={{color:'var(--muted)'}}>{d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <Faq items={PRICING.faq}/>
+        <p className="text-center text-sm" style={{color:'var(--muted)'}}>
+          Handling confidential files? <AppLink href={`${LP}/trust`} onGo={onTrust} className="text-blue-500 hover:text-blue-400">See how we protect them →</AppLink>
+        </p>
+      </div>
+    </div>
+  );
+}

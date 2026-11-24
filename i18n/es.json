@@ -1,6 +1,8 @@
 {
 "ui": {
 "lang": "Idioma",
+"nav.pricing": "Planes",
+"foot.pricing": "Planes",
 "nav.privacy": "Privacidad",
 "nav.signout": "Cerrar sesión",
 "nav.ask": "Preguntar",
@@ -56,11 +58,11 @@
 "chip.credits": "1.000 créditos gratis",
 "chip.google": "Inicio de sesión seguro con Google",
 "chip.device": "Los archivos se quedan en tu dispositivo",
-"stat.credits": "Créditos gratis para empezar",
+"stat.credits": "Créditos gratis cada mes",
 "stat.signin": "Inicio de sesión verificado para cada usuario",
 "nav.signin": "Iniciar sesión con Google",
 "gate.title": "Inicia sesión para usar esta herramienta",
-"gate.sub": "Las cuentas nuevas reciben 1.000 créditos gratis. Cada uso cuesta 5. Tus archivos se siguen procesando en tu propio dispositivo.",
+"gate.sub": "Las cuentas gratuitas reciben 1.000 créditos cada mes. La mayoría de las herramientas cuesta 10 créditos por uso; las de IA y OCR, 25. Tus archivos se siguen procesando en tu propio dispositivo.",
 "auth.title": "Inicia sesión para continuar",
 "auth.sub": "Usamos tu cuenta de Google para que cada usuario esté verificado. Nunca vemos tu contraseña de Google y tus archivos se quedan en tu dispositivo.",
 "home.title": "LetsConvertPDF: herramientas PDF privadas que nunca suben tus archivos",

@@ -87,6 +87,7 @@
     ['ads', 'Ad banners', renderAds],
     ['users', 'Users', renderUsers],
     ['credits', 'Credits & usage', renderCredits],
+    ['requests', 'Upgrade requests', renderRequests],
   ];
   let current = (location.hash || '#ads').slice(1);
 
@@ -268,7 +269,8 @@
     const stat = (n, l) => h('div', { class: 'stat' }, h('b', {}, n), h('span', { class: 'muted small' }, l));
     const bt = d.byType || {};
     root.append(h('div', { class: 'stats' }, stat(d.total, 'accounts'), stat(d.newThisWeek, 'new in 7 days'), stat(d.activeThisWeek, 'signed in in 7 days'),
-      stat(bt.student || 0, 'students'), stat(bt.individual || 0, 'individuals'), stat(bt.business || 0, 'business')));
+      stat(bt.student || 0, 'students'), stat(bt.individual || 0, 'individuals'), stat(bt.business || 0, 'business'),
+      stat((d.byPlan || {}).pro || 0, 'on Pro'), stat((d.byPlan || {}).business || 0, 'on Business')));
     const q = h('input', { type: 'text', placeholder: 'Search by name, email or company domain' });
     const tbody = h('tbody');
     const draw = () => {
@@ -287,6 +289,14 @@
               try { const r = await api('POST', `/api/admin/users/${encodeURIComponent(u.email)}/credits`, { delta: Number(v), note }); u.credits = r.credits; draw(); }
               catch (e) { alert(e.message); }
             } }, '±')),
+          h('td', {}, (() => {
+            const sel = h('select', { onchange: async () => {
+              const until = sel.value === 'free' ? '' : (prompt(`Plan end date for ${u.email} (YYYY-MM-DD), or leave empty for no end date:`, u.planUntil || '') || '');
+              try { const r = await api('POST', `/api/admin/users/${encodeURIComponent(u.email)}/plan`, { plan: sel.value, until: until.trim() }); Object.assign(u, r); draw(); }
+              catch (e) { alert(e.message); draw(); }
+            } }, ['free', 'pro', 'business'].map(p => h('option', { value: p, selected: (u.plan || 'free') === p }, p[0].toUpperCase() + p.slice(1))));
+            return [sel, u.planUntil ? h('div', { class: 'muted small' }, `until ${u.planUntil}`) : null];
+          })()),
           h('td', {}, u.googleDomain || '—'),
           h('td', {}, fmtDate(u.createdAt)),
           h('td', {}, fmtDate(u.lastLoginAt)),
@@ -298,7 +308,7 @@
     };
     q.addEventListener('input', draw);
     root.append(h('div', { class: 'card' }, q, h('div', { style: { overflowX: 'auto', marginTop: '12px' } },
-      h('table', {}, h('thead', {}, h('tr', {}, ['Name', 'Email', 'Type', 'Credits', 'Google domain', 'Joined', 'Last sign-in', ''].map(t => h('th', {}, t)))), tbody))));
+      h('table', {}, h('thead', {}, h('tr', {}, ['Name', 'Email', 'Type', 'Credits', 'Plan', 'Google domain', 'Joined', 'Last sign-in', ''].map(t => h('th', {}, t)))), tbody))));
     draw();
   }
 
@@ -323,12 +333,20 @@
     root.append(
       h('div', { class: 'card' }, h('h2', {}, 'Credit rules'),
         h('div', { class: 'grid' },
-          num('Credits for a new account', () => cfg.startingCredits, v => { cfg.startingCredits = v; }),
-          num('Credits per use (default)', () => cfg.costPerUse, v => { cfg.costPerUse = v; }),
-          num('Monthly top-up: students', () => cfg.monthlyFloor.student, v => { cfg.monthlyFloor.student = v; }),
-          num('Monthly top-up: individuals', () => cfg.monthlyFloor.individual, v => { cfg.monthlyFloor.individual = v; }),
-          num('Monthly top-up: business', () => cfg.monthlyFloor.business, v => { cfg.monthlyFloor.business = v; })),
-        h('p', { class: 'muted small' }, 'The monthly top-up raises a balance back up to that number on the first use each month; it never lowers it.')),
+          num('Credits per use: basic tools', () => cfg.costPerUse, v => { cfg.costPerUse = v; }),
+          num('Credits per use: heavy tools', () => cfg.heavyCost, v => { cfg.heavyCost = v; }),
+          num('Upgrade prompt at (% used)', () => cfg.warnAtPercent, v => { cfg.warnAtPercent = v; }),
+          h('div', {}, h('label', {}, 'Heavy tools (tool ids, comma separated)'),
+            h('input', { type: 'text', value: (cfg.heavyTools || []).join(', '), oninput: e => { cfg.heavyTools = e.target.value.split(',').map(x => x.trim()).filter(Boolean); } }))),
+        h('p', { class: 'muted small' }, 'Batch tools pay once per file.')),
+      h('div', { class: 'card' }, h('h2', {}, 'Plans'),
+        h('div', { class: 'grid' }, ['free', 'pro', 'business'].flatMap(id => [
+          num(`${id[0].toUpperCase() + id.slice(1)}: credits a month`, () => cfg.plans[id].monthlyCredits, v => { cfg.plans[id].monthlyCredits = v; }),
+          num(`${id[0].toUpperCase() + id.slice(1)}: file size limit (MB)`, () => cfg.plans[id].maxFileMB, v => { cfg.plans[id].maxFileMB = v; }),
+          h('div', {}, h('label', {}, `${id[0].toUpperCase() + id.slice(1)}: unlimited use`),
+            h('input', { type: 'checkbox', checked: !!cfg.plans[id].unlimited, onchange: e => { cfg.plans[id].unlimited = e.target.checked; } })),
+        ])),
+        h('p', { class: 'muted small' }, 'Balances reset to the plan\'s monthly credits on the 1st of each month (UTC). Unused credits do not roll over. Put someone on Pro or Business from the Users tab. If you change these numbers, the Plans page text in public/js/audiences.js should be updated to match.')),
       h('div', { class: 'card' }, h('h2', {}, 'Cost per tool (leave empty to use the default)'), overrides,
         h('div', { class: 'row', style: { marginTop: '12px' } }, newId,
           h('button', { class: 'btn', onclick: () => { const id = newId.value.trim(); if (!id) return; cfg.toolCosts = { ...cfg.toolCosts, [id]: cfg.costPerUse }; newId.value = ''; drawOverrides(); } }, 'Add tool'))),
@@ -348,7 +366,24 @@
         ? h('table', {}, h('thead', {}, h('tr', {}, ['Tool', 'Uses', 'Credits'].map(t => h('th', {}, t)))),
             h('tbody', {}, st.perTool.map(t => h('tr', {}, h('td', {}, t.toolId), h('td', {}, t.uses.toLocaleString()), h('td', {}, t.credits.toLocaleString())))))
         : h('p', { class: 'muted' }, 'No uses yet.'),
-      h('p', { class: 'muted small' }, 'Business licences (seats, company domain, expiry and security policies) come in the next update.')));
+      h('p', { class: 'muted small' }, 'Business plan uses are not charged, but they are counted here.')));
+  }
+
+  /* ── Upgrade requests from /pricing ── */
+  async function renderRequests(root) {
+    root.append(h('p', { class: 'muted' }, 'Loading…'));
+    let d;
+    try { d = await api('GET', '/api/admin/upgrade-requests'); }
+    catch (e) { clear(root); root.append(h('div', { class: 'msg err' }, e.message)); return; }
+    clear(root);
+    root.append(h('div', { class: 'card' }, h('h2', {}, 'Upgrade requests'),
+      h('p', { class: 'muted small' }, 'Send the person an invoice, then switch their plan on in the Users tab.'),
+      d.requests.length
+        ? h('div', { style: { overflowX: 'auto' } }, h('table', {},
+            h('thead', {}, h('tr', {}, ['When', 'Email', 'Wants', 'Now on', 'Company', 'Seats', 'Phone', 'Message'].map(t => h('th', {}, t)))),
+            h('tbody', {}, d.requests.map(r => h('tr', {}, h('td', {}, fmtDate(r.t)), h('td', {}, r.email), h('td', {}, r.plan), h('td', {}, r.currentPlan || '—'),
+              h('td', {}, r.company || '—'), h('td', {}, r.seats || '—'), h('td', {}, r.phone || '—'), h('td', {}, r.message || '—'))))))
+        : h('p', { class: 'muted' }, 'No requests yet.')));
   }
 
   /* ── start ── */

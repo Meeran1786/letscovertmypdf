@@ -68,6 +68,9 @@
       --text:     #E2E8F0;
       --muted:    #94A3B8;
       --subtle:   #475569;
+      --accent-text: #60A5FA;
+      --ok-text:  #34D399;
+      --err-text: #F87171;
       --hero-glow:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(37,99,235,0.18) 0%, transparent 70%);
     }
     [data-theme="light"] {
@@ -81,6 +84,9 @@
       --text:     #1E293B;
       --muted:    #64748B;
       --subtle:   #94A3B8;
+      --accent-text: #1D4ED8;
+      --ok-text:  #047857;
+      --err-text: #B91C1C;
       --hero-glow:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(37,99,235,0.08) 0%, transparent 70%);
     }
     *, *::before, *::after { box-sizing: border-box; }
@@ -536,8 +542,10 @@ async function fetchUsageStatus(toolId, token) {
   if (!r.ok) return null;
   const d = await r.json(); announceCredits(d.balance); return d;
 }
-async function consumeUsage(toolId, token, units = 1) {
-  const r = await fetch('/api/credits/spend', { method:'POST', headers: authHeaders(token, {'Content-Type':'application/json'}), body: JSON.stringify({ toolId, units }) });
+const largest = files => Math.max(0, ...(files || []).map(f => f?.size || 0));
+async function consumeUsage(toolId, token, units = 1, maxBytes = 0) {
+  // Only the tool id, file count and the largest file's size (for the plan's size limit) are sent.
+  const r = await fetch('/api/credits/spend', { method:'POST', headers: authHeaders(token, {'Content-Type':'application/json'}), body: JSON.stringify({ toolId, units, maxBytes }) });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) {
     if (Number.isFinite(d.balance)) announceCredits(d.balance);
@@ -546,22 +554,50 @@ async function consumeUsage(toolId, token, units = 1) {
   announceCredits(d.balance);
   return d;
 }
+const fmtReset = d => d ? new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, { day:'numeric', month:'short', timeZone:'UTC' }) : '';
+const goPricing = () => { const p = `${LP}/pricing`; if (location.pathname !== p) { history.pushState(null, '', p); window.dispatchEvent(new PopStateEvent('popstate')); window.scrollTo(0, 0); } };
+
+/** Cost of this tool, credits left this month, and an upgrade prompt once
+ *  most of the month's credits are used. */
 function UsageBadge({ status }) {
+  const month = new Date().toISOString().slice(0, 7);
+  const [hidden, setHidden] = useState(() => localStorage.getItem('lcpdf-upgrade-hint') === month);
   if (!status) return null;
-  const short = status.balance < status.cost;
-  return (
+  if (status.unlimited) return (
     <div className="flex flex-wrap items-center gap-2 mb-5">
-      <div className="flex items-center gap-2 text-xs rounded-full px-3 py-1.5 w-fit"
-        style={{
-          background: short ? 'rgba(239,68,68,0.1)' : 'rgba(37,99,235,0.1)',
-          color: short ? '#F87171' : '#60A5FA',
-          border: `1px solid ${short ? 'rgba(239,68,68,0.3)' : 'rgba(37,99,235,0.3)'}`,
-        }}>
-        <Ic n="sparkle" sz={13}/>
-        {short
-          ? `Not enough credits: this costs ${status.cost}, you have ${status.balance}`
-          : `${status.cost} credits per use · you have ${status.balance.toLocaleString()}`}
+      <div className="flex items-center gap-2 text-xs rounded-full px-3 py-1.5 w-fit" style={{background:'rgba(16,185,129,0.1)',color:'var(--ok-text)',border:'1px solid rgba(16,185,129,0.3)'}}>
+        <Ic n="sparkle" sz={13}/>{tr('credits.unlimited','Business plan: unlimited use')}
       </div>
+    </div>
+  );
+  const short = status.balance < status.cost;
+  const monthly = status.monthlyCredits || 0;
+  const usedPct = monthly ? Math.round(100 * (1 - status.balance / monthly)) : 0;
+  const nearLimit = !short && monthly > 0 && usedPct >= (status.warnAtPercent || 80) && status.plan !== 'business';
+  return (
+    <div className="mb-5 space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 text-xs rounded-full px-3 py-1.5 w-fit"
+          style={{
+            background: short ? 'rgba(239,68,68,0.1)' : 'rgba(37,99,235,0.1)',
+            color: short ? 'var(--err-text)' : 'var(--accent-text)',
+            border: `1px solid ${short ? 'rgba(239,68,68,0.3)' : 'rgba(37,99,235,0.3)'}`,
+          }}>
+          <Ic n="sparkle" sz={13}/>
+          {short
+            ? `Not enough credits: this costs ${status.cost}, you have ${status.balance}`
+            : `${status.cost} credits per use · ${status.balance.toLocaleString()}${monthly ? ` of ${monthly.toLocaleString()}` : ''} left this month`}
+        </div>
+        {status.resetsOn && <span className="text-xs" style={{color:'var(--subtle)'}}>Resets {fmtReset(status.resetsOn)}</span>}
+        {status.maxFileMB > 0 && <span className="text-xs" style={{color:'var(--subtle)'}}>· Files up to {status.maxFileMB} MB</span>}
+      </div>
+      {nearLimit && !hidden && (
+        <div className="rounded-xl p-3 text-sm flex flex-wrap items-center gap-3" role="status" style={{background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.35)',color:'var(--text)'}}>
+          <span className="flex-1 min-w-[12rem]">You've used {usedPct}% of this month's credits. {status.plan === 'pro' ? 'Need more? Business is unlimited.' : `Pro gives you 10,000 credits a month and bigger files.`}</span>
+          <button onClick={goPricing} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style={{background:'#2563EB'}}>See plans</button>
+          <button onClick={() => { localStorage.setItem('lcpdf-upgrade-hint', month); setHidden(true); }} className="text-xs" style={{color:'var(--muted)'}}>Not now</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -575,7 +611,7 @@ function SignInGate({ tool, onSignIn }) {
       </div>
       <h2 className="text-lg font-bold" style={{color:'var(--text)'}}>{tr('gate.title','Sign in to use this tool')}</h2>
       <p className="text-sm max-w-md mx-auto" style={{color:'var(--muted)'}}>
-        {tr('gate.sub','New accounts get 1,000 free credits. Each use costs 5. Your files are still processed on your own device.')}
+        {tr('gate.sub','Free accounts get 1,000 credits every month. Most tools cost 10 credits a use, AI and OCR tools 25. Your files are still processed on your own device.')}
       </p>
       <button onClick={onSignIn} className="px-6 py-3 rounded-xl font-bold text-white text-sm" style={{background:'#2563EB'}}>{tr('nav.signin','Sign in with Google')}</button>
     </div>
@@ -601,10 +637,12 @@ function UpgradeModal({ tool, usageInfo, onClose }) {
           {usageInfo
             ? `${tool.label} needs ${usageInfo.cost} credits and you have ${usageInfo.balance}. `
             : `You don't have enough credits for ${tool.label}. `}
-          Your credits top up at the start of each month. For your team or company, ask us about a business licence using the chat button.
+          {usageInfo?.resetsOn ? `Your free credits reset on ${fmtReset(usageInfo.resetsOn)}. ` : 'Your credits reset at the start of each month. '}
+          Pro gives you 10,000 credits a month, and Business is unlimited for your whole team.
         </p>
+        <button onClick={() => { onClose(); goPricing(); }} className="w-full py-3 rounded-xl font-bold text-white text-sm mb-2" style={{background:'#2563EB'}}>See plans</button>
         <button onClick={onClose} className="w-full py-3 rounded-xl font-semibold text-sm transition-colors"
-          style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>Got it</button>
+          style={{background:'var(--bg-input)',border:'1px solid var(--border-s)',color:'var(--text)'}}>Not now</button>
       </div>
     </div>
   );
@@ -636,7 +674,7 @@ function ProfilePicker({ onDone }) {
     <div className="anim-fade overlay" role="dialog" aria-modal="true" aria-labelledby="profile-title">
       <div className="card-solid anim-up w-full max-w-md relative p-6 sm:p-8">
         <h2 id="profile-title" className="text-xl font-bold mb-1" style={{color:'var(--text)'}}>Welcome! Which describes you?</h2>
-        <p className="text-sm mb-5" style={{color:'var(--muted)'}}>Your account has 1,000 free credits. Each use of a tool costs 5.</p>
+        <p className="text-sm mb-5" style={{color:'var(--muted)'}}>Your free plan has 1,000 credits every month. Most tools cost 10 a use, AI and OCR tools 25.</p>
         <div className="space-y-2 mb-4" role="radiogroup">
           {opts.map(([v, label, sub]) => (
             <button key={v} type="button" role="radio" aria-checked={type===v} onClick={() => setType(v)}
@@ -1033,6 +1071,9 @@ function Workspace({ tool, onBack, preset }) {
   const handleFiles = picked => {
     const ok = picked.filter(Boolean).filter(accepts);
     if (!ok.length) { setError(`Please choose a ${tool.accept.toUpperCase().replace(/\./g,'').replace(/,/g,' / ')} file.`); return; }
+    const maxMB = usageStatus?.maxFileMB;
+    const tooBig = maxMB > 0 && ok.find(f => f.size > maxMB * 1048576);
+    if (tooBig) { setError(`${tooBig.name} is ${fmtSz(tooBig.size)}. Your plan allows files up to ${maxMB} MB. Upgrade for bigger files on the Plans page.`); return; }
     setFiles(ok); setState('config');
     setError(ok.length < picked.length ? 'Some files were skipped because they are not the right type.' : '');
   };
@@ -1069,7 +1110,7 @@ function Workspace({ tool, onBack, preset }) {
         if (tool.id==='sign' && !config.sigData) throw new Error('Add your signature first.');
         if (tool.id==='protect' && config.password!==config.confirmPw) throw new Error('Passwords do not match.');
         if (tool.id==='merge' && files.length<2) throw new Error('Add at least two PDFs to merge.');
-        await consumeUsage(tool.id, token, tool.batch && files.length > 1 ? files.length : 1);
+        await consumeUsage(tool.id, token, tool.batch && files.length > 1 ? files.length : 1, largest(files));
         setStatus(tr('ws.processing','Processing on your device…'));tick(20);
         const batch = tool.batch && files.length > 1;
         let result;
@@ -1136,7 +1177,7 @@ function Workspace({ tool, onBack, preset }) {
             </div>
             {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
             <AiWorkspace key={files[0]?.name+files[0]?.size} tool={tool} file={files[0]}
-              onQuota={async()=>{try{await consumeUsage(tool.id,token);refreshUsage();}catch(e){if(e.status===402){setShowUpgrade(true);refreshUsage();}if(e.status===401)openAuth('login');throw e;}}}
+              onQuota={async()=>{try{await consumeUsage(tool.id,token,1,largest(files));refreshUsage();}catch(e){if(e.status===402){setShowUpgrade(true);refreshUsage();}if(e.status===401)openAuth('login');throw e;}}}
               onError={e=>{if(e&&(e.status===402||e.status===401))return;console.error(e);setError(e.message||'Something went wrong.');}}/>
           </div>
         )}
@@ -1151,7 +1192,7 @@ function Workspace({ tool, onBack, preset }) {
             </div>
             {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
             {(()=>{
-              const onQuota = async()=>{try{await consumeUsage(tool.id,token);refreshUsage();}catch(e){if(e.status===402){setShowUpgrade(true);refreshUsage();}if(e.status===401)openAuth('login');throw e;}};
+              const onQuota = async()=>{try{await consumeUsage(tool.id,token,1,largest(files));refreshUsage();}catch(e){if(e.status===402){setShowUpgrade(true);refreshUsage();}if(e.status===401)openAuth('login');throw e;}};
               const onError = e=>{if(e&&(e.status===402||e.status===401))return;console.error(e);setError(e.message||'Something went wrong.');};
               const key = files.map(f=>f.name+f.size).join('|');
               if (tool.custom==='translate') return <TranslateWorkspace key={key} file={files[0]} initialTo={config.to} onQuota={onQuota} onError={onError}/>;
@@ -1170,7 +1211,7 @@ function Workspace({ tool, onBack, preset }) {
                 <button onClick={()=>{setState('drop');setFiles([]);setError('');}} className="text-xs text-blue-400">Start over</button></div>
               {error && <div className="rounded-xl p-3 text-sm" style={{background:'rgba(239,68,68,0.1)',color:'#F87171',border:'1px solid rgba(239,68,68,0.3)'}}>{error}</div>}
               <CompareWorkspace key={files.map(f=>f.name+f.size).join('|')} files={files}
-                onQuota={async()=>{try{await consumeUsage(tool.id,token);refreshUsage();}catch(e){if(e.status===402){setShowUpgrade(true);refreshUsage();}if(e.status===401)openAuth('login');throw e;}}}
+                onQuota={async()=>{try{await consumeUsage(tool.id,token,1,largest(files));refreshUsage();}catch(e){if(e.status===402){setShowUpgrade(true);refreshUsage();}if(e.status===401)openAuth('login');throw e;}}}
                 onError={e=>{if(e&&(e.status===402||e.status===401))return;setError(e.message||'Something went wrong.');}}/>
             </div>)}
 
@@ -1340,7 +1381,7 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand, onAudience, onTru
               {tr('hero.t1','PDF tools that')} <span className="gradient-text">{tr('hero.t2','never upload your files')}</span>
             </h1>
             <p className="text-base sm:text-lg max-w-xl mx-auto lg:mx-0 mb-7 leading-relaxed" style={{color:'var(--muted)'}}>
-              {tr('hero.sub','Merge, compress, sign, OCR, and chat with your PDFs using AI that runs on your own device. Your documents stay with you. Start free with 1,000 credits, no watermarks.')}
+              {tr('hero.sub','Merge, compress, sign, OCR, and chat with your PDFs using AI that runs on your own device. Your documents stay with you. Start free with 1,000 credits a month, no watermarks.')}
             </p>
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start mb-7">
               {isAuthenticated
@@ -1358,7 +1399,7 @@ function HomePage({ onTool, cat, setCat, onPrivacy, onCommand, onAudience, onTru
           <div className="card p-6 sm:p-7" style={{background:'var(--bg-elev)'}}>
             <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{color:'var(--subtle)'}}>{tr('hero.trust','Built for confidential work')}</p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-6">
-              {[[`${TOOLS.filter(t=>t.engine==='client').length}/${TOOLS.length}`,tr('stat.device','Tools run on your device')],['0',tr('stat.ai','Files uploaded by AI tools')],['1,000',tr('stat.credits','Free credits to start')],['Google',tr('stat.signin','Verified sign-in for every user')]].map(([v,l])=>(
+              {[[`${TOOLS.filter(t=>t.engine==='client').length}/${TOOLS.length}`,tr('stat.device','Tools run on your device')],['0',tr('stat.ai','Files uploaded by AI tools')],['1,000',tr('stat.credits','Free credits every month')],['Google',tr('stat.signin','Verified sign-in for every user')]].map(([v,l])=>(
                 <div key={l}>
                   <p className="font-bold text-2xl sm:text-3xl text-blue-400 leading-none mb-1.5">{v}</p>
                   <p className="text-xs sm:text-sm leading-snug" style={{color:'var(--muted)'}}>{l}</p>
@@ -1495,6 +1536,7 @@ function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
             <button key={c} onClick={() => onCategory(c)} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400" style={{color:'var(--muted)'}}>{tr('cat.'+c, c)}</button>
           ))}
           <a href={`${LP}/privacy`} onClick={e=>{e.preventDefault();onPrivacy();}} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400 flex items-center gap-1" style={{color:'#34D399'}}><Ic n="lock" sz={12}/>{tr('nav.privacy','Privacy')}</a>
+          <a href={`${LP}/pricing`} onClick={e=>{e.preventDefault();goPricing();}} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-blue-400" style={{color:'var(--muted)'}}>{tr('nav.pricing','Plans')}</a>
           <button onClick={onCommand} className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 hover:text-blue-400" style={{color:'var(--muted)',border:'1px solid var(--border-s)'}} aria-label="Open the command bar" title="Tell LetsConvertPDF what to do (Ctrl+K)"><Ic n="sparkle" sz={12}/>Ask <kbd className="text-[10px] opacity-70">⌘K</kbd></button>
         </div>
 
@@ -1518,15 +1560,22 @@ function Navbar({ onHome, onCategory, onPrivacy, onCommand }) {
                   {user?.name?.[0]?.toUpperCase()||'U'}
                 </div>
                 <span className="hidden sm:block max-w-24 truncate">{user?.name}</span>
-                {Number.isFinite(user?.credits) && <span className="text-xs font-semibold px-2 py-0.5 rounded-full" title="Your credits" style={{background:'rgba(37,99,235,0.15)',color:'#60A5FA'}}>{user.credits.toLocaleString()} cr</span>}
+                {user?.unlimited
+                  ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full" title="Business plan" style={{background:'rgba(16,185,129,0.15)',color:'var(--ok-text)'}}>∞</span>
+                  : Number.isFinite(user?.credits) && <span className="text-xs font-semibold px-2 py-0.5 rounded-full" title="Credits left this month" style={{background:'rgba(37,99,235,0.15)',color:'var(--accent-text)'}}>{user.credits.toLocaleString()} cr</span>}
               </button>
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-2 w-56 card-solid anim-up overflow-hidden" style={{zIndex:50}}>
                   <div className="p-3 border-b" style={{borderColor:'var(--border)'}}>
                     <p className="text-xs font-semibold truncate" style={{color:'var(--text)'}}>{user?.name}</p>
                     <p className="text-xs truncate" style={{color:'var(--muted)'}}>{user?.email}</p>
-                    {Number.isFinite(user?.credits) && <p className="text-xs mt-1" style={{color:'var(--text)'}}>{user.credits.toLocaleString()} credits · tops up monthly</p>}
+                    {user?.unlimited
+                      ? <p className="text-xs mt-1" style={{color:'var(--text)'}}>Business plan · unlimited</p>
+                      : Number.isFinite(user?.credits) && <p className="text-xs mt-1" style={{color:'var(--text)'}}>{user.credits.toLocaleString()}{user.monthlyCredits ? ` of ${user.monthlyCredits.toLocaleString()}` : ''} credits · {user.plan === 'pro' ? 'Pro' : 'Free'} plan{user.resetsOn ? ` · resets ${fmtReset(user.resetsOn)}` : ''}</p>}
                   </div>
+                  <a href={`${LP}/pricing`} onClick={e=>{e.preventDefault();setMenuOpen(false);goPricing();}} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-blue-500/10 transition-colors" style={{color:'var(--text)'}}>
+                    <Ic n="sparkle" sz={14}/> Plans and credits
+                  </a>
                   {user?.isAdmin && (
                     <a href="/admin" className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-blue-500/10 transition-colors" style={{color:'var(--text)'}}>
                       <Ic n="lock" sz={14}/> Admin
@@ -1566,6 +1615,7 @@ function Footer({ onTool, onPrivacy, onTrust }) {
           <a href="/guides" className="hover:text-blue-400 transition-colors">{tr('foot.guides','Guides')}</a>
           <a href={`${LP}/privacy`} onClick={e=>{e.preventDefault();onPrivacy();}} className="hover:text-blue-400 transition-colors">{tr('foot.privacy','Privacy')}</a>
           <a href={`${LP}/trust`} onClick={e=>{e.preventDefault();onTrust();}} className="hover:text-blue-400 transition-colors">{tr('foot.trust','Trust & security')}</a>
+          <a href={`${LP}/pricing`} onClick={e=>{e.preventDefault();goPricing();}} className="hover:text-blue-400 transition-colors">{tr('foot.pricing','Plans')}</a>
         </div>
         <p className="text-xs" style={{color:'var(--subtle)'}}>© {new Date().getFullYear()} Maqsusi Digital Industries</p>
       </div>
@@ -1580,6 +1630,7 @@ function routeFromPath(path) {
   const slug = (path || '/').replace(LP ? new RegExp(`^${LP}(?=/|$)`) : /^$/, '').replace(/^\/+|\/+$/g, '');
   if (slug === 'privacy') return { view:'privacy' };
   if (slug === 'trust') return { view:'trust' };
+  if (slug === 'pricing') return { view:'pricing' };
   const audience = (window.LCP_AUDIENCES || []).find(a => a.slug === slug);
   if (audience) return { view:'audience', audience };
   const tool = TOOLS.find(t => t.slug === slug);
@@ -1613,6 +1664,7 @@ function App() {
     document.title = route.view === 'tool' ? `${tr('seo.title', '{tool} — Free & Private').replace('{tool}', route.tool.label)} | LetsConvertPDF`
       : route.view === 'privacy' ? 'Private by design | LetsConvertPDF'
       : route.view === 'trust' ? 'Trust and security | LetsConvertPDF'
+      : route.view === 'pricing' ? 'Plans and credits | LetsConvertPDF'
       : route.view === 'audience' ? `${route.audience.h1} | LetsConvertPDF` : TITLE_HOME;
   }, [route]);
   const openTool = (t, preset) => go({ view:'tool', tool:t, preset }, `${LP}/${t.slug}`);
@@ -1647,6 +1699,8 @@ function App() {
                 </>
               : route.view === 'privacy'
                 ? <PrivacyPage onTool={openTool}/>
+              : route.view === 'pricing'
+                ? <PricingPage onTrust={openTrust}/>
               : route.view === 'trust'
                 ? <TrustPage onAudience={openAudience} onPrivacy={openPrivacy}/>
               : route.view === 'audience'

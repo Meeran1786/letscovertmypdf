@@ -602,7 +602,7 @@ function article(page, slug) {
 
 /* Audience pages (/pdf-tools-for-lawyers, …) and the trust centre (/trust).
    Their text lives in public/js/audiences.js, which the app also reads. */
-const { AUDIENCES, TRUST } = require('./public/js/audiences.js');
+const { AUDIENCES, TRUST, PRICING } = require('./public/js/audiences.js');
 const AUD = Object.fromEntries(AUDIENCES.map(a => [a.slug, a]));
 const MAIN = '<main style="max-width:720px;margin:0 auto;padding:96px 16px;font-family:system-ui,sans-serif;color:#E2E8F0">';
 const faqHtml = page => page.faq ? `<h2>Questions</h2>${page.faq.map(([q, a]) => `<h3>${esc(q)}</h3><p>${esc(a)}</p>`).join('')}` : '';
@@ -621,6 +621,13 @@ function trustArticle() {
 <h1>${esc(TRUST.h1)}</h1><p>${esc(TRUST.intro)}</p><h2>What protects your files today</h2>${TRUST.today.map(([, t, d]) => `<h3>${esc(t)}</h3><p>${esc(d)}</p>`).join('')}
 <h2>Certifications and compliance</h2><ul>${TRUST.roadmap.map(([n, st, d]) => `<li><strong>${esc(n)}</strong> (${st === 'planned' ? 'on our roadmap, not yet certified' : 'aligned, not certified'}): ${esc(d)}</li>`).join('')}</ul>
 <h2>Check it yourself</h2><p>${esc(TRUST.verify)}</p>${faqHtml(TRUST)}${audienceLinks()}<p><a href="/privacy">Which tools run on your device</a></p></main>`;
+}
+
+function pricingArticle() {
+  return `${MAIN}
+<h1>${esc(PRICING.h1)}</h1><p>${esc(PRICING.intro)}</p>${PRICING.plans.map(p => `<h2>${esc(p.name)}: ${esc(p.tagline)}</h2><ul>${p.features.map(f => `<li>${esc(f)}</li>`).join('')}</ul>`).join('')}
+<h2>What a use costs</h2><ul>${PRICING.costs.map(([n, c, d]) => `<li><strong>${esc(n)}: ${esc(c)}</strong>. ${esc(d)}</li>`).join('')}</ul>
+${faqHtml(PRICING)}<p><a href="/trust">Trust and security</a> · <a href="/privacy">How we keep your files private</a></p></main>`;
 }
 
 /** Steps for every tool, for the "How it works" panel in the app. */
@@ -733,7 +740,7 @@ function renderHome(html, lang = 'en') {
 function renderPage(html, slug, lang = 'en') {
   if (lang !== 'en') {
     if (!i18n.has(lang)) return null;
-    if (slug === 'privacy' || AUD[slug] || slug === TRUST.slug) return injectLang(renderPage(html, slug), lang);
+    if (slug === 'privacy' || AUD[slug] || slug === TRUST.slug || slug === PRICING.slug) return injectLang(renderPage(html, slug), lang);
     const page = localPage(html, slug, lang);
     if (!page) return null;
     const url = `${SITE}/${lang}/${slug}`;
@@ -742,6 +749,12 @@ function renderPage(html, slug, lang = 'en') {
       .replace('</head>', `${crumbs(page.h1, url, lang)}\n${alternates(slug)}\n</head>`)
       .replace('<div id="root"></div>', `<div id="root">${localArticle(html, page, slug, lang)}</div>`);
     return injectLang(out, lang);
+  }
+  if (slug === PRICING.slug) {
+    const url = `${SITE}/${slug}`;
+    return setHead(html, { title: PRICING.title, desc: PRICING.desc, url })
+      .replace('</head>', `${faqSchema(PRICING)}\n${crumbs(PRICING.h1, url)}\n</head>`)
+      .replace('<div id="root"></div>', `<div id="root">${pricingArticle()}</div>`);
   }
   if (AUD[slug] || slug === TRUST.slug) {
     const page = AUD[slug] || TRUST, url = `${SITE}/${slug}`;
@@ -775,7 +788,7 @@ function sitemapUrls() {
   // pages are built from), not "today": Bing and Google ignore a lastmod that
   // changes on every fetch, and IndexNow re-sends pages only when it changes.
   const today = contentDate();
-  const urls = ['', 'privacy', TRUST.slug, ...Object.keys(AUD), ...Object.keys(PAGES)].map(u => ({ loc: `${SITE}/${u}`, lastmod: today, priority: u === '' ? '1.0' : '0.8' }));
+  const urls = ['', 'privacy', TRUST.slug, PRICING.slug, ...Object.keys(AUD), ...Object.keys(PAGES)].map(u => ({ loc: `${SITE}/${u}`, lastmod: today, priority: u === '' ? '1.0' : '0.8' }));
   for (const l of i18n.LANGS.slice(1)) {
     urls.push({ loc: `${SITE}/${l}`, lastmod: today, priority: '0.9' });
     for (const slug of Object.keys(PAGES)) urls.push({ loc: `${SITE}/${l}/${slug}`, lastmod: today, priority: '0.7' });
@@ -798,7 +811,7 @@ function llmsTxt() {
   const local = Object.entries(PAGES).filter(([, p]) => p.local), server = Object.entries(PAGES).filter(([, p]) => !p.local);
   return `# LetsConvertPDF
 
-> Private PDF tools that run in your web browser. Most tools, including all AI features (chat with a PDF, summaries, translation, contract review), process files on the user's own device, so the files are never uploaded. Sign-in is with Google only, so every user is verified; new accounts get 1,000 free credits and each use costs 5. There are no watermarks.
+> Private PDF tools that run in your web browser. Most tools, including all AI features (chat with a PDF, summaries, translation, contract review), process files on the user's own device, so the files are never uploaded. Sign-in is with Google only, so every user is verified; free accounts get 1,000 credits every month (resetting on the 1st), basic tools cost 10 credits a use and AI or OCR tools 25; Pro has 10,000 credits a month and Business is unlimited (see /pricing). There are no watermarks.
 
 - Private by design: ${PRIVACY_PAGE.intro}
 - Works on phones, tablets and computers in any modern browser, and can be installed as an app.
@@ -825,6 +838,7 @@ ${AUDIENCES.map(a => `- [${a.h1}](${SITE}/${a.slug}): ${a.desc}`).join('\n')}
 
 - [How we keep files private](${SITE}/privacy)
 - [Trust and security](${SITE}/trust): ${TRUST.desc}
+- [Plans and credits](${SITE}/pricing): ${PRICING.desc}
 - [All guides](${SITE}/guides)
 - [Sitemap](${SITE}/sitemap.xml)
 `;

@@ -1,6 +1,8 @@
 {
 "ui": {
 "lang": "Bahasa",
+"nav.pricing": "Paket",
+"foot.pricing": "Paket",
 "nav.privacy": "Privasi",
 "nav.signout": "Keluar",
 "nav.ask": "Tanya",
@@ -56,11 +58,11 @@
 "chip.credits": "1.000 kredit gratis",
 "chip.google": "Masuk aman dengan Google",
 "chip.device": "File tetap di perangkat Anda",
-"stat.credits": "Kredit gratis untuk memulai",
+"stat.credits": "Kredit gratis setiap bulan",
 "stat.signin": "Masuk terverifikasi untuk setiap pengguna",
 "nav.signin": "Masuk dengan Google",
 "gate.title": "Masuk untuk menggunakan alat ini",
-"gate.sub": "Akun baru mendapat 1.000 kredit gratis. Setiap penggunaan memakai 5 kredit. File Anda tetap diproses di perangkat Anda sendiri.",
+"gate.sub": "Akun gratis mendapat 1.000 kredit setiap bulan. Sebagian besar alat memakai 10 kredit per penggunaan, alat AI dan OCR 25. File Anda tetap diproses di perangkat Anda sendiri.",
 "auth.title": "Masuk untuk melanjutkan",
 "auth.sub": "Kami menggunakan akun Google Anda agar setiap pengguna terverifikasi. Kami tidak pernah melihat kata sandi Google Anda, dan file Anda tetap di perangkat Anda.",
 "home.title": "LetsConvertPDF: alat PDF privat yang tidak pernah mengunggah file Anda",
