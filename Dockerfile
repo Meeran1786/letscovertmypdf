@@ -23,7 +23,7 @@ RUN npm ci --omit=dev \
     # OCR uses the compact best_int language files; drop the larger duplicates (~70 MB).
     && rm -rf node_modules/@tesseract.js-data/*/4.0.0
 
-COPY server.js seo.js guides.js indexnow.js webmasters.js ./
+COPY server.js seo.js guides.js indexnow.js webmasters.js precompile.js ./
 COPY guides ./guides
 COPY i18n ./i18n
 COPY converters ./converters

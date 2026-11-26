@@ -23,6 +23,7 @@
   "author": "Maqsusi Digital Industries Software",
   "license": "MIT",
   "dependencies": {
+    "@babel/standalone": "7.26.10",
     "@mlc-ai/web-llm": "0.2.86",
     "@neslinesli93/qpdf-wasm": "0.3.0",
     "@tesseract.js-data/deu": "1.0.0",

@@ -1,8 +1,8 @@
 /* LetsConvertPDF service worker: makes the app installable and keeps the
    on-device tools working offline. It never touches /api/ requests or any
    file the user processes; those never go through the network anyway. */
-const VERSION = 'lcpdf-r3-2';
-const SHELL = ['/', '/js/engine.js', '/js/tools.jsx', '/js/r2.jsx', '/js/r3.jsx', '/js/r4.jsx', '/js/r5.jsx', '/js/audiences.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
+const VERSION = 'lcpdf-r6-1';
+const SHELL = ['/', '/js/engine.js', '/js/tools.jsx.js', '/js/r2.jsx.js', '/js/r3.jsx.js', '/js/r4.jsx.js', '/js/r5.jsx.js', '/js/audiences.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
 const CDN = ['unpkg.com', 'cdnjs.cloudflare.com', 'cdn.tailwindcss.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
 self.addEventListener('install', (e) => {
