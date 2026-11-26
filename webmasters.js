@@ -173,9 +173,14 @@ module.exports = function webmasters({ dataDir, site, sitemapUrl, keyPages = [],
   /** Submit now, then report once a week (checked hourly; survives restarts via the saved report's date). */
   function start() {
     if (process.env.WEBMASTERS === 'off' || (!gKey && !bingKey)) return;
-    const due = () => { let last = 0; try { last = Date.parse(JSON.parse(read(reportFile)).at) || 0; } catch {} return Date.now() - last >= WEEK; };
+    // Weekly, but a report that failed (e.g. access not granted yet) is retried on the next hourly check.
+    const due = () => {
+      let r = {}; try { r = JSON.parse(read(reportFile)); } catch {}
+      const age = Date.now() - (Date.parse(r.at) || 0);
+      return age >= WEEK || (!!(r.google?.error || r.bing?.error) && age >= 3600000);
+    };
     setTimeout(() => submitSitemaps().then(o => log.log('[webmasters] sitemap', JSON.stringify(o))).catch(() => {}), 45000);
-    const tick = () => { if (due()) report().then(r => log.log(`[webmasters] weekly report saved${r.emailed ? ' and emailed' : ''}`)).catch(e => log.warn('[webmasters]', e.message)); };
+    const tick = () => { if (due()) (status.lastSubmit && Object.values(status.lastSubmit).some(v => v !== 'submitted' && !/^\d{4}-/.test(v)) ? submitSitemaps() : Promise.resolve()).then(report).then(r => log.log(`[webmasters] weekly report saved${r.emailed ? ' and emailed' : ''}`)).catch(e => log.warn('[webmasters]', e.message)); };
     setTimeout(tick, 120000);
     setInterval(tick, 3600000).unref();
   }
