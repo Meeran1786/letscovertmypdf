@@ -20,12 +20,16 @@ fi
 
 echo
 echo "== Google service-account JSON =="
-echo "Paste the whole JSON file. Then, on a new line, type END and press Enter."
+echo "Paste the whole JSON file. Then type END and press Enter (or press Ctrl+D)."
 echo "(Type just END to skip.)"
 JSON=""
 while IFS= read -r line; do
   # A paste often lacks a final newline, so "END" can land on the "}" line.
-  if [[ "$line" == *END ]]; then JSON+="${line%END}"$'\n'; break; fi
+  # "END" in any case, alone or after the closing brace, spaces allowed.
+  trimmed="$(echo "$line" | sed 's/[[:space:]]*$//')"
+  if [[ "${trimmed,,}" =~ (^|\})[[:space:]]*end$ ]]; then
+    JSON+="$(echo "$trimmed" | sed 's/[[:space:]]*[Ee][Nn][Dd]$//')"$'\n'; break
+  fi
   JSON+="$line"$'\n'
 done
 if [ -n "$(echo "$JSON" | tr -d '[:space:]')" ]; then
