@@ -407,6 +407,14 @@ const webmasters = require('./webmasters')({
 });
 app.get(`/${indexNow.key}.txt`, (req, res) => res.type('text/plain').send(indexNow.key));
 let indexHtml = null;
+// The app's JSX is compiled here once instead of in every browser (precompile.js).
+const precompile = require('./precompile');
+app.get('/js/:name.jsx.js', (req, res, next) => {
+  const f = precompile.file(req.params.name);
+  if (!f) return next();
+  res.set('Cache-Control', req.query.v ? 'public, max-age=31536000, immutable' : 'no-cache');
+  res.type('application/javascript').send(f.code);
+});
 const readIndex = () => {
   if (!indexHtml || process.env.NODE_ENV !== 'production') indexHtml = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
   return indexHtml;
@@ -434,17 +442,17 @@ app.get('/howto.json', (req, res) => {
   const lang = require('./i18n').has(req.query.lang) ? req.query.lang : 'en';
   res.set('Cache-Control', 'public, max-age=3600').json(seo.howto(readIndex(), lang));
 });
-app.get('/', (req, res) => res.type('html').send(seo.renderHome(readIndex())));
-app.get(`/:lang(${LANG_RE})`, (req, res) => res.type('html').send(seo.renderHome(readIndex(), req.params.lang)));
+app.get('/', (req, res) => res.type('html').send(precompile.html(seo.renderHome(readIndex()))));
+app.get(`/:lang(${LANG_RE})`, (req, res) => res.type('html').send(precompile.html(seo.renderHome(readIndex(), req.params.lang))));
 app.get(`/:lang(${LANG_RE})/:slug`, (req, res, next) => {
   const page = seo.renderPage(readIndex(), req.params.slug, req.params.lang);
   if (!page) return next();
-  res.type('html').send(page);
+  res.type('html').send(precompile.html(page));
 });
 app.get('/:slug', (req, res, next) => {
   const page = seo.renderPage(readIndex(), req.params.slug);
   if (!page) return next();
-  res.type('html').send(page);
+  res.type('html').send(precompile.html(page));
 });
 
 // Ad banners are edited on /admin and kept in DATA_DIR, not in the code.
@@ -1200,7 +1208,7 @@ app.post('/api/unlock', upload.single('file'), conversionRoute('unlock', async (
 // old or mistyped URLs drop out of Google instead of piling up as copies of "/".
 app.get('*', (req, res) => {
   res.status(404).set('X-Robots-Tag', 'noindex');
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.type('html').send(precompile.html(readIndex()));
 });
 
 /* ── Error handler ── */
@@ -1238,6 +1246,7 @@ app.listen(PORT, () => {
       .catch(e => { console.warn(`[indexnow] ${e.message}`); setTimeout(pingNow, 3600000); });
     setTimeout(pingNow, 30000);
     webmasters.start();
+    precompile.warm(readIndex());
   }
   console.log(`
 ╔══════════════════════════════════════════════════════╗
