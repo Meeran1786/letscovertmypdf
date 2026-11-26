@@ -24,7 +24,8 @@ echo "Paste the whole JSON file. Then, on a new line, type END and press Enter."
 echo "(Type just END to skip.)"
 JSON=""
 while IFS= read -r line; do
-  [ "$line" = "END" ] && break
+  # A paste often lacks a final newline, so "END" can land on the "}" line.
+  if [[ "$line" == *END ]]; then JSON+="${line%END}"$'\n'; break; fi
   JSON+="$line"$'\n'
 done
 if [ -n "$(echo "$JSON" | tr -d '[:space:]')" ]; then
