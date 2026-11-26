@@ -163,7 +163,15 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
     }
+    /* The server puts a plain-text article in #root for crawlers that don't run
+       JavaScript. People never see it: React replaces it once the app loads, and
+       until then a small loading mark is shown instead of a flash of raw text. */
+    #root > main { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; }
+    #root:has(> main) { min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg,#0A1628); }
+    #root:has(> main)::before { content:''; width:36px; height:36px; border-radius:50%; border:3px solid rgba(37,99,235,0.25); border-top-color:#2563EB; animation:lcp-spin .8s linear infinite; }
+    @keyframes lcp-spin { to { transform:rotate(360deg); } }
   </style>
+  <noscript><style>#root > main { position:static !important; width:auto; height:auto; overflow:visible; clip:auto; clip-path:none; white-space:normal; } #root:has(> main)::before { display:none; }</style></noscript>
 </head>
 <body>
 <div id="root"></div>
