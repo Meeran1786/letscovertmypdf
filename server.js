@@ -399,6 +399,12 @@ app.get('/robots.txt', (req, res) => res.type('text/plain').send(seo.robots()));
 app.get('/sitemap.xml', (req, res) => res.type('application/xml').send(seo.sitemap()));
 app.get('/llms.txt', (req, res) => res.type('text/plain; charset=utf-8').send(seo.llmsTxt()));
 const indexNow = require('./indexnow')(DATA_DIR, seo.SITE);
+// Google Search Console + Bing Webmaster Tools: sitemap on each deploy, weekly report by email.
+const webmasters = require('./webmasters')({
+  dataDir: DATA_DIR, site: seo.SITE, sitemapUrl: `${seo.SITE}/sitemap.xml`,
+  keyPages: ['', 'merge-pdf', 'compress-pdf', 'pdf-to-word', 'chat-with-pdf', 'sign-pdf', 'ocr-pdf', 'split-pdf', 'jpg-to-pdf', 'word-to-pdf', 'privacy', 'pricing', 'guides'].map(s => `${seo.SITE}/${s}`),
+  sendReport: (subject, text) => (ADMIN_EMAILS.length ? sendEmail(ADMIN_EMAILS.join(','), subject, text) : Promise.resolve(false)),
+});
 app.get(`/${indexNow.key}.txt`, (req, res) => res.type('text/plain').send(indexNow.key));
 let indexHtml = null;
 const readIndex = () => {
@@ -773,6 +779,15 @@ function cleanAds(body) {
   return { enabled: body.enabled !== false, interval, slides };
 }
 
+// Search report: GET the last one, POST to build a fresh one now (also emails it).
+app.get('/api/admin/seo-report', requireAdmin, (req, res) => {
+  try { res.json(JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'seo-report.json'), 'utf8'))); }
+  catch { res.status(404).json({ error: 'No report yet.', status: webmasters.status }); }
+});
+app.post('/api/admin/seo-report', requireAdmin, async (req, res) => {
+  try { await webmasters.submitSitemaps(); res.json(await webmasters.report()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
 app.get('/api/admin/me', requireAdmin, (req, res) => res.json({ user: publicUser(req.adminEmail) }));
 app.get('/api/admin/ads', requireAdmin, (req, res) => res.json({ ...readAds(), stats: adStats }));
 app.put('/api/admin/ads', requireAdmin, (req, res) => {
@@ -1018,6 +1033,8 @@ app.get('/api/health', (req, res) => {
     googleSignInConfigured: !!googleClient,
     engines,
     indexNow: indexNow.status.last, // last ping to Bing/IndexNow: { at, ok, sent | error }
+    webmasters: { google: webmasters.status.google.configured, bing: webmasters.status.bing.configured,
+      lastSubmit: webmasters.status.lastSubmit || null, lastReport: webmasters.status.lastReport },
   });
 });
 
@@ -1220,6 +1237,7 @@ app.listen(PORT, () => {
       .then(r => console.log(`[indexnow] sent ${r.sent} URLs`))
       .catch(e => { console.warn(`[indexnow] ${e.message}`); setTimeout(pingNow, 3600000); });
     setTimeout(pingNow, 30000);
+    webmasters.start();
   }
   console.log(`
 ╔══════════════════════════════════════════════════════╗
